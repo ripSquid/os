@@ -1,5 +1,6 @@
 global long_mode_start
 
+
 section .text
 bits 64
 long_mode_start:
@@ -10,6 +11,8 @@ long_mode_start:
     mov ds, ax
     mov es, ax
 
+    extern rust_start
+    call rust_start
     
     mov dword [0xb8000], 0x2f4b2f4f
     hlt
