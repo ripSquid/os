@@ -9,6 +9,7 @@
     gnumake
     grub2
     xorriso
+    nasm
   ];
 
   RUSTC_VERSION = pkgs.lib.readFile ./rust-toolchain;
