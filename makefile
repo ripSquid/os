@@ -45,6 +45,6 @@ $(kernel): $(assembly_object_files) $(linker_script)
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files)
 
 # compile assembly files
-build/arch/$(arch)/%.o: src/arch/$(arch)/%.asm
+asm-src/%.o: asm-src/%.asm
 	@mkdir -p $(shell dirname $@)
 	@nasm -felf64 $< -o $@
