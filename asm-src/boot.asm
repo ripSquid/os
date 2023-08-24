@@ -1,6 +1,7 @@
 %define STACKSIZE 64
 
 global start
+extern long_mode_start
 
 section .text
 bits 32
@@ -66,7 +67,7 @@ check_longmode:
     jz .longmode_fail
     ret
 
-.longmode_fail
+.longmode_fail:
     mov al, "2"
     jmp error
 
