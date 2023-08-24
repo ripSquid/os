@@ -19,7 +19,7 @@ linker_script := asm-src/linker.ld
 grub_cfg := asm-src/grub.cfg
 assembly_source_files := $(wildcard asm-src/*.asm)
 assembly_object_files := $(patsubst asm-src/%.asm, \
-	asm-src/%.o, $(assembly_source_files))
+	build/asm/%.o, $(assembly_source_files))
 
 
 
@@ -41,10 +41,9 @@ $(iso): $(kernel) $(grub_cfg)
 	
 
 $(kernel): $(assembly_object_files) $(linker_script)
-	@mkdir build
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files)
 
 # compile assembly files
-asm-src/%.o: asm-src/%.asm
+build/asm/%.o: asm-src/%.asm
 	@mkdir -p $(shell dirname $@)
 	@nasm -felf64 $< -o $@
