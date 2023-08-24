@@ -6,7 +6,7 @@ run-qemu:
   -cpu Opteron_G5                                \
   -m 1024                                        \
   -no-reboot                                     \
-  -drive format=raw,media=cdrom,file=myos.iso    \
+  -drive format=raw,media=cdrom,file=build/os-gymnasie.iso    \
   -serial stdio                                  \
   -smp 1                                         \
   -vga std
@@ -41,6 +41,7 @@ $(iso): $(kernel) $(grub_cfg)
 	@rm -r build/isofiles
 
 $(kernel): $(assembly_object_files) $(linker_script)
+	@mkdir build
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files)
 
 # compile assembly files

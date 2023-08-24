@@ -7,6 +7,8 @@
     rustup
     qemu
     gnumake
+    grub2
+    xorriso
   ];
 
   RUSTC_VERSION = pkgs.lib.readFile ./rust-toolchain;
