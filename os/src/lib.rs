@@ -5,7 +5,7 @@
 
 use core::panic::PanicInfo;
 
-use x86_64::instructions::port::PortWriteOnly;
+use x86_64::instructions::{port::PortWriteOnly, hlt};
 
 use display::{ScreenBuffer, VgaChar};
 mod display;
@@ -24,7 +24,9 @@ pub extern "C" fn rust_start() -> ! {
     });
     writer.write_str("Hello World                                                                                                                                          test");
     
-    loop {}
+    hlt();
+
+    panic!();
 }
 
 fn disable_cursor() {
