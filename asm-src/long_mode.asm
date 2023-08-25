@@ -12,9 +12,11 @@ long_mode_start:
     mov ds, ax
     mov es, ax
 
+    mov dword [0xb8000], 0x2f4b2f4f
+    
     ;jump into our rust entry point (rust_start in lib.rs)
     extern rust_start
     call rust_start
     
-    mov dword [0xb8000], 0x2f4b2f4f
+
     hlt
