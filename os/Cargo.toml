@@ -15,4 +15,5 @@ test = false
 
 
 [dependencies]
+x86_64 = "0.14.10"
 

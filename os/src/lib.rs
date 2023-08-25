@@ -5,6 +5,8 @@
 
 use core::panic::PanicInfo;
 
+use x86_64::instructions::port::PortWriteOnly;
+
 use display::{ScreenBuffer, VgaChar};
 mod display;
 
@@ -15,14 +17,21 @@ const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
 //this is later used in long_mode.asm, at which point the cpu is prepared to run rust code
 #[no_mangle]
 pub extern "C" fn rust_start() -> ! {
+    disable_cursor();
+
     let mut writer = display::DefaultVgaWriter::new(unsafe {
         &mut *(VGA_BUFFER_ADDRESS as *mut ScreenBuffer<VgaChar>)
     });
     writer.write_str("Hello World                                                                                                                                          test");
     
-
-    panic!();
     loop {}
+}
+
+fn disable_cursor() {
+    unsafe {
+        PortWriteOnly::new(0x03D4 as u16).write(0x0A as u8);
+        PortWriteOnly::new(0x03D5 as u16).write(0x20 as u8);
+    }
 }
 
 #[panic_handler]
