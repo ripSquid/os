@@ -1,7 +1,7 @@
 //The repr here causes the entire struct to use the layout of the chars field
 
 #[repr(transparent)]
-pub struct ScreenBuffer<Unit, const WIDTH: usize = 80, const HEIGHT: usize = 25> {
+pub struct ScreenBuffer<Unit, const WIDTH: usize, const HEIGHT: usize> {
     pub chars: [[Unit; WIDTH]; HEIGHT],
 }
 
@@ -19,4 +19,3 @@ impl<Unit, const WIDTH: usize, const HEIGHT: usize> ScreenBuffer<Unit, WIDTH, HE
         HEIGHT
     }
 }
-

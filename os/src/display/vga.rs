@@ -1,20 +1,21 @@
 use super::ScreenBuffer;
 
+
+
+
 const DEFAULT_VGA_BUFFER_WIDTH: usize = 80;
 const DEFAULT_VGA_BUFFER_HEIGHT: usize = 25;
+
+pub type DefaultVgaBuffer = ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
 pub struct DefaultVgaWriter {
-    buffer: &'static mut ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>,
+    buffer: &'static mut DefaultVgaBuffer,
     position: (usize, usize),
     fallback_color: VgaColorCombo,
 }
 
 impl DefaultVgaWriter {
     pub fn new(
-        buffer: &'static mut ScreenBuffer<
-            VgaChar,
-            DEFAULT_VGA_BUFFER_WIDTH,
-            DEFAULT_VGA_BUFFER_HEIGHT,
-        >,
+        buffer: &'static mut DefaultVgaBuffer
     ) -> Self {
         Self {
             buffer,
@@ -22,9 +23,17 @@ impl DefaultVgaWriter {
             fallback_color: VgaColorCombo::new(VgaColor::White, VgaColor::Black),
         }
     }
+    pub fn set_default_colors(&mut self, color: VgaColorCombo) {
+        self.fallback_color = color;
+    }
     pub fn write_str(&mut self, chars: &str) {
         for byte in chars.bytes() {
             self.write_byte(byte);
+        }
+    }
+    pub fn write_bytes(&mut self, bytes: &[u8]) {
+        for byte in bytes {
+            self.write_byte(*byte)
         }
     }
     pub fn write_byte(&mut self, byte: u8) {
