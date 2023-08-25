@@ -9,6 +9,7 @@ authors = ["viktor och julle"]
 
 [lib]
 crate-type = ["staticlib"]
+test = false
 
 
 

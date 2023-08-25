@@ -28,22 +28,7 @@ impl DefaultVgaWriter {
         }
     }
     pub fn write_byte(&mut self, byte: u8) {
-        match byte {
-            b'\n' => {
-                self.next_line();
-            }
-            char => {
-                if self.position.0 >= self.buffer.width() {
-                    self.next_line();
-                }
-                let (col, row) = self.position;
-                self.buffer.chars[row][col] = VgaChar {
-                    char,
-                    color: self.fallback_color,
-                };
-                self.position.0 += 1;
-            }
-        }
+        self.write_char(VgaChar { char: byte, color: self.fallback_color })
     }
     pub fn next_line(&mut self) {
         let buffer_height = self.buffer.height();
@@ -53,6 +38,21 @@ impl DefaultVgaWriter {
             *row += 1
         } else {
             *row = 0;
+        }
+    }
+    pub fn write_char(&mut self, char: VgaChar) {
+        match char.char {
+            b'\n' => {
+                self.next_line();
+            }
+            _ => {
+                if self.position.0 >= self.buffer.width() {
+                    self.next_line();
+                }
+                let (col, row) = self.position;
+                self.buffer.chars[row][col] = char;
+                self.position.0 += 1;
+            }
         }
     }
 }
