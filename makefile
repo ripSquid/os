@@ -15,6 +15,10 @@ arch ?= gymnasie
 kernel := build/kernel-$(arch).bin
 iso := build/os-$(arch).iso
 
+target ?= x86_64-os
+rust_os := os/target/$(target)/debug/libos.a
+
+
 linker_script := asm-src/linker.ld
 grub_cfg := asm-src/grub.cfg
 assembly_source_files := $(wildcard asm-src/*.asm)
@@ -41,7 +45,8 @@ $(iso): $(kernel) $(grub_cfg)
 	
 
 $(kernel): $(assembly_object_files) $(linker_script)
-	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files)
+	@cd os; cargo build --target $(target).json
+	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 # compile assembly files
 build/asm/%.o: asm-src/%.asm
