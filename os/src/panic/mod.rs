@@ -49,7 +49,7 @@ impl U32Str {
                 continue;
             }
             if accounted > 0 {
-                value[len] = this_char as u8;
+                value[len] = (this_char as u8) + 0x30;
                 len += 1;
             }
         }
