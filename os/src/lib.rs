@@ -16,11 +16,20 @@ pub extern "C" fn rust_start() -> ! {
     let mut writer = display::DefaultVgaWriter::new(unsafe {
         &mut *(VGA_BUFFER_ADDRESS as *mut ScreenBuffer<VgaChar>)
     });
-    writer.write_str("Hello World");
+    writer.write_str("Hello World                                                                                                                                          test");
+    
+
+    panic!();
     loop {}
 }
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
+    let mut writer = display::DefaultVgaWriter::new(unsafe {&mut *(VGA_BUFFER_ADDRESS as *mut ScreenBuffer<VgaChar>)
+    });
+
+    writer.write_str("PANIC xD   ");
+
+
     loop {}
 }

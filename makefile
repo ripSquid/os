@@ -16,7 +16,7 @@ kernel := build/kernel-$(arch).bin
 iso := build/os-$(arch).iso
 
 target ?= x86_64-os
-rust_os := os/target/$(target)/debug/libos.a
+rust_os := os/target/$(target)/release/libos.a
 
 
 linker_script := asm-src/linker.ld
@@ -45,7 +45,7 @@ $(iso): $(kernel) $(grub_cfg)
 	
 
 $(kernel): $(assembly_object_files) $(linker_script)
-	@cd os; cargo build --target $(target).json
+	@cd os; cargo build --target $(target).json --release
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 # compile assembly files
