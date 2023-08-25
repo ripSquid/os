@@ -33,7 +33,7 @@ impl DefaultVgaWriter {
                 self.next_line();
             }
             char => {
-                if self.position.0 > self.buffer.width() {
+                if self.position.0 >= self.buffer.width() {
                     self.next_line();
                 }
                 let (col, row) = self.position;
@@ -49,10 +49,10 @@ impl DefaultVgaWriter {
         let buffer_height = self.buffer.height();
         let (col, row) = &mut self.position;
         *col = 0;
-        if *row == buffer_height {
-            *row = 0;
-        } else {
+        if *row < buffer_height {
             *row += 1
+        } else {
+            *row = 0;
         }
     }
 }

@@ -1,10 +1,10 @@
 %define ARCHITECTURE 0
 section .multiboot_header 
 header_start:
-    ;magic
-    dd 0xe85250d6
+    ;magic (required by multiboot 2 spec)
+    dd 0xE85250D6
     
-    ;architecture
+    ;architecture 
     dd ARCHITECTURE
 
     ;length
