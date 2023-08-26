@@ -1,17 +1,14 @@
-
-
 //this program can't use std since it's on bare metal
 #![no_std]
 
-
-
 use x86_64::instructions::{port::PortWriteOnly, hlt};
 
-
-
-use crate::display::DefaultVgaBuffer;
+use crate::display::{DefaultVgaBuffer, macros::*};
 pub mod display;
 mod panic;
+
+
+
 // Address of the default 80x25 vga text mode buffer left to us after grub.
 pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
 
@@ -21,14 +18,10 @@ pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
 pub extern "C" fn rust_start() -> ! {
     disable_cursor();
 
-    let mut writer = display::DefaultVgaWriter::new(unsafe {
-        &mut *(VGA_BUFFER_ADDRESS as *mut DefaultVgaBuffer)
-    });
-    writer.write_str("Hello World                                                                                                                                          test");
-    
-    hlt();
+    print_str!("hello world");
 
-    panic!();
+    hlt();
+    loop {}
 }
 
 fn disable_cursor() {

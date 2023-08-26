@@ -30,7 +30,7 @@ assembly_object_files := $(patsubst asm-src/%.asm, \
 all: $(kernel)
 
 clean:
-	@rm -r build
+	@-rm -r build
 
 run: $(iso)
 	@qemu-system-x86_64 -cdrom $(iso)
@@ -45,7 +45,7 @@ $(iso): $(kernel) $(grub_cfg)
 	
 
 $(kernel): $(assembly_object_files) $(linker_script)
-	@cd os; cargo build --target $(target).json --release
+	@cd ./os; cargo build --target $(target).json --release
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 # compile assembly files

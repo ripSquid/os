@@ -64,6 +64,14 @@ impl DefaultVgaWriter {
             }
         }
     }
+    pub fn prepare_print(&mut self) {
+        let last_line = self.buffer.height()-1;
+        self.position = (0, last_line);
+        for i in 1..=last_line {
+            self.buffer.chars[i-1] = self.buffer.chars[i]
+        }
+        self.buffer.chars[last_line] = [VgaChar::BLANK; 80]
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -72,7 +80,12 @@ pub struct VgaChar {
     char: u8,
     color: VgaColorCombo,
 }
-
+impl VgaChar {
+    const BLANK: Self = Self {
+        char: b' ',
+        color: VgaColorCombo(0),
+    };
+}
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct VgaColorCombo(u8);

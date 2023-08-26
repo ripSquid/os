@@ -1,5 +1,3 @@
-wsl -d debian -u root
-cd Documents/GITHUB/osdev
-make clean
-make iso
+wsl -d debian -u root -e bash run.sh
+qemu-system-x86_64 -cdrom build/os-gymnasie.iso
 
