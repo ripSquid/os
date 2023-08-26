@@ -2,10 +2,12 @@
 #![no_std]
 
 use x86_64::instructions::{port::PortWriteOnly, hlt};
-
+use core::arch::asm;
 use crate::display::{DefaultVgaBuffer, macros::*, primitives::PrimitiveDisplay};
 pub mod display;
 mod panic;
+use crate::interrupt::setup::setup_interrupt;
+mod interrupt;
 
 
 
@@ -21,6 +23,8 @@ pub extern "C" fn rust_start(address: u64) -> ! {
     print_str!("hello world");
     
     print_hex!(address);
+    
+
 
     hlt();
     loop {}
