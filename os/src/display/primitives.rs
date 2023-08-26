@@ -37,13 +37,13 @@ macro_rules! impl_primitive_print {
     }
 }
 
-struct LenArray<T, const CAP: usize>(usize, [T; CAP]);
+pub struct LenArray<T, const CAP: usize>(usize, [T; CAP]);
 impl<T, const CAP: usize> AsRef<[T]> for LenArray<T, CAP> {
     fn as_ref(&self) -> &[T] {
         &self.1[..self.0]
     }
 }
-trait PrimitiveDisplay<const LEN_CAP: usize, const HEX_LEN: usize> {
+pub trait PrimitiveDisplay<const LEN_CAP: usize, const HEX_LEN: usize> {
     fn as_numeric_ascii(&self) -> LenArray<u8, LEN_CAP>;
     fn as_hexadecimal_ascii(&self) -> LenArray<u8, HEX_LEN>;
 }
