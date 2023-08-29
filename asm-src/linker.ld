@@ -5,7 +5,6 @@ SECTIONS {
     
     .boot : {
         KEEP(*(.multiboot_header))
-        . = ALIGN(4K);
     }
     .text : {
         *(.text .text.*)

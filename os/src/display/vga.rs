@@ -58,6 +58,9 @@ impl DefaultVgaWriter {
                 if self.position.0 >= self.buffer.width() {
                     self.next_line();
                 }
+                if self.position.1 >= self.buffer.height() {
+                    self.prepare_print();
+                }
                 let (col, row) = self.position;
                 self.buffer.chars[row][col] = char;
                 self.position.0 += 1;
