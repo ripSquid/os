@@ -6,8 +6,9 @@ run-qemu:
   -cpu Opteron_G5                                \
   -m 1024                                        \
   -no-reboot                                     \
+  -no-shutdown \
   -drive format=raw,media=cdrom,file=build/os-gymnasie.iso    \
-  -serial stdio                                  \
+  -monitor stdio                                  \
   -smp 1                                         \
   -vga std
 

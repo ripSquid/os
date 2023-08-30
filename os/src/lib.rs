@@ -20,6 +20,8 @@ pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
 pub extern "C" fn rust_start(address: u64) -> ! {
     disable_cursor();
 
+    setup_interrupt(address);
+
     print_str!("hello world");
     
     print_hex!(address);
@@ -39,5 +41,6 @@ fn disable_cursor() {
 
 #[no_mangle]
 pub extern "C" fn keyboard_handler() {
-    print_str!("Interrupt");
+    print_str!("Interrupt Keyboard");
+    panic!();
 }

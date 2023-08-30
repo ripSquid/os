@@ -58,4 +58,4 @@ interrupt_wrapper:
   extern keyboard_handler
   call keyboard_handler
   popaq
-  iret
+  iretq
