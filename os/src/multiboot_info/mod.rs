@@ -1,4 +1,4 @@
-use core::mem::size_of;
+use core::{mem::size_of, str::from_utf8};
 
 use crate::display::macros::{print_str, print_hex};
 
@@ -20,7 +20,7 @@ impl<'a> MultibootInfo<'a> {
         }
         let header = *pointer;
         let raw = pointer as u64;
-        let tags = core::slice::from_raw_parts((raw + 40) as *const u8, (header.total_size-40) as usize );
+        let tags = core::slice::from_raw_parts((raw + 24) as *const u8, (header.total_size-24) as usize );
         let tags = MultiBootTags::from_slice(tags)?;
         print_hex!(header.total_size);
         Some(MultibootInfo { header, tags })
@@ -42,60 +42,60 @@ impl<'a> MultiBootTags<'a> {
     pub fn memory_tag(&self) -> Option<&'a [MemoryMapEntry]> {
         let mut searching = true;
         let mut counter = 0;
-        let tag_head_pointer = &self.0[counter] as *const u8 as u64;
-        let tag_head = unsafe {&*(tag_head_pointer as *const TagHeader)};
-        print_hex!(self.0[0]);
         
-        
-        match tag_head.tag_type {
-            TagType::BootCommandLine => print_str!("command line"),
-            TagType::BootLoaderName => {
-                print_str!("name");
-            },
-            TagType::Module => print_str!("modul"),
-            TagType::BasicMemoryTag => print_str!("basic mem"),
-            TagType::BiosBootDevice => print_str!("boot device"),
-            TagType::MemoryMap => {
-                print_str!("memory!!!");
-            },
-            TagType::VbeInfo => print_str!("vbe"),
-            TagType::FramebufferInfo => print_str!("frame info"),
-            TagType::ElfSymbol => print_str!("elf symbol"),
-            TagType::ApmTable => print_str!("apm"),
-            TagType::End => {
-                print_str!("end tag");
-                if tag_head.size == 8 {
-                    return None;
-                } else {
-                    print_str!("SOMETHIGN IS WROGN WITH END TAG!");
-                    panic!();
-                }
-            },
-            _ => print_str!("PISS AND SHIT AND FUCK")
-        }
-
-        return None;
-        
-        let moving = {
-            let unpadded = tag_head.size as usize;
-            if unpadded & 0x07 == 0 {
-                unpadded
-            } else {
-                (unpadded + 8) & 0xFFFF_FFFF_FFFF_FFF8
+        while searching {
+            let tag_head: &TagHeader = unsafe {&*transmute(&self.0[counter] as *const u8)};
+            match tag_head.tag_type {
+                TagType::BootCommandLine => print_str!("command line"),
+                TagType::BootoaderName => {
+                    let tag = unsafe {BootloaderNameTab::from_ref(&tag_head)};
+                    print_str!(tag.name);
+                    print_str!("name");
+                },
+                TagType::Module => print_str!("modul"),
+                TagType::BasicMemoryTag => print_str!("basic mem"),
+                TagType::BiosBootDevice => print_str!("boot device"),
+                TagType::MemoryMap => {
+                    print_str!("memory!!!");
+                },
+                TagType::VbeInfo => print_str!("vbe"),
+                TagType::FramebufferInfo => print_str!("frame info"),
+                TagType::ElfSymbol => print_str!("elf symbol"),
+                TagType::ApmTable => print_str!("apm"),
+                TagType::End => {
+                    print_str!("end tag");
+                    if tag_head.size == 8 {
+                        return None;
+                    } else {
+                        print_str!("SOMETHIGN IS WROGN WITH END TAG!");
+                        panic!();
+                    }
+                },
+                _ => print_str!("PISS AND SHIT AND FUCK")
             }
-        };
-        counter += moving;
+            
+            //rounds upward to nearest multiple of 8
+            let moving = 
+                ((tag_head.size + 7) & MASK8) as usize;
+            counter += moving;
+        }
+        
 
         None
         
     }
 }
 
+//provides a mask that removes the last 3 bits of any u32 (rounding it to nearest multiple of 8)
+const MASK8: u32 = u32::MAX - 0x07;
+
+
 #[repr(u32)]
+#[derive(Clone, Copy)]
 enum TagType {
     End = 0,
     BootCommandLine = 1,
-    BootLoaderName = 2,
+    BootoaderName = 2,
     Module = 3,
     BasicMemoryTag = 4,
     BiosBootDevice = 5,
@@ -108,7 +108,8 @@ enum TagType {
 
 
 #[repr(C)]
-struct TagHeader {
+#[derive(Clone, Copy)]
+pub struct TagHeader {
     tag_type: TagType,
     size: u32,
 }
@@ -129,3 +130,42 @@ pub struct MemoryMapHeader {
     entry_version: u32,
 }
 
+pub struct MemoryMapTag<'a> {
+    header: &'a MemoryMapHeader,
+    entries: &'a [MemoryMapEntry],
+}
+
+impl<'a> MemoryMapTag<'a> {
+    pub unsafe fn from_ref(head: &'a TagHeader) -> Self {
+        let pointer: *const MemoryMapHeader = transmute(head as *const TagHeader);
+        let header = &*pointer;
+        let entries_start: *const MemoryMapEntry = type_after(pointer);
+        let slice_len = (header.size as usize - size_of::<MemoryMapHeader>()) / size_of::<MemoryMapEntry>();
+        let entries = core::slice::from_raw_parts(entries_start, slice_len);
+        Self { header, entries }
+    }
+}
+
+pub struct BootloaderNameTab<'a> {
+    head: &'a TagHeader,
+    name: &'a str,
+}
+impl<'a> BootloaderNameTab<'a> {
+    pub unsafe fn from_ref(head: &'a TagHeader) -> Self {
+        let pointer: *const u8 = type_after(head as *const TagHeader);
+        let sting_len = head.size as usize - size_of::<TagHeader>() - 1;
+        let string_bytes = core::slice::from_raw_parts( pointer as *const u8, sting_len);
+        let name = from_utf8(string_bytes).unwrap();
+        Self { head, name }
+    }
+}
+
+/// Gives a pointer to a data type laid out after the one pointed to in `pointer`
+pub unsafe fn type_after<B, A>(pointer: *const B) -> *const A {
+    pointer.offset(1) as u64 as *const A
+}
+
+/// turn a pointer of one type into another, mega hacky!!!
+pub unsafe fn transmute<B, A>(pointer: *const B) -> *const A {
+    pointer as u64 as *const A
+}

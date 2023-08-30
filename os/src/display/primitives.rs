@@ -36,6 +36,20 @@ macro_rules! impl_primitive_print {
         }
     }
 }
+macro_rules! impl_signed_debug {
+    ($($term: ty),*) => {
+        $(
+            impl crate::display::KernelDebug for $term {
+                fn debug(&self, formatter: &mut super::KernelFormatter) {
+                    if self.is_negative() {
+                        formatter.debug_str("-");
+                    }
+                    formatter.debug_num(self.unsigned_abs());
+                }
+            }
+        )*
+    };
+}
 
 pub struct LenArray<T, const CAP: usize>(usize, [T; CAP]);
 impl<T, const CAP: usize> AsRef<[T]> for LenArray<T, CAP> {
@@ -55,3 +69,5 @@ impl_primitive_print!(u16, 5, 4);
 impl_primitive_print!(u32, 10, 8);
 impl_primitive_print!(u64, 20, 16);
 impl_primitive_print!(usize, 20, 16);
+impl_signed_debug!(i8, i16, i32, i64);
+

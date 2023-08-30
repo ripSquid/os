@@ -51,3 +51,18 @@ macro_rules! print_num {
 }
 
 pub(crate) use print_num;
+
+macro_rules! debug {
+    ($($term: expr),+) => {
+        {
+            let mut writer = crate::display::DefaultVgaWriter::new(unsafe {
+                &mut *(0xB8000 as *mut crate::display::DefaultVgaBuffer)
+            });
+            let mut formatter = crate::display::KernelFormatter::new(&mut writer);
+            $(
+                crate::display::KernelDebug::debug($term, &mut formatter);
+            )*
+        }
+    };
+}
+pub(crate) use debug;
