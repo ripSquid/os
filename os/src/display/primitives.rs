@@ -54,3 +54,4 @@ impl_primitive_print!(u8, 3, 2);
 impl_primitive_print!(u16, 5, 4);
 impl_primitive_print!(u32, 10, 8);
 impl_primitive_print!(u64, 20, 16);
+impl_primitive_print!(usize, 20, 16);

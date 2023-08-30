@@ -20,10 +20,13 @@ pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
 #[no_mangle]
 pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
     disable_cursor();
-    let multiboot_info = unsafe {multiboot_info::MultibootInfo::from_pointer(info as *const MultibootInfoHeader)}.unwrap();
-    
+
     print_str!("hello world");
+    let multiboot_info = unsafe {multiboot_info::MultibootInfo::from_pointer(info as *const MultibootInfoHeader)}.unwrap();
+    print_str!("12341234123412341234123412341234123412341234123412341234123412341234123412341234");
     print_bytes!(multiboot_info.tags.bytes());
+    multiboot_info.tags.memory_tag();
+    
     print_hex!(address);
     print_hex!(info);
     

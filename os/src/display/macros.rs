@@ -2,11 +2,13 @@
 
 macro_rules! print_str {
     ($term: expr) => {
-        let mut writer = crate::display::DefaultVgaWriter::new(unsafe {
-            &mut *(0xB8000 as *mut crate::display::DefaultVgaBuffer)
-        });
-        writer.prepare_print();
-        writer.write_str($term);
+        {
+            let mut writer = crate::display::DefaultVgaWriter::new(unsafe {
+                &mut *(0xB8000 as *mut crate::display::DefaultVgaBuffer)
+            });
+            writer.prepare_print();
+            writer.write_str($term);
+        }
     };
 }
 
