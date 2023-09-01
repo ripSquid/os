@@ -1,12 +1,10 @@
 use super::ScreenBuffer;
 
-
-
-
 const DEFAULT_VGA_BUFFER_WIDTH: usize = 80;
 const DEFAULT_VGA_BUFFER_HEIGHT: usize = 25;
 
-pub type DefaultVgaBuffer = ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
+pub type DefaultVgaBuffer =
+    ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
 pub struct DefaultVgaWriter {
     buffer: &'static mut DefaultVgaBuffer,
     position: (usize, usize),
@@ -14,9 +12,7 @@ pub struct DefaultVgaWriter {
 }
 
 impl DefaultVgaWriter {
-    pub fn new(
-        buffer: &'static mut DefaultVgaBuffer
-    ) -> Self {
+    pub fn new(buffer: &'static mut DefaultVgaBuffer) -> Self {
         Self {
             buffer,
             position: (0, 0),
@@ -37,17 +33,15 @@ impl DefaultVgaWriter {
         }
     }
     pub fn write_byte(&mut self, byte: u8) {
-        self.write_char(VgaChar { char: byte, color: self.fallback_color })
+        self.write_char(VgaChar {
+            char: byte,
+            color: self.fallback_color,
+        })
     }
     pub fn next_line(&mut self) {
-        let buffer_height = self.buffer.height();
         let (col, row) = &mut self.position;
         *col = 0;
-        if *row < buffer_height {
-            *row += 1
-        } else {
-            *row = 0;
-        }
+        *row += 1
     }
     pub fn write_char(&mut self, char: VgaChar) {
         match char.char {
@@ -68,10 +62,10 @@ impl DefaultVgaWriter {
         }
     }
     pub fn prepare_print(&mut self) {
-        let last_line = self.buffer.height()-1;
+        let last_line = self.buffer.height() - 1;
         self.position = (0, last_line);
         for i in 1..=last_line {
-            self.buffer.chars[i-1] = self.buffer.chars[i]
+            self.buffer.chars[i - 1] = self.buffer.chars[i]
         }
         self.buffer.chars[last_line] = [VgaChar::BLANK; 80]
     }

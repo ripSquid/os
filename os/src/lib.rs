@@ -1,16 +1,13 @@
 //this program can't use std since it's on bare metal
 #![no_std]
 
-use x86_64::instructions::{port::PortWriteOnly, hlt};
-use core::arch::asm;
 use crate::display::macros::*;
+use x86_64::instructions::{hlt, port::PortWriteOnly};
 pub mod display;
 mod panic;
-use crate::interrupt::setup::setup_interrupt;
 use crate::multiboot_info::MultibootInfoHeader;
 mod interrupt;
 mod multiboot_info;
-
 
 // Address of the default 80x25 vga text mode buffer left to us after grub.
 pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
@@ -22,14 +19,15 @@ pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
     disable_cursor();
 
     print_str!("hello world");
-    let multiboot_info = unsafe {multiboot_info::MultibootInfo::from_pointer(info as *const MultibootInfoHeader)}.unwrap();
+    let multiboot_info =
+        unsafe { multiboot_info::MultibootInfo::from_pointer(info as *const MultibootInfoHeader) }
+            .unwrap();
     print_str!("12341234123412341234123412341234123412341234123412341234123412341234123412341234");
     debug!(" ", "bajs", "ja");
     multiboot_info.tags.memory_tag();
-    
-    print_hex!(address);
-    print_hex!(info);
-    
+
+    //print_hex!(address);
+    //print_hex!(info);
 
     hlt();
     loop {}

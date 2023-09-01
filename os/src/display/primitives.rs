@@ -1,4 +1,3 @@
-
 macro_rules! impl_primitive_print {
     ($typ: ty, $n_cap: expr, $h_cap: expr) => {
         impl PrimitiveDisplay<$n_cap, $h_cap> for $typ {
@@ -29,22 +28,30 @@ macro_rules! impl_primitive_print {
                 for i in 0..$h_cap {
                     let mul = (i << 2);
                     let this_char = (self & (15 << mul)) >> mul;
-                    value[{$h_cap-1}-i] = HEX_INDICES[this_char as usize];
+                    value[{ $h_cap - 1 } - i] = HEX_INDICES[this_char as usize];
                 }
                 LenArray($h_cap, value)
             }
         }
-    }
+
+        impl<'a> crate::display::KernelDebug<'a> for $typ {
+            fn debug(&self, formatter: super::KernelFormatter<'a>) -> super::KernelFormatter<'a> {
+                formatter.debug_num(*self)
+            }
+        }
+    };
 }
 macro_rules! impl_signed_debug {
     ($($term: ty),*) => {
         $(
-            impl crate::display::KernelDebug for $term {
-                fn debug(&self, formatter: &mut super::KernelFormatter) {
+            impl<'a> crate::display::KernelDebug<'a> for $term {
+                fn debug(&self, formatter: super::KernelFormatter<'a>) -> super::KernelFormatter<'a> {
                     if self.is_negative() {
-                        formatter.debug_str("-");
+                        formatter.debug_str("-").debug_num(self.unsigned_abs())
+                    } else {
+                        formatter.debug_num(self.unsigned_abs())
                     }
-                    formatter.debug_num(self.unsigned_abs());
+                    
                 }
             }
         )*
@@ -62,7 +69,9 @@ pub trait PrimitiveDisplay<const LEN_CAP: usize, const HEX_LEN: usize> {
     fn as_hexadecimal_ascii(&self) -> LenArray<u8, HEX_LEN>;
 }
 
-const HEX_INDICES: &[u8] = &[b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F'];
+const HEX_INDICES: &[u8] = &[
+    b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'A', b'B', b'C', b'D', b'E', b'F',
+];
 
 impl_primitive_print!(u8, 3, 2);
 impl_primitive_print!(u16, 5, 4);
@@ -70,4 +79,3 @@ impl_primitive_print!(u32, 10, 8);
 impl_primitive_print!(u64, 20, 16);
 impl_primitive_print!(usize, 20, 16);
 impl_signed_debug!(i8, i16, i32, i64);
-

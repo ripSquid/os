@@ -1,9 +1,8 @@
-mod vga;
-mod generics;
 mod formatter;
+mod generics;
 pub mod macros;
 pub mod primitives;
-pub use vga::*;
-pub use generics::*;
+mod vga;
 pub use formatter::*;
-
+pub use generics::*;
+pub use vga::*;
