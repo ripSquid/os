@@ -90,6 +90,9 @@ impl VgaColorCombo {
     pub fn new(foreground: VgaColor, background: VgaColor) -> Self {
         VgaColorCombo((background as u8) << 4 | (foreground as u8))
     }
+    pub fn on_black(color: VgaColor) -> Self {
+        VgaColorCombo::new(color, VgaColor::Black)
+    }
 }
 
 #[derive(Clone, Copy)]
