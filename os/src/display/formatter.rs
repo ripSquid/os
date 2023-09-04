@@ -1,4 +1,4 @@
-use super::{primitives::PrimitiveDisplay, DefaultVgaWriter, VgaColorCombo, VgaColor};
+use super::{primitives::PrimitiveDisplay, DefaultVgaWriter, VgaColor, VgaColorCombo};
 
 impl<'a> KernelDebug<'a> for [u8] {
     fn debug(&self, formatter: KernelFormatter<'a>) -> KernelFormatter<'a> {
@@ -11,12 +11,20 @@ impl<'a> KernelDebug<'a> for str {
     }
 }
 
-impl<'a, T> KernelDebug<'a> for &[T] where T: KernelDebug<'a> {
-    fn debug(&self, mut formatter: KernelFormatter<'a>) -> KernelFormatter<'a> {
+impl<'a, T> KernelDebug<'a> for &[T]
+where
+    T: KernelDebug<'a>,
+{
+    fn debug(&self, formatter: KernelFormatter<'a>) -> KernelFormatter<'a> {
         let mut form = formatter;
-        for item in *self {
-            form = KernelDebug::debug(item, form);
+        if !self.is_empty() {
+            form = KernelDebug::debug(&self[0], form);
+            for item in &self[1..] {
+                form = form.debug_str(",");
+                form = KernelDebug::debug(item, form);
+            }
         }
+        
         form
     }
 }
@@ -30,6 +38,10 @@ pub struct KernelFormatter<'a> {
 impl<'a> KernelFormatter<'a> {
     pub fn debug_str(self, str: &str) -> Self {
         self.writer.write_str(str);
+        self
+    }
+    pub fn debug_bytes(self, bytes: &[u8]) -> Self {
+        self.writer.write_bytes(bytes);
         self
     }
     pub fn debug_hex<const CAP: usize, const LEN: usize>(
@@ -60,9 +72,11 @@ impl<'a> KernelFormatter<'a> {
         Self { writer }
     }
     pub fn debug_struct(self, struct_name: &str) -> StructFormatter<'a> {
-        self.writer.set_default_colors(VgaColorCombo::on_black(VgaColor::White));
+        self.writer
+            .set_default_colors(VgaColorCombo::on_black(VgaColor::White));
         self.writer.write_str(struct_name);
-        self.writer.set_default_colors(VgaColorCombo::on_black(VgaColor::Yellow));
+        self.writer
+            .set_default_colors(VgaColorCombo::on_black(VgaColor::Yellow));
         self.writer.write_str("{");
         StructFormatter::new(self)
     }
@@ -80,26 +94,41 @@ impl<'a> StructFormatter<'a> {
     }
     pub fn debug_field(mut self, name: &str, field: &impl KernelDebug<'a>) -> Self {
         if self.count != 0 {
-            self.formatter.writer.set_default_colors(VgaColorCombo::on_black(VgaColor::DarkGray));
+            self.formatter
+                .writer
+                .set_default_colors(VgaColorCombo::on_black(VgaColor::DarkGray));
             self.formatter.writer.write_str(",");
         }
-        self.formatter.writer.set_default_colors(VgaColorCombo::on_black(VgaColor::LightCyan));
+        self.formatter
+            .writer
+            .set_default_colors(VgaColorCombo::on_black(VgaColor::LightCyan));
         self.formatter.writer.write_str(name);
-        self.formatter.writer.set_default_colors(VgaColorCombo::on_black(VgaColor::LightGray));
+        self.formatter
+            .writer
+            .set_default_colors(VgaColorCombo::on_black(VgaColor::LightGray));
         self.formatter.writer.write_str(":");
         {
-            self.formatter.writer.set_default_colors(VgaColorCombo::on_black(VgaColor::Green));
-            self = Self { count: self.count + 1, formatter: field.debug(self.formatter) };
+            self.formatter
+                .writer
+                .set_default_colors(VgaColorCombo::on_black(VgaColor::Green));
+            self = Self {
+                count: self.count + 1,
+                formatter: field.debug(self.formatter),
+            };
         }
         self
     }
     pub fn finish(self) -> KernelFormatter<'a> {
-        self.formatter.writer.set_default_colors(VgaColorCombo::on_black(VgaColor::Yellow));
+        self.formatter
+            .writer
+            .set_default_colors(VgaColorCombo::on_black(VgaColor::Yellow));
         self.formatter.writer.write_str("} ");
         self.formatter
     }
     pub fn finish_none_exhaustive(self) -> KernelFormatter<'a> {
-        self.formatter.writer.set_default_colors(VgaColorCombo::on_black(VgaColor::Yellow));
+        self.formatter
+            .writer
+            .set_default_colors(VgaColorCombo::on_black(VgaColor::Yellow));
         self.formatter.writer.write_str(",.. } ");
         self.formatter
     }

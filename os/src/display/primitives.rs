@@ -51,7 +51,7 @@ macro_rules! impl_signed_debug {
                     } else {
                         formatter.debug_num(self.unsigned_abs())
                     }
-                    
+
                 }
             }
         )*

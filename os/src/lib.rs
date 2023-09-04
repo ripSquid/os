@@ -19,9 +19,10 @@ pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
     disable_cursor();
 
     print_str!("hello world");
-    let multiboot_info =
-        unsafe { multiboot_info::MultibootInfo::from_pointer(info as *const MultibootInfoHeader) }
-            .unwrap();
+    let multiboot_info = unsafe {
+        multiboot_info::MultibootInfoUnparsed::from_pointer(info as *const MultibootInfoHeader)
+    }
+    .unwrap();
     print_str!("12341234123412341234123412341234123412341234123412341234123412341234123412341234");
     debug!(" ", "bajs", "ja");
     multiboot_info.tags.memory_tag();

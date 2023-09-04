@@ -1,3 +1,8 @@
+mod elf;
+mod memory_map;
+use elf::*;
+use memory_map::*;
+
 use core::{mem::size_of, str::from_utf8};
 
 use crate::display::{
@@ -5,7 +10,7 @@ use crate::display::{
     KernelDebug,
 };
 
-pub struct MultibootInfo<'a> {
+pub struct MultibootInfoUnparsed<'a> {
     pub header: MultibootInfoHeader,
     pub tags: MultiBootTags<'a>,
 }
@@ -16,7 +21,7 @@ pub struct MultibootInfoHeader {
     total_size: u32,
     _reserved: u32,
 }
-impl<'a> MultibootInfo<'a> {
+impl<'a> MultibootInfoUnparsed<'a> {
     pub unsafe fn from_pointer(pointer: *const MultibootInfoHeader) -> Option<Self> {
         if pointer.align_offset(8) != 0 || pointer.is_null() {
             return None;
@@ -26,31 +31,13 @@ impl<'a> MultibootInfo<'a> {
         let tags =
             core::slice::from_raw_parts((raw + 24) as *const u8, (header.total_size - 24) as usize);
         let tags = MultiBootTags::from_slice(tags)?;
-        print_hex!(header.total_size);
-        Some(MultibootInfo { header, tags })
+        Some(MultibootInfoUnparsed { header, tags })
     }
     pub fn size(&self) -> usize {
         self.header.total_size as usize
     }
 }
-impl<'a> KernelDebug<'a> for MemoryMapTag<'a> {
-    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
-        formatter
-            .debug_struct("MemoryMapTag")
-            .debug_field("entries", &self.entries)
-            .finish()
-    }
-}
-impl<'a> KernelDebug<'a> for MemoryMapEntry {
-    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
-        formatter
-            .debug_struct("MemoryMapEntry")
-            .debug_field("base", &self.base_address)
-            .debug_field("len", &self.length)
-            .debug_field("type", &self.mem_type)
-            .finish()
-    }
-}
+
 pub struct MultiBootTags<'a>(&'a [u8]);
 
 impl<'a> MultiBootTags<'a> {
@@ -79,12 +66,13 @@ impl<'a> MultiBootTags<'a> {
                 TagType::MemoryMap => {
                     let info = unsafe { MemoryMapTag::from_ref(&tag_head) };
                     debug!(&info);
-                    return None;
-                    print_str!("memory!!!");
                 }
                 TagType::VbeInfo => print_str!("vbe"),
                 TagType::FramebufferInfo => print_str!("frame info"),
-                TagType::ElfSymbol => print_str!("elf symbol"),
+                TagType::ElfSymbol => {
+                    let info = unsafe { ElfSymbolTag::from_ref(&tag_head) };
+                    debug!(&info);
+                }
                 TagType::ApmTable => print_str!("apm"),
                 TagType::End => {
                     print_str!("end tag");
@@ -111,7 +99,7 @@ impl<'a> MultiBootTags<'a> {
 const MASK8: u32 = u32::MAX - 0x07;
 
 #[repr(u32)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum TagType {
     End = 0,
     BootCommandLine = 1,
@@ -131,39 +119,6 @@ enum TagType {
 pub struct TagHeader {
     tag_type: TagType,
     size: u32,
-}
-
-#[repr(C)]
-pub struct MemoryMapEntry {
-    pub base_address: u64,
-    pub length: u64,
-    pub mem_type: u32,
-    _reserved: u32,
-}
-
-#[repr(C)]
-pub struct MemoryMapHeader {
-    tag_type: TagType,
-    size: u32,
-    entry_size: u32,
-    entry_version: u32,
-}
-
-pub struct MemoryMapTag<'a> {
-    header: &'a MemoryMapHeader,
-    entries: &'a [MemoryMapEntry],
-}
-
-impl<'a> MemoryMapTag<'a> {
-    pub unsafe fn from_ref(head: &'a TagHeader) -> Self {
-        let pointer: *const MemoryMapHeader = transmute(head as *const TagHeader);
-        let header = &*pointer;
-        let entries_start: *const MemoryMapEntry = type_after(pointer);
-        let slice_len =
-            (header.size as usize - size_of::<MemoryMapHeader>()) / size_of::<MemoryMapEntry>();
-        let entries = core::slice::from_raw_parts(entries_start, slice_len);
-        Self { header, entries }
-    }
 }
 
 pub struct BootloaderNameTab<'a> {
