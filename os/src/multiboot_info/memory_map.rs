@@ -9,6 +9,19 @@ pub struct MemoryMapTag<'a> {
     entries: &'a [MemoryMapEntry],
 }
 
+#[derive(Clone, Copy)]
+pub struct BasicMemoryTag {
+    tag_type: TagType,
+    size: u32,
+    lower: u32,
+    higher: u32,
+}
+impl BasicMemoryTag {
+    pub unsafe fn from_ref(pointer: &TagHeader) -> Self {
+        *transmute(pointer)
+    }
+}
+
 #[repr(C)]
 pub struct MemoryMapHeader {
     tag_type: TagType,
