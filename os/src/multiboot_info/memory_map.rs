@@ -21,6 +21,15 @@ impl BasicMemoryTag {
         *transmute(pointer)
     }
 }
+impl<'a> KernelDebug<'a> for BasicMemoryTag {
+    fn debug(&self, formatter: KernelFormatter<'a>) -> KernelFormatter<'a> {
+        formatter
+            .debug_struct("BasicMemTag")
+            .debug_field("higher", &self.higher)
+            .debug_field("lower", &self.lower)
+            .finish()
+    }
+}
 
 #[repr(C)]
 pub struct MemoryMapHeader {

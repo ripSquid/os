@@ -62,11 +62,9 @@ impl<'a> MultiBootTags<'a> {
                 }
                 TagType::Module => print_str!("modul"),
                 TagType::BasicMemoryTag => {
-                    let info = unsafe {
-                        BasicMemoryTag::from_ref(&tag_head)
-                    };
+                    let info = unsafe { BasicMemoryTag::from_ref(&tag_head) };
                     debug!(&info);
-                },
+                }
                 TagType::BiosBootDevice => print_str!("boot device"),
                 TagType::MemoryMap => {
                     let info = unsafe { MemoryMapTag::from_ref(&tag_head) };
@@ -79,13 +77,12 @@ impl<'a> MultiBootTags<'a> {
                     debug!(&info);
                     let mut highest_addr = 0;
                     for section in info.entries.parsed.iter() {
-                        let end = section.sh_addr;
+                        let end = section.sh_addr + section.sh_size;
                         if end > highest_addr {
                             highest_addr = end;
                         }
                     }
                     print_hex!(highest_addr);
-
                 }
                 TagType::ApmTable => print_str!("apm"),
                 TagType::End => {

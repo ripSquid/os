@@ -1,4 +1,7 @@
-use core::{mem::{size_of, align_of}, slice::from_raw_parts};
+use core::{
+    mem::{align_of, size_of},
+    slice::from_raw_parts,
+};
 
 use crate::display::{KernelDebug, KernelFormatter};
 
@@ -8,10 +11,9 @@ use super::{transmute, type_after, TagHeader, TagType};
 pub struct ElfSymbolTagHeader {
     typ: TagType,
     size: u32,
-    number: u16,
-    entry_size: u16,
-    sh_index: u16,
-    _reserved: u16,
+    number: u32,
+    entry_size: u32,
+    sh_index: u32,
 }
 
 pub struct ElfSectionHeaders<'a> {
@@ -44,7 +46,6 @@ pub enum ElfSectionType {
     HIPROC = 0x7FFFFFFF,
 }
 
-
 #[repr(C)]
 pub struct ElfSectionHeader {
     pub sh_name: u32,
@@ -64,20 +65,16 @@ impl<'a> ElfSymbolTag<'a> {
         let header: &'a ElfSymbolTagHeader = &*transmute(pointer as *const TagHeader);
 
         assert!(header.typ == TagType::ElfSymbol);
-        
+
         let len = header.size as usize - size_of::<ElfSymbolTagHeader>();
 
         let sections_pointer = {
-            let pointer: *const u8 = type_after(pointer as *const TagHeader);
-            assert!(pointer as u64 % 8 == 0);
-            pointer.add(4)
+            let pointer: *const u8 = type_after(header as *const ElfSymbolTagHeader);
+            pointer
         };
-        
-        let raw = from_raw_parts(transmute(sections_pointer), len/4);
-        let parsed = from_raw_parts(
-            transmute(sections_pointer),
-            header.number as usize,
-        );
+
+        let raw = from_raw_parts(transmute(sections_pointer), len / 4);
+        let parsed = from_raw_parts(transmute(sections_pointer), header.number as usize);
         let entries = ElfSectionHeaders { raw, parsed };
         Self { header, entries }
     }
@@ -98,14 +95,14 @@ impl<'a> KernelDebug<'a> for ElfSectionHeader {
             .debug_struct("ElfSection")
             .debug_field("addr", &self.sh_addr)
             //.debug_field("name", &self.sh_name)
-            .debug_field("flags", &self.sh_flags)
+            //.debug_field("flags", &self.sh_flags)
             //.debug_field("align", &self.sh_addralign)
-            .debug_field("entsize", &self.sh_entsize)
+            //.debug_field("entsize", &self.sh_entsize)
             //.debug_field("info", &self.sh_info)
             //.debug_field("link", &self.sh_link)
-            .debug_field("offset", &self.sh_offset)
+            //.debug_field("offset", &self.sh_offset)
             .debug_field("size", &self.sh_size)
-            .debug_field("type", &self.sh_type)
+            //.debug_field("type", &self.sh_type)
             .finish()
     }
 }

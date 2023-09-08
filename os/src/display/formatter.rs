@@ -24,7 +24,7 @@ where
                 form = KernelDebug::debug(item, form);
             }
         }
-        
+
         form
     }
 }
@@ -73,7 +73,7 @@ impl<'a> KernelFormatter<'a> {
     }
     pub fn debug_struct(self, struct_name: &str) -> StructFormatter<'a> {
         self.writer
-            .set_default_colors(VgaColorCombo::on_black(VgaColor::White));
+            .set_default_colors(VgaColorCombo::new(VgaColor::Black, VgaColor::White));
         self.writer.write_str(struct_name);
         self.writer
             .set_default_colors(VgaColorCombo::on_black(VgaColor::Yellow));
