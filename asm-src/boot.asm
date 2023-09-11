@@ -2,6 +2,7 @@
 
 global start
 extern long_mode_start
+extern interrupt_wrapper
 
 section .text
 bits 32
@@ -158,4 +159,4 @@ p2_table:
 
 stack_bottom:
     resb STACKSIZE
-stack_top:
+stack_top: 

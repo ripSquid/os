@@ -53,9 +53,14 @@ long_mode_start:
     hlt
 
 interrupt_wrapper:
+  cli
   pushaq
   cld
+  ;mov rax, 0xb8000
+  mov byte [0xb8000], 0x0F
+  mov byte [0xb8001], 0x41
   extern keyboard_handler
   call keyboard_handler
+  sti
   popaq
-  iret
+  iretq

@@ -29,6 +29,9 @@ pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
     //print_hex!(info);
 
     hlt();
+    setup_interrupt(address);
+    
+    print_str!("Yes?");
     loop {}
 }
 
@@ -41,5 +44,6 @@ fn disable_cursor() {
 
 #[no_mangle]
 pub extern "C" fn keyboard_handler() {
-    print_str!("Interrupt");
+    print_str!("Interrupt Keyboard");
+    panic!();
 }
