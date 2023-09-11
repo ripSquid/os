@@ -21,14 +21,8 @@ pub extern "C" fn rust_start(address: u64) -> ! {
     disable_cursor();
 
     setup_interrupt(address);
-
-    print_str!("hello world");
     
-    print_hex!(address);
-    
-
-
-    hlt();
+    print_str!("Yes?");
     loop {}
 }
 
