@@ -8,14 +8,15 @@ section .text
 bits 32
 start:
     mov esp, stack_top 
-    call check_multiboot
-    call check_cpuid
-    call check_longmode
+    mov esi, ebx                    ;Moves the pointer to the multiboot info structure, not used until WAAAAY later.
+    call check_multiboot            ;check if proper magic value was returned by bootloader
+    call check_cpuid                ;check if cpu supports cpuid
+    call check_longmode             ;check if cpu supports long mode
 
-    call page_table_setup
-    call enable_paging
-    lgdt [gdt64.pointer]
-    jmp gdt64.code:long_mode_start
+    call page_table_setup           ;create identity page table
+    call enable_paging              ;enable paging
+    lgdt [gdt64.pointer]            ;load 10 byte size+address pointer into gdt register
+    jmp gdt64.code:long_mode_start 
 
 error:
     mov dword [0xb8000], 0x4f524f45
@@ -131,10 +132,12 @@ enable_paging:
 
 section .rodata
 gdt64:
-    dq 0
-.code: equ $ - gdt64
+    dq 0 ; Empty beginner segment into the GDT
+.code: equ $ - gdt64 ;kernel code segment in GDT (long mode)
     dq (1<<43) | (1<<44) | (1<<47) | (1<<53)
-.pointer:
+.k_data: equ $ - gdt64 ;kernel data segment in GDT (long mode + writable)
+    dq (1<<44) | (1<<47) | (1<<53) | (1<<41)
+.pointer: ;pointer to GDT
     dw $ - gdt64 - 1
     dq gdt64
 

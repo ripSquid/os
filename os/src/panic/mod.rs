@@ -1,9 +1,13 @@
+use crate::{
+    display::{DefaultVgaBuffer, DefaultVgaWriter, VgaColor, VgaColorCombo},
+    VGA_BUFFER_ADDRESS,
+};
 use core::panic::PanicInfo;
-use crate::{display::{VgaColorCombo, DefaultVgaBuffer, VgaColor, DefaultVgaWriter}, VGA_BUFFER_ADDRESS};
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    let mut writer = DefaultVgaWriter::new(unsafe {&mut *(VGA_BUFFER_ADDRESS as *mut DefaultVgaBuffer)});
+    let mut writer =
+        DefaultVgaWriter::new(unsafe { &mut *(VGA_BUFFER_ADDRESS as *mut DefaultVgaBuffer) });
     let error_color = VgaColorCombo::new(VgaColor::White, VgaColor::Red);
     writer.set_default_colors(error_color);
     writer.write_str("PANIC OCCURED:");
@@ -17,9 +21,7 @@ fn panic(info: &PanicInfo) -> ! {
         writer.next_line();
         writer.write_str("   column: ");
         writer.write_bytes(U32Str::from(location.column()).as_ref());
-        
     }
-
 
     loop {}
 }
