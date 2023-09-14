@@ -16,4 +16,5 @@ test = false
 
 [dependencies]
 x86_64 = "0.14.10"
+bitflags = "2.4.0"
 

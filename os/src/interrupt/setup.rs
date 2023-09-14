@@ -14,7 +14,7 @@ struct IDTDescriptor {
 type IDT = [GateDescriptor; 256];
 
 
-
+/*
 pub fn setup_interrupt(address: u64) {
 
     let tmp: SegmentSelector = SegmentSelector(0x80);
@@ -50,3 +50,4 @@ pub fn setup_interrupt(address: u64) {
     }
 
 }
+ */

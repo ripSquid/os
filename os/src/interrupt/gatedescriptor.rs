@@ -29,7 +29,7 @@ pub enum InterruptType {
 }
 
 #[derive(Clone, Copy, Default)]
-struct TypeAttribute(u8);
+pub struct TypeAttribute(u8);
 
 impl TypeAttribute {
         pub fn new(exists: bool, cpu_privilege: CPUPrivilege, interrupt_type: InterruptType) -> Self {

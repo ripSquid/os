@@ -1,13 +1,18 @@
 //this program can't use std since it's on bare metal
 #![no_std]
+#![feature(adt_const_params)]
 
-use crate::display::macros::*;
+#[macro_use]
+extern crate bitflags;
+
+use crate::{display::macros::*};
 use x86_64::instructions::{hlt, port::PortWriteOnly};
 pub mod display;
 mod panic;
 use crate::multiboot_info::MultibootInfoHeader;
 mod interrupt;
 mod multiboot_info;
+mod memory;
 
 // Address of the default 80x25 vga text mode buffer left to us after grub.
 pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
@@ -29,7 +34,7 @@ pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
     //print_hex!(info);
 
     hlt();
-    setup_interrupt(address);
+    //setup_interrupt(address);
     
     print_str!("Yes?");
     loop {}

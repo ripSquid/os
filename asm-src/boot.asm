@@ -104,6 +104,11 @@ page_table_setup:
     cmp ecx, 512
     jne .map_p2_table
 
+    ;map entry 511 of p4 table to itself, making a recursive page table.
+    mov eax, p4_table
+    or eax, 0b11 ; present + writable
+    mov [p4_table + (511 * 8)], eax
+
     ret
 
 enable_paging:
@@ -132,12 +137,12 @@ enable_paging:
 
 section .rodata
 gdt64:
-    dq 0 ; Empty beginner segment into the GDT
-.code: equ $ - gdt64 ;kernel code segment in GDT (long mode)
+    dq 0                                        ; Empty beginner segment into the GDT
+.code: equ $ - gdt64                            ; kernel code segment in GDT (long mode)
     dq (1<<43) | (1<<44) | (1<<47) | (1<<53)
-.k_data: equ $ - gdt64 ;kernel data segment in GDT (long mode + writable)
+.k_data: equ $ - gdt64                          ; kernel data segment in GDT (long mode + writable)
     dq (1<<44) | (1<<47) | (1<<53) | (1<<41)
-.pointer: ;pointer to GDT
+.pointer:                                       ; pointer to GDT
     dw $ - gdt64 - 1
     dq gdt64
 
