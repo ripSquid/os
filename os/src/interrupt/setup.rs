@@ -13,9 +13,7 @@ struct IDTDescriptor {
 
 type IDT = [GateDescriptor; 256];
 
-static mut idt: IDT = [GateDescriptor {offset_1: 0, selector: SegmentSelector(0), ist: 0, type_attributes: 0, offset_2: 0, offset_3: 0, zero: 0}; 256];
 
-static mut idtdescriptor: IDTDescriptor = IDTDescriptor {size: 0, offset: 0};
 
 pub fn setup_interrupt(address: u64) {
 

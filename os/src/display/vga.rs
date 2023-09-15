@@ -1,12 +1,10 @@
 use super::ScreenBuffer;
 
-
-
-
 const DEFAULT_VGA_BUFFER_WIDTH: usize = 80;
 const DEFAULT_VGA_BUFFER_HEIGHT: usize = 25;
 
-pub type DefaultVgaBuffer = ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
+pub type DefaultVgaBuffer =
+    ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
 pub struct DefaultVgaWriter {
     buffer: &'static mut DefaultVgaBuffer,
     position: (usize, usize),
@@ -14,9 +12,7 @@ pub struct DefaultVgaWriter {
 }
 
 impl DefaultVgaWriter {
-    pub fn new(
-        buffer: &'static mut DefaultVgaBuffer
-    ) -> Self {
+    pub fn new(buffer: &'static mut DefaultVgaBuffer) -> Self {
         Self {
             buffer,
             position: (0, 0),
@@ -37,17 +33,15 @@ impl DefaultVgaWriter {
         }
     }
     pub fn write_byte(&mut self, byte: u8) {
-        self.write_char(VgaChar { char: byte, color: self.fallback_color })
+        self.write_char(VgaChar {
+            char: byte,
+            color: self.fallback_color,
+        })
     }
     pub fn next_line(&mut self) {
-        let buffer_height = self.buffer.height();
         let (col, row) = &mut self.position;
         *col = 0;
-        if *row < buffer_height {
-            *row += 1
-        } else {
-            *row = 0;
-        }
+        *row += 1
     }
     pub fn write_char(&mut self, char: VgaChar) {
         match char.char {
@@ -58,6 +52,9 @@ impl DefaultVgaWriter {
                 if self.position.0 >= self.buffer.width() {
                     self.next_line();
                 }
+                if self.position.1 >= self.buffer.height() {
+                    self.prepare_print();
+                }
                 let (col, row) = self.position;
                 self.buffer.chars[row][col] = char;
                 self.position.0 += 1;
@@ -65,10 +62,10 @@ impl DefaultVgaWriter {
         }
     }
     pub fn prepare_print(&mut self) {
-        let last_line = self.buffer.height()-1;
+        let last_line = self.buffer.height() - 1;
         self.position = (0, last_line);
         for i in 1..=last_line {
-            self.buffer.chars[i-1] = self.buffer.chars[i]
+            self.buffer.chars[i - 1] = self.buffer.chars[i]
         }
         self.buffer.chars[last_line] = [VgaChar::BLANK; 80]
     }
@@ -92,6 +89,9 @@ pub struct VgaColorCombo(u8);
 impl VgaColorCombo {
     pub fn new(foreground: VgaColor, background: VgaColor) -> Self {
         VgaColorCombo((background as u8) << 4 | (foreground as u8))
+    }
+    pub fn on_black(color: VgaColor) -> Self {
+        VgaColorCombo::new(color, VgaColor::Black)
     }
 }
 
