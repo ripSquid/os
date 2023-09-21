@@ -1,3 +1,5 @@
+use core::ops::{Deref, DerefMut};
+
 use x86_64::VirtAddr;
 
 use crate::memory::{
@@ -7,17 +9,65 @@ use crate::memory::{
 
 use super::{
     page::MemoryPage,
-    table::{EntryFlags, Level4Entry, PageTable},
+    table::{EntryFlags, Level4Entry, PageTable}, temporary::TemporaryPage,
 };
 
 pub const P4_TABLE: *mut PageTable<Level4Entry> = 0xffffffff_fffff000 as *mut _;
-pub struct PageTableMaster<'a> {
+pub struct Mapper<'a> {
     p4: &'a mut PageTable<Level4Entry>,
 }
+
+pub struct InactivePageTable(MemoryFrame);
+
+impl InactivePageTable {
+    pub fn new(frame: MemoryFrame, active_table: &mut Mapper, temp_page: &mut TemporaryPage) -> Self {
+        {
+            let table = temp_page.map_table_frame(frame.clone(), active_table);
+            table.zero_out();
+            table[511].set(frame.clone(), EntryFlags::PRESENT | EntryFlags::WRITABLE);
+        }
+        temp_page.unmap(active_table);
+        Self(frame)
+    }
+}
+
+pub struct PageTableMaster<'a> {
+    page_table: Mapper<'a>,
+}
+impl<'a> Deref for PageTableMaster<'a> {
+    type Target = Mapper<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.page_table
+    }
+}
+impl<'a> DerefMut for PageTableMaster<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.page_table
+    }
+}
+
 impl<'a> PageTableMaster<'a> {
+    pub fn with<F: FnOnce(&mut Mapper)>(&mut self, table: &mut InactivePageTable, temp_page: &mut TemporaryPage, f: F) {
+        {
+            let backup = MemoryFrame::inside_address(x86_64::registers::control::Cr3::read_raw().0.start_address().as_u64());
+            let p4_table = temp_page.map_table_frame(backup.clone(), self);
+            self.p4_mut()[511].set(table.0.clone(), EntryFlags::PRESENT | EntryFlags::WRITABLE);
+            x86_64::instructions::tlb::flush_all();
+            f(&mut self.page_table);
+
+            p4_table[511].set(backup, EntryFlags::PRESENT | EntryFlags::WRITABLE);
+            x86_64::instructions::tlb::flush_all();
+        } 
+        temp_page.unmap(self);
+    }
+}
+
+impl<'a> Mapper<'a> {
     pub unsafe fn new() -> Self {
         Self { p4: &mut *P4_TABLE }
     }
+
     fn p4(&self) -> &PageTable<Level4Entry> {
         &self.p4
     }

@@ -9,6 +9,7 @@ use super::{
 };
 
 //A Physical area of memory where usize is offset by 0x1000
+#[derive(Clone, Copy)]
 pub struct MemoryFrame(usize);
 
 impl MemoryFrame {

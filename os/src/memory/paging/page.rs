@@ -1,6 +1,7 @@
 use crate::memory::{VirtualAddress, PAGE_SIZE_4K};
 
 //A Virtual area of memory that with maps to a frame.
+#[derive(Clone, Copy)]
 pub struct MemoryPage(pub(super) usize);
 
 impl MemoryPage {
