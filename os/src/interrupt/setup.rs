@@ -21,7 +21,7 @@ pub fn setup_interrupt(address: u64) {
 
     // TODO: TRANSLATE ADDRESS INCASE PAGING IS USED
     unsafe {
-        for i in 0..255 {
+        for i in 0..=255 {
             idt[i] = GateDescriptor::new(address, true, CPUPrivilege::KERNEL, InterruptType::Trap, SegmentSelector(0), 0);
         }
         
