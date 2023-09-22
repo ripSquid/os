@@ -1,5 +1,5 @@
-mod elf;
-mod memory_map;
+pub mod elf;
+pub mod memory_map;
 use elf::*;
 use memory_map::*;
 

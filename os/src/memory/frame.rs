@@ -27,3 +27,47 @@ pub trait FrameAllocator {
     fn allocate_frame(&mut self) -> Option<MemoryFrame>;
     fn deallocate_frame(&mut self, frame: MemoryFrame);
 }
+
+
+impl Iterator for FrameIter {
+    type Item = MemoryFrame;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.frame.0 <= self.end {
+            self.frame.0 += 1;
+            Some(MemoryFrame(self.frame.0-1))
+        } else {
+            None
+        }
+    }
+    
+}
+pub struct FrameIter {
+    frame: MemoryFrame,
+    start: usize,
+    end: usize,
+}
+
+pub struct FrameRangeInclusive {
+    start_frame: usize,
+    end_frame: usize,
+}
+
+impl FrameRangeInclusive {
+    pub fn contains(&self, frame: &MemoryFrame) -> bool {
+        (self.start_frame..=self.end_frame).contains(&frame.0)
+    }
+    pub fn new(start: MemoryFrame, end: MemoryFrame) -> Self {
+        Self { start_frame: start.0, end_frame: end.0 }
+    }
+}
+
+impl IntoIterator for FrameRangeInclusive {
+    type Item = MemoryFrame;
+
+    type IntoIter = FrameIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        FrameIter {frame: MemoryFrame(self.start_frame), start: self.start_frame, end: self.end_frame}
+    }
+}
