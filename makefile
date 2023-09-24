@@ -10,7 +10,9 @@ run-qemu:
   -drive format=raw,media=cdrom,file=build/os-gymnasie.iso    \
   -monitor stdio                                  \
   -smp 1                                         \
-  -vga std
+  -vga std \
+  -d int \
+
 
 arch ?= gymnasie
 kernel := build/kernel-$(arch).bin
@@ -46,10 +48,10 @@ $(iso): $(kernel) $(grub_cfg)
 	
 
 $(kernel): $(assembly_object_files) $(linker_script)
-	@cd ./os; cargo build --target $(target).json --release
+	@cd ./os; cargo build --target $(target).json
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 # compile assembly files
 build/asm/%.o: asm-src/%.asm
 	@mkdir -p $(shell dirname $@)
-	@nasm -felf64 $< -o $@
+	@nasm -g -felf64 $< -o $@

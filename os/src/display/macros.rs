@@ -43,7 +43,7 @@ macro_rules! print_num {
         });
         writer.prepare_print();
         writer.write_bytes(
-            crate::display::primitives::PrimitiveDisplay::as_numerical_ascii(&$term).as_ref(),
+            crate::display::primitives::PrimitiveDisplay::as_numeric_ascii(&$term).as_ref(),
         );
     }};
 }

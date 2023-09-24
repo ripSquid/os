@@ -1,9 +1,13 @@
 //this program can't use std since it's on bare metal
 #![no_std]
 #![feature(adt_const_params)]
+#![feature(abi_x86_interrupt)]
+#![feature(core_intrinsics)]
 
 #[macro_use]
 extern crate bitflags;
+
+use core::arch::asm;
 
 use crate::display::macros::*;
 use x86_64::instructions::{hlt, port::PortWriteOnly};
@@ -13,6 +17,7 @@ use crate::multiboot_info::MultibootInfoHeader;
 mod interrupt;
 mod memory;
 mod multiboot_info;
+use crate::interrupt::setup::{self, setup_interrupt};
 
 // Address of the default 80x25 vga text mode buffer left to us after grub.
 pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
@@ -28,16 +33,19 @@ pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
         multiboot_info::MultibootInfoUnparsed::from_pointer(info as *const MultibootInfoHeader)
     }
     .unwrap();
-    multiboot_info.tags.memory_tag();
+    //multiboot_info.tags.memory_tag();
 
     //print_hex!(address);
     //print_hex!(info);
 
-    hlt();
-    //setup_interrupt(address);
+    print_hex!(0xE as u32);
 
-    print_str!("Yes?");
-    loop {}
+    //hlt();
+    setup_interrupt(address);
+
+    //print_str!("Yes?");
+    hlt();
+    loop { unsafe {asm!("nop");} }
 }
 
 fn disable_cursor() {

@@ -1,3 +1,5 @@
+use crate::display::macros::{print_hex, print_str};
+
 #[repr(C, packed)]
 #[derive(Copy, Clone, Default)]
 pub struct SegmentSelector(pub u16);
@@ -29,7 +31,7 @@ pub enum InterruptType {
 }
 
 #[derive(Clone, Copy, Default)]
-pub struct TypeAttribute(u8);
+pub struct TypeAttribute(pub u8);
 
 impl TypeAttribute {
         pub fn new(exists: bool, cpu_privilege: CPUPrivilege, interrupt_type: InterruptType) -> Self {
@@ -49,9 +51,12 @@ impl GateDescriptor {
         }
 
         pub fn set_address(mut self, address: u64) -> Self {
+                //print_str!("supposed to be");
+                //print_hex!(address);
                 self.offset_1 = address as u16;
                 self.offset_2 = (address >> 16) as u16;
                 self.offset_3 = (address >> 32) as u32;
+                //print_hex!((self.offset_3 as u64) << 32 | (self.offset_2 as u64) << 16 | (self.offset_1 as u64));
                 return self;
         }
 }
