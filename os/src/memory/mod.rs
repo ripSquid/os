@@ -1,10 +1,10 @@
-use core::alloc::{GlobalAlloc, Layout};
+use core::{alloc::{GlobalAlloc, Layout}, iter::Filter};
 
 
-use crate::multiboot_info::memory_map::MemoryMapEntry;
+use crate::multiboot_info::memory_map::{MemoryMapEntry, MemoryType};
 
 use self::frame::{MemoryFrame, FrameRangeInclusive, FrameAllocator};
-mod frame;
+pub mod frame;
 mod paging;
 
 type MemoryAddress = u64;
@@ -38,38 +38,28 @@ unsafe impl GlobalAlloc for GymnasieAllocator {
 }
 
 
-struct ElfTrustAllocator {
+pub struct ElfTrustAllocator {
     next_free_frame: MemoryFrame,
-    memory_areas: Option<&'static MemoryMapEntry>,
+    active_area: Option<&'static MemoryMapEntry>,
     areas: MemoryAreaIter,
     multiboot: FrameRangeInclusive,
     kernel: FrameRangeInclusive,
 
 }
-struct MemoryAreaIter {
-    areas: &'static [MemoryMapEntry],
-    index: usize,
+#[derive(Clone)]
+pub struct MemoryAreaIter {
+    itera: Filter<core::slice::Iter<'static, MemoryMapEntry>, &'static dyn Fn(&&MemoryMapEntry) -> bool>
 }
 impl MemoryAreaIter {
     pub fn new(slice: &'static [MemoryMapEntry]) -> Self {
-        Self { areas: slice, index: 0 }
+        Self { itera: slice.iter().filter(&(|i| i.mem_type == MemoryType::Available)) }
     }
 }
 impl Iterator for MemoryAreaIter {
     type Item = &'static MemoryMapEntry;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.index += 1;
-        self.areas.get(self.index-1)
+        self.itera.next()
     }
 }
 
-impl FrameAllocator for ElfTrustAllocator {
-    fn allocate_frame(&mut self) -> Option<MemoryFrame> {
-        todo!()
-    }
-
-    fn deallocate_frame(&mut self, frame: MemoryFrame) {
-        todo!()
-    }
-}

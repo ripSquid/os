@@ -10,6 +10,9 @@ extern crate bitflags;
 use core::arch::asm;
 
 use crate::display::macros::*;
+use memory::ElfTrustAllocator;
+use memory::frame::FrameAllocator;
+use multiboot_info::{MultibootInfoUnparsed, TagType, MultiBootTag};
 use x86_64::instructions::{hlt, port::PortWriteOnly};
 pub mod display;
 mod panic;
@@ -33,16 +36,13 @@ pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
         multiboot_info::MultibootInfoUnparsed::from_pointer(info as *const MultibootInfoHeader)
     }
     .unwrap();
-    //multiboot_info.tags.memory_tag();
-
-    //print_hex!(address);
-    //print_hex!(info);
 
     print_hex!(0xE as u32);
 
     //hlt();
-    setup_interrupt(address);
-
+    //setup_interrupt(address);
+    //debug!(&multiboot_info);
+    remap_everything(multiboot_info);
     //print_str!("Yes?");
     hlt();
     loop { unsafe {asm!("nop");} }
@@ -60,3 +60,21 @@ pub extern "C" fn keyboard_handler() {
     print_str!("Interrupt Keyboard");
     panic!();
 }
+
+
+fn remap_everything(info: MultibootInfoUnparsed) {
+    let MultiBootTag::MemoryMap(memory_tag) = info.tag_iter().find(|tag| tag.tag_type() == TagType::MemoryMap).unwrap() else {panic!()};
+    let MultiBootTag::ElfSymbols(elf_tag) = info.tag_iter().find(|tag| tag.tag_type() == TagType::ElfSymbol).unwrap() else {panic!()};
+    let multiboot = unsafe {info.frame_range()};
+    let kernel = unsafe { elf_tag.frame_range()};
+    for area in memory_tag.area_iter() {
+        debug!(area);
+    }
+    let mut allocator = ElfTrustAllocator::new(kernel, multiboot, memory_tag.area_iter());
+    for i in 0u32..10u32 {
+        print_num!(i);
+        let frame = allocator.allocate_frame();
+        debug!(&frame);
+    }
+}
+

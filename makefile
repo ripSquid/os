@@ -48,7 +48,7 @@ $(iso): $(kernel) $(grub_cfg)
 	
 
 $(kernel): $(assembly_object_files) $(linker_script)
-	@cd ./os; cargo build --target $(target).json
+	@cd ./os; cargo build --target $(target).json --release
 	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
 
 # compile assembly files

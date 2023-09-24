@@ -1,15 +1,17 @@
 use x86_64::{structures::paging::frame, VirtAddr};
 
+use crate::display::KernelDebug;
+
 use super::{
     paging::{
         page::MemoryPage,
         table::{EntryFlags, Level4Entry, PageTable},
     },
-    MemoryAddress, PhysicalAddress, VirtualAddress, PAGE_SIZE_4K,
+    MemoryAddress, PhysicalAddress, VirtualAddress, PAGE_SIZE_4K, ElfTrustAllocator, MemoryAreaIter,
 };
 
 //A Physical area of memory where usize is offset by 0x1000
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MemoryFrame(usize);
 
 impl MemoryFrame {
@@ -28,6 +30,19 @@ pub trait FrameAllocator {
     fn deallocate_frame(&mut self, frame: MemoryFrame);
 }
 
+impl<'a> KernelDebug<'a> for MemoryFrame {
+    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
+        formatter.debug_struct("frame:").debug_field("", &self.0).finish()
+    }
+}
+impl<'a, T: KernelDebug<'a>> KernelDebug<'a> for Option<T> {
+    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
+        match self {
+            Some(value) => value.debug(formatter.debug_str("Some(")).debug_str(")"),
+            None => formatter.debug_str("None"),
+        }
+    }
+}
 
 impl Iterator for FrameIter {
     type Item = MemoryFrame;
@@ -69,5 +84,54 @@ impl IntoIterator for FrameRangeInclusive {
 
     fn into_iter(self) -> Self::IntoIter {
         FrameIter {frame: MemoryFrame(self.start_frame), start: self.start_frame, end: self.end_frame}
+    }
+}
+
+impl FrameAllocator for ElfTrustAllocator {
+    fn allocate_frame(&mut self) -> Option<MemoryFrame> {
+        let Some(area) = self.active_area else {return None};
+
+        let frame = self.next_free_frame.clone();
+        let calf = {
+            let addr = area.base_address + area.length - 1;
+            MemoryFrame::inside_address(addr)
+        };
+        if frame > calf {
+            self.choose_next_area();
+        } else if self.kernel.contains(&frame) {
+            self.next_free_frame = MemoryFrame(self.kernel.end_frame+1);
+        } else if self.multiboot.contains(&frame) {
+            self.next_free_frame = MemoryFrame(self.multiboot.end_frame+1);
+        } else {
+            self.next_free_frame.0 += 1;
+            return Some(frame);
+        }
+        None
+    }
+
+    fn deallocate_frame(&mut self, frame: MemoryFrame) {
+        unimplemented!("the ElfTrustAllocator Doesn't keep track of allocated frames!")
+    }
+}
+impl ElfTrustAllocator {
+    fn choose_next_area(&mut self) {
+        self.active_area = self.areas.clone().filter(|area| {
+            let address = area.base_address + area.length - 1;
+            MemoryFrame::inside_address(address) >= self.next_free_frame
+        }).min_by_key(|area| area.base_address);
+
+        if let Some(area) = self.active_area {
+            let start_frame = MemoryFrame::inside_address(area.base_address);
+            if self.next_free_frame < start_frame {
+                self.next_free_frame = start_frame;
+            }
+        }
+    }
+    pub fn new(kernel: FrameRangeInclusive, multiboot: FrameRangeInclusive, areas: MemoryAreaIter) -> Self {
+        let mut ourself = Self { next_free_frame: MemoryFrame::inside_address(0), 
+            active_area: None, areas, multiboot, kernel };
+            ourself.choose_next_area();
+            ourself
+
     }
 }

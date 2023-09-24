@@ -3,7 +3,7 @@ use core::{
     slice::from_raw_parts,
 };
 
-use crate::display::{KernelDebug, KernelFormatter};
+use crate::{display::{KernelDebug, KernelFormatter}, memory::frame::{FrameRangeInclusive, MemoryFrame}};
 
 use super::{transmute, type_after, TagHeader, TagType};
 
@@ -21,9 +21,9 @@ pub struct ElfSectionHeaders<'a> {
     pub parsed: &'a [ElfSectionHeader],
 }
 
-pub struct ElfSymbolTag<'a> {
-    pub header: &'a ElfSymbolTagHeader,
-    pub entries: ElfSectionHeaders<'a>,
+pub struct ElfSymbolTag {
+    pub header: &'static ElfSymbolTagHeader,
+    pub entries: ElfSectionHeaders<'static>,
 }
 
 #[repr(u32)]
@@ -60,9 +60,9 @@ pub struct ElfSectionHeader {
     pub sh_entsize: u64,
 }
 
-impl<'a> ElfSymbolTag<'a> {
-    pub unsafe fn from_ref(pointer: &'a TagHeader) -> Self {
-        let header: &'a ElfSymbolTagHeader = &*transmute(pointer as *const TagHeader);
+impl ElfSymbolTag {
+    pub unsafe fn from_ref(pointer: &'static TagHeader) -> Self {
+        let header: &ElfSymbolTagHeader = &*transmute(pointer as *const TagHeader);
 
         assert!(header.typ == TagType::ElfSymbol);
 
@@ -78,9 +78,18 @@ impl<'a> ElfSymbolTag<'a> {
         let entries = ElfSectionHeaders { raw, parsed };
         Self { header, entries }
     }
+    pub unsafe fn frame_range(&self) -> FrameRangeInclusive {
+        let mut start = 0;
+        let mut end = 0;
+        for entry in self.entries.parsed.iter() {
+            start = start.min(entry.sh_addr);
+            end = end.max(entry.sh_addr + entry.sh_size - 1);
+        }
+        FrameRangeInclusive::new(MemoryFrame::inside_address(start), MemoryFrame::inside_address(end))
+    }
 }
 
-impl<'a> KernelDebug<'a> for ElfSymbolTag<'a> {
+impl<'a> KernelDebug<'a> for ElfSymbolTag {
     fn debug(&self, formatter: KernelFormatter<'a>) -> KernelFormatter<'a> {
         formatter
             .debug_struct("ElfSymbolsTag")

@@ -5,23 +5,26 @@ use memory_map::*;
 
 use core::{mem::size_of, str::from_utf8};
 
-use crate::display::{
-    macros::{debug, print_hex, print_str},
-    KernelDebug,
-};
+use crate::{memory::frame::{FrameRangeInclusive, MemoryFrame}, display::{macros::{print_str, print_hex}, KernelDebug}};
 
-pub struct MultibootInfoUnparsed<'a> {
+#[derive(Clone, Copy)]
+pub struct MultibootInfoUnparsed {
     pub header: MultibootInfoHeader,
-    pub tags: MultiBootTags<'a>,
+    pub tags: MultiBootTags,
+    pointer: u64,
 }
-
+impl<'a> KernelDebug<'a> for MultibootInfoUnparsed {
+    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
+        formatter.debug_bytes(self.tags.bytes())
+    }
+}
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct MultibootInfoHeader {
     total_size: u32,
     _reserved: u32,
 }
-impl<'a> MultibootInfoUnparsed<'a> {
+impl MultibootInfoUnparsed {
     pub unsafe fn from_pointer(pointer: *const MultibootInfoHeader) -> Option<Self> {
         if pointer.align_offset(8) != 0 || pointer.is_null() {
             return None;
@@ -31,87 +34,125 @@ impl<'a> MultibootInfoUnparsed<'a> {
         let tags =
             core::slice::from_raw_parts((raw + 24) as *const u8, (header.total_size - 24) as usize);
         let tags = MultiBootTags::from_slice(tags)?;
-        Some(MultibootInfoUnparsed { header, tags })
+        Some(MultibootInfoUnparsed { header, tags, pointer: pointer as u64})
     }
-    pub fn size(&self) -> usize {
+    fn size(&self) -> usize {
         self.header.total_size as usize
+    }
+    pub fn tag_iter(&self) -> MultiBootTagIter {
+        MultiBootTagIter::new(*self)
+    } 
+    pub unsafe fn frame_range(&self) -> FrameRangeInclusive {
+        FrameRangeInclusive::new(MemoryFrame::inside_address(self.pointer), MemoryFrame::inside_address(self.pointer+(self.header.total_size as u64)-1))
     }
 }
 
-pub struct MultiBootTags<'a>(&'a [u8]);
-
-impl<'a> MultiBootTags<'a> {
-    pub fn bytes(&self) -> &[u8] {
-        self.0
+impl<'a> KernelDebug<'a> for MultiBootTag {
+    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
+        match self {
+            MultiBootTag::MemoryMap(map) => map.debug(formatter),
+            MultiBootTag::BasicMem(_) => todo!(),
+            MultiBootTag::BootoaderName(map) => formatter.debug_str(map.as_str()),
+            MultiBootTag::ElfSymbols(map) => map.debug(formatter),
+            MultiBootTag::End => formatter.debug_str("end"),
+        }
     }
-    pub fn from_slice(slice: &'a [u8]) -> Option<Self> {
-        Some(Self(slice))
+}
+pub struct MultiBootTagIter {
+    byte_index: usize,
+    tags: MultibootInfoUnparsed,
+}
+impl MultiBootTagIter {
+    pub fn new(info: MultibootInfoUnparsed) -> Self {
+        Self { byte_index: 0, tags: info }
     }
-    pub fn memory_tag(&self) -> Option<&'a [MemoryMapEntry]> {
-        let mut searching = true;
-        let mut counter = 0;
+}
+impl Iterator for MultiBootTagIter {
+    type Item = MultiBootTag;
 
-        while searching {
-            let tag_head: &TagHeader = unsafe { &*transmute(&self.0[counter] as *const u8) };
+    fn next(&mut self) -> Option<Self::Item> {
+        
+        while self.byte_index < self.tags.size() {
+            let tag_head: &TagHeader = unsafe { &*transmute((self.tags.pointer + 24 + self.byte_index as u64) as *const u8) };
+            self.byte_index += ((tag_head.size + 7) & MASK8) as usize;
             match tag_head.tag_type {
-                TagType::BootCommandLine => print_str!("command line"),
                 TagType::BootoaderName => {
-                    let tag = unsafe { BootloaderNameTab::from_ref(&tag_head) };
-                    print_str!(tag.name);
-                    print_str!("name");
+                    let info = unsafe { BootloaderNameTag::from_ref(&tag_head) };
+                    return Some(MultiBootTag::BootoaderName(info))
                 }
-                TagType::Module => print_str!("modul"),
                 TagType::BasicMemoryTag => {
                     let info = unsafe { BasicMemoryTag::from_ref(&tag_head) };
-                    debug!(&info);
+                    return Some(MultiBootTag::BasicMem(info));
                 }
-                TagType::BiosBootDevice => print_str!("boot device"),
                 TagType::MemoryMap => {
                     let info = unsafe { MemoryMapTag::from_ref(&tag_head) };
-                    debug!(&info);
+                    return Some(MultiBootTag::MemoryMap(info));
                 }
-                TagType::VbeInfo => print_str!("vbe"),
-                TagType::FramebufferInfo => print_str!("frame info"),
                 TagType::ElfSymbol => {
                     let info = unsafe { ElfSymbolTag::from_ref(&tag_head) };
-                    debug!(&info);
-                    let mut highest_addr = 0;
-                    for section in info.entries.parsed.iter() {
-                        let end = section.sh_addr + section.sh_size;
-                        if end > highest_addr {
-                            highest_addr = end;
-                        }
-                    }
-                    print_hex!(highest_addr);
+                    return Some(MultiBootTag::ElfSymbols(info));
                 }
-                TagType::ApmTable => print_str!("apm"),
                 TagType::End => {
-                    print_str!("end tag");
                     if tag_head.size == 8 {
-                        return None;
+                        return Some(MultiBootTag::End);
                     } else {
-                        print_str!("SOMETHIGN IS WROGN WITH END TAG!");
                         panic!();
                     }
                 }
-                _ => print_str!("PISS AND SHIT AND FUCK"),
+                TagType::FramebufferInfo => (),
+                TagType::BootCommandLine => (),
+                TagType::BiosBootDevice => (),
+                TagType::ApmTable => (),
+                TagType::VbeInfo => (),
+                TagType::Module => (),
+                _ => panic!(),
             }
-
             //rounds upward to nearest multiple of 8
-            let moving = ((tag_head.size + 7) & MASK8) as usize;
-            counter += moving;
+            
         }
-
         None
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct MultiBootTags(&'static [u8]);
+
+pub enum MultiBootTag {
+    MemoryMap(MemoryMapTag),
+    BasicMem(BasicMemoryTag),
+    BootoaderName(BootloaderNameTag),
+    ElfSymbols(ElfSymbolTag),
+    End,
+
+}
+impl MultiBootTag {
+    pub fn tag_type(&self) -> TagType {
+        match self {
+            MultiBootTag::MemoryMap(_) => TagType::MemoryMap,
+            MultiBootTag::BootoaderName(_) => TagType::BootoaderName,
+            MultiBootTag::ElfSymbols(_) => TagType::ElfSymbol,
+            MultiBootTag::BasicMem(_) => TagType::BasicMemoryTag,
+            MultiBootTag::End => TagType::End,
+        }
+    }
+}
+
+impl MultiBootTags {
+    pub fn bytes(&self) -> &[u8] {
+        self.0
+    }
+    pub fn from_slice(slice: &'static [u8]) -> Option<Self> {
+        Some(Self(slice))
     }
 }
 
 //provides a mask that removes the last 3 bits of any u32 (rounding it to nearest multiple of 8)
 const MASK8: u32 = u32::MAX - 0x07;
 
+#[allow(dead_code)]
 #[repr(u32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum TagType {
+pub enum TagType {
     End = 0,
     BootCommandLine = 1,
     BootoaderName = 2,
@@ -132,17 +173,20 @@ pub struct TagHeader {
     size: u32,
 }
 
-pub struct BootloaderNameTab<'a> {
-    head: &'a TagHeader,
-    name: &'a str,
+pub struct BootloaderNameTag {
+    head: &'static TagHeader,
+    name: &'static str,
 }
-impl<'a> BootloaderNameTab<'a> {
-    pub unsafe fn from_ref(head: &'a TagHeader) -> Self {
+impl BootloaderNameTag {
+    pub unsafe fn from_ref(head: &'static TagHeader) -> Self {
         let pointer: *const u8 = type_after(head as *const TagHeader);
         let sting_len = head.size as usize - size_of::<TagHeader>() - 1;
         let string_bytes = core::slice::from_raw_parts(pointer as *const u8, sting_len);
         let name = from_utf8(string_bytes).unwrap();
         Self { head, name }
+    }
+    pub fn as_str(&self) -> &'static str {
+        self.name
     }
 }
 

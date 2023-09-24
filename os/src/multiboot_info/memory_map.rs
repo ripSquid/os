@@ -1,12 +1,12 @@
 use core::mem::size_of;
 
-use crate::display::{KernelDebug, KernelFormatter};
+use crate::{display::{KernelDebug, KernelFormatter}, memory::MemoryAreaIter};
 
 use super::{transmute, type_after, TagHeader, TagType};
 
-pub struct MemoryMapTag<'a> {
-    header: &'a MemoryMapHeader,
-    entries: &'a [MemoryMapEntry],
+pub struct MemoryMapTag {
+    header: &'static MemoryMapHeader,
+    entries: &'static [MemoryMapEntry],
 }
 
 #[derive(Clone, Copy)]
@@ -47,7 +47,9 @@ pub struct MemoryMapEntry {
     _reserved: u32,
 }
 
+#[allow(dead_code)]
 #[repr(u32)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum MemoryType {
     Available = 1,
     Unknown = 2,
@@ -56,8 +58,8 @@ pub enum MemoryType {
     Defective = 5,
 }
 
-impl<'a> MemoryMapTag<'a> {
-    pub unsafe fn from_ref(head: &'a TagHeader) -> Self {
+impl MemoryMapTag {
+    pub unsafe fn from_ref(head: &TagHeader) -> Self {
         let pointer: *const MemoryMapHeader = transmute(head as *const TagHeader);
         let header = &*pointer;
         let entries_start: *const MemoryMapEntry = type_after(pointer);
@@ -66,8 +68,11 @@ impl<'a> MemoryMapTag<'a> {
         let entries = core::slice::from_raw_parts(entries_start, slice_len);
         Self { header, entries }
     }
+    pub fn area_iter(&self) -> MemoryAreaIter {
+        MemoryAreaIter::new(self.entries)
+    }
 }
-impl<'a> KernelDebug<'a> for MemoryMapTag<'a> {
+impl<'a> KernelDebug<'a> for MemoryMapTag {
     fn debug(&self, formatter: KernelFormatter<'a>) -> KernelFormatter<'a> {
         formatter
             .debug_struct("MemoryMapTag")
