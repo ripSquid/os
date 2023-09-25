@@ -1,6 +1,6 @@
 use x86_64::{structures::paging::frame, VirtAddr};
 
-use crate::display::KernelDebug;
+use crate::display::{KernelDebug, macros::{print_str, debug}};
 
 use super::{
     paging::{
@@ -76,7 +76,11 @@ impl FrameRangeInclusive {
         Self { start_frame: start.0, end_frame: end.0 }
     }
 }
-
+impl<'a> KernelDebug<'a> for FrameRangeInclusive {
+    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
+        formatter.debug_num(self.start_frame).debug_str("..=").debug_num(self.end_frame)
+    }
+}
 impl IntoIterator for FrameRangeInclusive {
     type Item = MemoryFrame;
 
@@ -96,17 +100,23 @@ impl FrameAllocator for ElfTrustAllocator {
             let addr = area.base_address + area.length - 1;
             MemoryFrame::inside_address(addr)
         };
+        debug!(&calf, &frame);
         if frame > calf {
+            print_str!("scenario 1");
             self.choose_next_area();
         } else if self.kernel.contains(&frame) {
+            print_str!("scenario 2");
+            debug!(&self.kernel);
             self.next_free_frame = MemoryFrame(self.kernel.end_frame+1);
         } else if self.multiboot.contains(&frame) {
+            print_str!("scenario 3");
             self.next_free_frame = MemoryFrame(self.multiboot.end_frame+1);
         } else {
+            print_str!("scenario 4");
             self.next_free_frame.0 += 1;
             return Some(frame);
         }
-        None
+        self.allocate_frame()
     }
 
     fn deallocate_frame(&mut self, frame: MemoryFrame) {
@@ -121,6 +131,7 @@ impl ElfTrustAllocator {
         }).min_by_key(|area| area.base_address);
 
         if let Some(area) = self.active_area {
+            debug!("changed area to", area);
             let start_frame = MemoryFrame::inside_address(area.base_address);
             if self.next_free_frame < start_frame {
                 self.next_free_frame = start_frame;

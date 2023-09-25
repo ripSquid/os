@@ -3,7 +3,7 @@ use core::{
     slice::from_raw_parts,
 };
 
-use crate::{display::{KernelDebug, KernelFormatter}, memory::frame::{FrameRangeInclusive, MemoryFrame}};
+use crate::{display::{KernelDebug, KernelFormatter, macros::debug}, memory::frame::{FrameRangeInclusive, MemoryFrame}};
 
 use super::{transmute, type_after, TagHeader, TagType};
 
@@ -25,7 +25,7 @@ pub struct ElfSymbolTag {
     pub header: &'static ElfSymbolTagHeader,
     pub entries: ElfSectionHeaders<'static>,
 }
-
+#[derive(PartialEq, Eq)]
 #[repr(u32)]
 pub enum ElfSectionType {
     NULL = 0,
@@ -79,12 +79,19 @@ impl ElfSymbolTag {
         Self { header, entries }
     }
     pub unsafe fn frame_range(&self) -> FrameRangeInclusive {
-        let mut start = 0;
-        let mut end = 0;
+        let mut start = u64::MAX;
+        let mut end = u64::MIN;
         for entry in self.entries.parsed.iter() {
+            debug!(entry);
+            if entry.sh_type == ElfSectionType::NULL {
+                continue;
+            }
             start = start.min(entry.sh_addr);
             end = end.max(entry.sh_addr + entry.sh_size - 1);
+            
         }
+        debug!(&start, &end);
+
         FrameRangeInclusive::new(MemoryFrame::inside_address(start), MemoryFrame::inside_address(end))
     }
 }
@@ -111,7 +118,7 @@ impl<'a> KernelDebug<'a> for ElfSectionHeader {
             //.debug_field("link", &self.sh_link)
             //.debug_field("offset", &self.sh_offset)
             .debug_field("size", &self.sh_size)
-            //.debug_field("type", &self.sh_type)
+            .debug_field("type", &self.sh_type)
             .finish()
     }
 }

@@ -67,14 +67,10 @@ fn remap_everything(info: MultibootInfoUnparsed) {
     let MultiBootTag::ElfSymbols(elf_tag) = info.tag_iter().find(|tag| tag.tag_type() == TagType::ElfSymbol).unwrap() else {panic!()};
     let multiboot = unsafe {info.frame_range()};
     let kernel = unsafe { elf_tag.frame_range()};
-    for area in memory_tag.area_iter() {
-        debug!(area);
-    }
     let mut allocator = ElfTrustAllocator::new(kernel, multiboot, memory_tag.area_iter());
     for i in 0u32..10u32 {
-        print_num!(i);
         let frame = allocator.allocate_frame();
-        debug!(&frame);
+        debug!(&i, &frame);
     }
 }
 
