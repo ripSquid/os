@@ -50,7 +50,7 @@ pub enum ElfSectionType {
 pub struct ElfSectionHeader {
     pub sh_name: u32,
     pub sh_type: ElfSectionType,
-    pub sh_flags: u64,
+    pub sh_flags: ElfSectionFlags,
     pub sh_addr: u64,
     pub sh_offset: u64,
     pub sh_size: u64,
@@ -58,6 +58,21 @@ pub struct ElfSectionHeader {
     pub sh_info: u32,
     pub sh_addralign: u64,
     pub sh_entsize: u64,
+}
+
+bitflags! {
+    #[derive(Clone, Copy)]
+    #[repr(transparent)]
+    pub struct ElfSectionFlags: u64 {
+        /// The section contains data that should be writable during program execution.
+        const WRITABLE = 1 << 0 ;
+
+        /// The section occupies memory during the process execution.
+        const ALLOCATED = 1 << 1;
+
+        /// The section contains executable machine instructions.
+        const EXECUTABLE = 1 << 2;
+    }
 }
 
 impl ElfSymbolTag {
@@ -82,7 +97,6 @@ impl ElfSymbolTag {
         let mut start = u64::MAX;
         let mut end = u64::MIN;
         for entry in self.entries.parsed.iter() {
-            debug!(entry);
             if entry.sh_type == ElfSectionType::NULL {
                 continue;
             }
@@ -90,7 +104,6 @@ impl ElfSymbolTag {
             end = end.max(entry.sh_addr + entry.sh_size - 1);
             
         }
-        debug!(&start, &end);
 
         FrameRangeInclusive::new(MemoryFrame::inside_address(start), MemoryFrame::inside_address(end))
     }

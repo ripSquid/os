@@ -3,6 +3,8 @@ use core::{
     ops::{Index, IndexMut},
 };
 
+use crate::multiboot_info::elf::ElfSectionFlags;
+
 use super::super::{
     frame::{FrameAllocator, MemoryFrame},
     MemoryAddress, PhysicalAddress,
@@ -110,6 +112,7 @@ impl<Level: PageLevelParent> PageTable<Level> {
 }
 
 bitflags! {
+    #[derive(Clone, Copy)]
     pub struct EntryFlags: u64 {
         const PRESENT =         1 << 0;
         const WRITABLE =        1 << 1;
@@ -123,7 +126,21 @@ bitflags! {
         const NO_EXECUTE =      1 << 63;
     }
 }
-
+impl EntryFlags {
+    pub fn from_elf_flags(flags: &ElfSectionFlags) -> Self {
+        let mut new = Self::empty();
+        if flags.contains(ElfSectionFlags::ALLOCATED) {
+            new |= EntryFlags::PRESENT;
+        }
+        if flags.contains(ElfSectionFlags::WRITABLE) {
+            new |= EntryFlags::WRITABLE;
+        }
+        if !flags.contains(ElfSectionFlags::EXECUTABLE) {
+            new |= EntryFlags::NO_EXECUTE;
+        }
+        new
+    }
+}
 impl PageTableEntry {
     fn flags(&self) -> EntryFlags {
         EntryFlags::from_bits_truncate(self.0)

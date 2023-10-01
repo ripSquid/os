@@ -100,19 +100,13 @@ impl FrameAllocator for ElfTrustAllocator {
             let addr = area.base_address + area.length - 1;
             MemoryFrame::inside_address(addr)
         };
-        debug!(&calf, &frame);
         if frame > calf {
-            print_str!("scenario 1");
             self.choose_next_area();
         } else if self.kernel.contains(&frame) {
-            print_str!("scenario 2");
-            debug!(&self.kernel);
             self.next_free_frame = MemoryFrame(self.kernel.end_frame+1);
         } else if self.multiboot.contains(&frame) {
-            print_str!("scenario 3");
             self.next_free_frame = MemoryFrame(self.multiboot.end_frame+1);
         } else {
-            print_str!("scenario 4");
             self.next_free_frame.0 += 1;
             return Some(frame);
         }
@@ -131,7 +125,6 @@ impl ElfTrustAllocator {
         }).min_by_key(|area| area.base_address);
 
         if let Some(area) = self.active_area {
-            debug!("changed area to", area);
             let start_frame = MemoryFrame::inside_address(area.base_address);
             if self.next_free_frame < start_frame {
                 self.next_free_frame = start_frame;

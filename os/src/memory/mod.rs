@@ -5,7 +5,7 @@ use crate::multiboot_info::memory_map::{MemoryMapEntry, MemoryType};
 
 use self::frame::{MemoryFrame, FrameRangeInclusive, FrameAllocator};
 pub mod frame;
-mod paging;
+pub mod paging;
 
 type MemoryAddress = u64;
 

@@ -1,6 +1,6 @@
 use core::ops::{Deref, DerefMut};
 
-use x86_64::VirtAddr;
+use x86_64::{VirtAddr, structures::paging::PhysFrame, PhysAddr, registers::control::Cr3Flags};
 
 use crate::memory::{
     frame::{FrameAllocator, MemoryFrame},
@@ -29,6 +29,9 @@ impl InactivePageTable {
         temp_page.unmap(active_table);
         Self(frame)
     }
+    pub fn as_address(&self) -> u64 {
+        self.0.starting_address()
+    }
 }
 
 pub struct PageTableMaster<'a> {
@@ -48,6 +51,13 @@ impl<'a> DerefMut for PageTableMaster<'a> {
 }
 
 impl<'a> PageTableMaster<'a> {
+    pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
+        let old_table = InactivePageTable(MemoryFrame::inside_address(x86_64::registers::control::Cr3::read().0.start_address().as_u64()));
+        unsafe {
+            x86_64::registers::control::Cr3::write(PhysFrame::containing_address(PhysAddr::new(new_table.0.starting_address())), Cr3Flags::empty());
+        }
+        old_table
+    }
     pub fn with<F: FnOnce(&mut Mapper)>(&mut self, table: &mut InactivePageTable, temp_page: &mut TemporaryPage, f: F) {
         {
             let backup = MemoryFrame::inside_address(x86_64::registers::control::Cr3::read_raw().0.start_address().as_u64());
@@ -60,6 +70,9 @@ impl<'a> PageTableMaster<'a> {
             x86_64::instructions::tlb::flush_all();
         } 
         temp_page.unmap(self);
+    }
+    pub unsafe fn new() -> Self {
+        Self { page_table: Mapper::new() }
     }
 }
 
