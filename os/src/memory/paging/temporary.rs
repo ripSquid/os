@@ -1,6 +1,14 @@
-use crate::memory::{frame::{MemoryFrame, FrameAllocator}, VirtualAddress, paging::table::EntryFlags};
+use crate::memory::{
+    frame::{FrameAllocator, MemoryFrame},
+    paging::table::EntryFlags,
+    VirtualAddress,
+};
 
-use super::{page::MemoryPage, master::Mapper, table::{PageTable, Level1Entry}};
+use super::{
+    master::Mapper,
+    page::MemoryPage,
+    table::{Level1Entry, PageTable},
+};
 
 pub struct TemporaryPage {
     page: MemoryPage,
@@ -14,8 +22,12 @@ impl TemporaryPage {
             allo: TinyAllocator::new(allocator),
         }
     }
-    pub fn map_table_frame(&mut self, frame: MemoryFrame, active_table: &mut Mapper) -> &mut PageTable<Level1Entry> {
-        unsafe {&mut *(self.map(frame, active_table) as *mut PageTable<Level1Entry>)}
+    pub fn map_table_frame(
+        &mut self,
+        frame: MemoryFrame,
+        active_table: &mut Mapper,
+    ) -> &mut PageTable<Level1Entry> {
+        unsafe { &mut *(self.map(frame, active_table) as *mut PageTable<Level1Entry>) }
     }
     pub fn map(&mut self, frame: MemoryFrame, active_table: &mut Mapper) -> VirtualAddress {
         assert!(active_table.translate_page(self.page).is_none());
@@ -29,7 +41,7 @@ impl TemporaryPage {
 
 pub struct TinyAllocator<const N: usize>([Option<MemoryFrame>; N]);
 
-impl<const N: usize>  TinyAllocator<N> {
+impl<const N: usize> TinyAllocator<N> {
     pub fn new<A: FrameAllocator>(allocator: &mut A) -> Self {
         //fills every element of the array with the result from ``allocate_frame``.
         Self(core::array::from_fn(|_| allocator.allocate_frame()))

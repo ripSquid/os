@@ -3,7 +3,10 @@ use core::{
     slice::from_raw_parts,
 };
 
-use crate::{display::{KernelDebug, KernelFormatter, macros::debug}, memory::frame::{FrameRangeInclusive, MemoryFrame}};
+use crate::{
+    display::{macros::debug, KernelDebug, KernelFormatter},
+    memory::frame::{FrameRangeInclusive, MemoryFrame},
+};
 
 use super::{transmute, type_after, TagHeader, TagType};
 
@@ -102,10 +105,12 @@ impl ElfSymbolTag {
             }
             start = start.min(entry.sh_addr);
             end = end.max(entry.sh_addr + entry.sh_size - 1);
-            
         }
 
-        FrameRangeInclusive::new(MemoryFrame::inside_address(start), MemoryFrame::inside_address(end))
+        FrameRangeInclusive::new(
+            MemoryFrame::inside_address(start),
+            MemoryFrame::inside_address(end),
+        )
     }
 }
 

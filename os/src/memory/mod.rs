@@ -1,9 +1,11 @@
-use core::{alloc::{GlobalAlloc, Layout}, iter::Filter};
-
+use core::{
+    alloc::{GlobalAlloc, Layout},
+    iter::Filter,
+};
 
 use crate::multiboot_info::memory_map::{MemoryMapEntry, MemoryType};
 
-use self::frame::{MemoryFrame, FrameRangeInclusive, FrameAllocator};
+use self::frame::{FrameAllocator, FrameRangeInclusive, MemoryFrame};
 pub mod frame;
 pub mod paging;
 
@@ -16,14 +18,10 @@ const PAGE_SIZE_4K: usize = 4096;
 
 #[global_allocator]
 static GLOBAL_ALLOCATOR: GymnasieAllocator = GymnasieAllocator::new();
-struct GymnasieAllocator {
-
-}
+struct GymnasieAllocator {}
 impl GymnasieAllocator {
     pub const fn new() -> Self {
-        Self {
-
-        }
+        Self {}
     }
 }
 
@@ -37,22 +35,27 @@ unsafe impl GlobalAlloc for GymnasieAllocator {
     }
 }
 
-
 pub struct ElfTrustAllocator {
     next_free_frame: MemoryFrame,
     active_area: Option<&'static MemoryMapEntry>,
     areas: MemoryAreaIter,
     multiboot: FrameRangeInclusive,
     kernel: FrameRangeInclusive,
-
 }
 #[derive(Clone)]
 pub struct MemoryAreaIter {
-    itera: Filter<core::slice::Iter<'static, MemoryMapEntry>, &'static dyn Fn(&&MemoryMapEntry) -> bool>
+    itera: Filter<
+        core::slice::Iter<'static, MemoryMapEntry>,
+        &'static dyn Fn(&&MemoryMapEntry) -> bool,
+    >,
 }
 impl MemoryAreaIter {
     pub fn new(slice: &'static [MemoryMapEntry]) -> Self {
-        Self { itera: slice.iter().filter(&(|i| i.mem_type == MemoryType::Available)) }
+        Self {
+            itera: slice
+                .iter()
+                .filter(&(|i| i.mem_type == MemoryType::Available)),
+        }
     }
 }
 impl Iterator for MemoryAreaIter {
@@ -62,4 +65,3 @@ impl Iterator for MemoryAreaIter {
         self.itera.next()
     }
 }
-

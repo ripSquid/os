@@ -5,7 +5,13 @@ use memory_map::*;
 
 use core::{mem::size_of, str::from_utf8};
 
-use crate::{memory::frame::{FrameRangeInclusive, MemoryFrame}, display::{macros::{print_str, print_hex}, KernelDebug}};
+use crate::{
+    display::{
+        macros::{print_hex, print_str},
+        KernelDebug,
+    },
+    memory::frame::{FrameRangeInclusive, MemoryFrame},
+};
 
 #[derive(Clone, Copy)]
 pub struct MultibootInfoUnparsed {
@@ -14,7 +20,10 @@ pub struct MultibootInfoUnparsed {
     pointer: u64,
 }
 impl<'a> KernelDebug<'a> for MultibootInfoUnparsed {
-    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
+    fn debug(
+        &self,
+        formatter: crate::display::KernelFormatter<'a>,
+    ) -> crate::display::KernelFormatter<'a> {
         formatter.debug_bytes(self.tags.bytes())
     }
 }
@@ -34,21 +43,31 @@ impl MultibootInfoUnparsed {
         let tags =
             core::slice::from_raw_parts((raw + 24) as *const u8, (header.total_size - 24) as usize);
         let tags = MultiBootTags::from_slice(tags)?;
-        Some(MultibootInfoUnparsed { header, tags, pointer: pointer as u64})
+        Some(MultibootInfoUnparsed {
+            header,
+            tags,
+            pointer: pointer as u64,
+        })
     }
     fn size(&self) -> usize {
         self.header.total_size as usize
     }
     pub fn tag_iter(&self) -> MultiBootTagIter {
         MultiBootTagIter::new(*self)
-    } 
+    }
     pub unsafe fn frame_range(&self) -> FrameRangeInclusive {
-        FrameRangeInclusive::new(MemoryFrame::inside_address(self.pointer), MemoryFrame::inside_address(self.pointer+(self.header.total_size as u64)-1))
+        FrameRangeInclusive::new(
+            MemoryFrame::inside_address(self.pointer),
+            MemoryFrame::inside_address(self.pointer + (self.header.total_size as u64) - 1),
+        )
     }
 }
 
 impl<'a> KernelDebug<'a> for MultiBootTag {
-    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
+    fn debug(
+        &self,
+        formatter: crate::display::KernelFormatter<'a>,
+    ) -> crate::display::KernelFormatter<'a> {
         match self {
             MultiBootTag::MemoryMap(map) => map.debug(formatter),
             MultiBootTag::BasicMem(_) => todo!(),
@@ -64,21 +83,25 @@ pub struct MultiBootTagIter {
 }
 impl MultiBootTagIter {
     pub fn new(info: MultibootInfoUnparsed) -> Self {
-        Self { byte_index: 0, tags: info }
+        Self {
+            byte_index: 0,
+            tags: info,
+        }
     }
 }
 impl Iterator for MultiBootTagIter {
     type Item = MultiBootTag;
 
     fn next(&mut self) -> Option<Self::Item> {
-        
         while self.byte_index < self.tags.size() {
-            let tag_head: &TagHeader = unsafe { &*transmute((self.tags.pointer + 24 + self.byte_index as u64) as *const u8) };
+            let tag_head: &TagHeader = unsafe {
+                &*transmute((self.tags.pointer + 24 + self.byte_index as u64) as *const u8)
+            };
             self.byte_index += ((tag_head.size + 7) & MASK8) as usize;
             match tag_head.tag_type {
                 TagType::BootoaderName => {
                     let info = unsafe { BootloaderNameTag::from_ref(&tag_head) };
-                    return Some(MultiBootTag::BootoaderName(info))
+                    return Some(MultiBootTag::BootoaderName(info));
                 }
                 TagType::BasicMemoryTag => {
                     let info = unsafe { BasicMemoryTag::from_ref(&tag_head) };
@@ -108,7 +131,6 @@ impl Iterator for MultiBootTagIter {
                 _ => panic!(),
             }
             //rounds upward to nearest multiple of 8
-            
         }
         None
     }
@@ -123,7 +145,6 @@ pub enum MultiBootTag {
     BootoaderName(BootloaderNameTag),
     ElfSymbols(ElfSymbolTag),
     End,
-
 }
 impl MultiBootTag {
     pub fn tag_type(&self) -> TagType {

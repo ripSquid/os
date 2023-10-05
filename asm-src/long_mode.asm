@@ -1,5 +1,6 @@
 global long_mode_start
 global interrupt_wrapper
+extern keyboard_handler
 
 %macro pushaq 0
   push rax
@@ -53,14 +54,20 @@ long_mode_start:
     hlt
 
 interrupt_wrapper:
-  cli
+  pop rax
+  pop rbx
+  pop rcx
+  
+  mov [0xb8000], rax
+  mov [0xb8008], rbx
+  mov [0xb8010], rcx
+  hlt
+  ;cli
   pushaq
   cld
   ;mov rax, 0xb8000
-  mov byte [0xb8000], 0x0F
-  mov byte [0xb8001], 0x41
-  extern keyboard_handler
-  call keyboard_handler
-  sti
+
+  ;call keyboard_handler
+  ;sti
   popaq
   iretq

@@ -1,6 +1,6 @@
 use core::ops::{Deref, DerefMut};
 
-use x86_64::{VirtAddr, structures::paging::PhysFrame, PhysAddr, registers::control::Cr3Flags};
+use x86_64::{registers::control::Cr3Flags, structures::paging::PhysFrame, PhysAddr, VirtAddr};
 
 use crate::memory::{
     frame::{FrameAllocator, MemoryFrame},
@@ -9,7 +9,8 @@ use crate::memory::{
 
 use super::{
     page::MemoryPage,
-    table::{EntryFlags, Level4Entry, PageTable}, temporary::TemporaryPage,
+    table::{EntryFlags, Level4Entry, PageTable},
+    temporary::TemporaryPage,
 };
 
 pub const P4_TABLE: *mut PageTable<Level4Entry> = 0xffffffff_fffff000 as *mut _;
@@ -20,7 +21,11 @@ pub struct Mapper<'a> {
 pub struct InactivePageTable(MemoryFrame);
 
 impl InactivePageTable {
-    pub fn new(frame: MemoryFrame, active_table: &mut Mapper, temp_page: &mut TemporaryPage) -> Self {
+    pub fn new(
+        frame: MemoryFrame,
+        active_table: &mut Mapper,
+        temp_page: &mut TemporaryPage,
+    ) -> Self {
         {
             let table = temp_page.map_table_frame(frame.clone(), active_table);
             table.zero_out();
@@ -52,15 +57,33 @@ impl<'a> DerefMut for PageTableMaster<'a> {
 
 impl<'a> PageTableMaster<'a> {
     pub fn switch(&mut self, new_table: InactivePageTable) -> InactivePageTable {
-        let old_table = InactivePageTable(MemoryFrame::inside_address(x86_64::registers::control::Cr3::read().0.start_address().as_u64()));
+        let old_table = InactivePageTable(MemoryFrame::inside_address(
+            x86_64::registers::control::Cr3::read()
+                .0
+                .start_address()
+                .as_u64(),
+        ));
         unsafe {
-            x86_64::registers::control::Cr3::write(PhysFrame::containing_address(PhysAddr::new(new_table.0.starting_address())), Cr3Flags::empty());
+            x86_64::registers::control::Cr3::write(
+                PhysFrame::containing_address(PhysAddr::new(new_table.0.starting_address())),
+                Cr3Flags::empty(),
+            );
         }
         old_table
     }
-    pub fn with<F: FnOnce(&mut Mapper)>(&mut self, table: &mut InactivePageTable, temp_page: &mut TemporaryPage, f: F) {
+    pub fn with<F: FnOnce(&mut Mapper)>(
+        &mut self,
+        table: &mut InactivePageTable,
+        temp_page: &mut TemporaryPage,
+        f: F,
+    ) {
         {
-            let backup = MemoryFrame::inside_address(x86_64::registers::control::Cr3::read_raw().0.start_address().as_u64());
+            let backup = MemoryFrame::inside_address(
+                x86_64::registers::control::Cr3::read_raw()
+                    .0
+                    .start_address()
+                    .as_u64(),
+            );
             let p4_table = temp_page.map_table_frame(backup.clone(), self);
             self.p4_mut()[511].set(table.0.clone(), EntryFlags::PRESENT | EntryFlags::WRITABLE);
             x86_64::instructions::tlb::flush_all();
@@ -68,11 +91,13 @@ impl<'a> PageTableMaster<'a> {
 
             p4_table[511].set(backup, EntryFlags::PRESENT | EntryFlags::WRITABLE);
             x86_64::instructions::tlb::flush_all();
-        } 
+        }
         temp_page.unmap(self);
     }
     pub unsafe fn new() -> Self {
-        Self { page_table: Mapper::new() }
+        Self {
+            page_table: Mapper::new(),
+        }
     }
 }
 

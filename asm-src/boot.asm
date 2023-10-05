@@ -1,4 +1,4 @@
-%define STACKSIZE 4096
+%define STACKSIZE 8192
 
 global start
 extern long_mode_start

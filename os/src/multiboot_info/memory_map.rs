@@ -1,6 +1,9 @@
 use core::mem::size_of;
 
-use crate::{display::{KernelDebug, KernelFormatter}, memory::MemoryAreaIter};
+use crate::{
+    display::{KernelDebug, KernelFormatter},
+    memory::MemoryAreaIter,
+};
 
 use super::{transmute, type_after, TagHeader, TagType};
 
