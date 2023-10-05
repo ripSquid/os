@@ -49,8 +49,6 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     .unwrap();
 
     remap_everything(multiboot_info);
-    print_str!("Yes!!!");
-
     unsafe { interrupt::setup::setup_interrupts() }
     x86_64::instructions::interrupts::int3();
     debug!("bajs");

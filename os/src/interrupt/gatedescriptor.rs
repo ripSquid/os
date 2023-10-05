@@ -1,12 +1,20 @@
 use core::marker::PhantomData;
-
-
-
-use crate::display::{
-    KernelDebug,
-};
-
+use crate::display::KernelDebug;
 use super::table::{EFunc, IFunc};
+
+//implements the "set_function" method for a interrupt function type.
+macro_rules! impl_gate_set {
+        ($t:ty) => {
+            impl GateDescriptor<$t> {
+                    pub fn set_function(&mut self, func: $t, attributes: TypeAttribute, gdt: SegmentSelector) {
+                        let addr = func as u64;
+                        self.set_address(addr);
+                        self.type_attributes = attributes;
+                        self.selector = gdt;
+                    }
+                }
+        };
+}
 
 #[derive(PartialEq)]
 #[repr(C)]
@@ -91,50 +99,14 @@ impl<T> Default for GateDescriptor<T> {
 }
 
 impl<T> GateDescriptor<T> {
-    pub fn new(
-        address: u64,
-        exists: bool,
-        cpu_privilege: CPUPrivilege,
-        interrupt_type: InterruptType,
-        segment_selector: SegmentSelector,
-        _ist: u8,
-    ) -> Self {
-        let mut gate_descriptor = Self::default();
-        gate_descriptor.set_address(address);
-        gate_descriptor.type_attributes = TypeAttribute::new(exists, cpu_privilege, interrupt_type);
-        gate_descriptor.selector = segment_selector;
-        return gate_descriptor;
-    }
-
     pub fn set_address(&mut self, address: u64) -> &mut Self {
-        //print_str!("supposed to be");
-        //print_hex!(address);
         self.offset_low = address as u16;
         self.offset_mid = (address >> 16) as u16;
         self.offset_high = (address >> 32) as u32;
-        //print_hex!((self.offset_3 as u64) << 32 | (self.offset_2 as u64) << 16 | (self.offset_1 as u64));
         return self;
     }
 }
 
-pub trait GateDescriptorFunction {
-    fn as_addr(&self) -> u64;
-}
-impl GateDescriptorFunction for IFunc {
-    fn as_addr(&self) -> u64 {
-        self as *const _ as u64
-    }
-}
-impl GateDescriptorFunction for EFunc {
-    fn as_addr(&self) -> u64 {
-        self as *const _ as u64
-    }
-}
-impl GateDescriptor<IFunc> {
-    pub fn set_function(&mut self, func: IFunc, attributes: TypeAttribute, gdt: SegmentSelector) {
-        let addr = func as u64;
-        self.set_address(addr);
-        self.type_attributes = attributes;
-        self.selector = gdt;
-    }
-}
+
+impl_gate_set!(IFunc);
+impl_gate_set!(EFunc);
