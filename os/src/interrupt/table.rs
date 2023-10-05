@@ -1,6 +1,9 @@
-use core::{ops::Index, mem::size_of};
+use core::{mem::size_of, ops::Index};
 
-use x86_64::{structures::{idt::InterruptStackFrame, DescriptorTablePointer}, VirtAddr};
+use x86_64::{
+    structures::{idt::InterruptStackFrame, DescriptorTablePointer},
+    VirtAddr,
+};
 
 use super::{gatedescriptor::GateDescriptor, setup::IDTDescriptor};
 
@@ -73,7 +76,6 @@ pub struct IDTable {
     pub user_interupts: [GateDescriptor<IFunc>; 256 - 32],
 }
 
-
 impl IDTable {
     pub const fn new() -> Self {
         Self {
@@ -102,10 +104,13 @@ impl IDTable {
             vmm_communication: GateDescriptor::null(),
             security: GateDescriptor::null(),
             ___reserved: GateDescriptor::null(),
-            user_interupts: [GateDescriptor::null(); 256-32]
+            user_interupts: [GateDescriptor::null(); 256 - 32],
         }
     }
     pub fn pointer(&self) -> DescriptorTablePointer {
-        DescriptorTablePointer { limit: (size_of::<Self>()-1) as u16, base: VirtAddr::new(self as *const _ as u64) }
+        DescriptorTablePointer {
+            limit: (size_of::<Self>() - 1) as u16,
+            base: VirtAddr::new(self as *const _ as u64),
+        }
     }
 }

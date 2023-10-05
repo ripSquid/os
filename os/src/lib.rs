@@ -34,7 +34,7 @@ use crate::multiboot_info::MultibootInfoHeader;
 mod interrupt;
 mod memory;
 mod multiboot_info;
-use crate::interrupt::setup::{self, setup_interrupt, IDTDescriptor};
+use crate::interrupt::setup::{self, IDTDescriptor};
 
 // Address of the default 80x25 vga text mode buffer left to us after grub.
 pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
@@ -58,7 +58,6 @@ pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
     debug!("bajs");
     loop {}
 }
-
 
 fn disable_cursor() {
     unsafe {

@@ -220,3 +220,7 @@ pub unsafe fn type_after<B, A>(pointer: *const B) -> *const A {
 pub unsafe fn transmute<B, A>(pointer: *const B) -> *const A {
     pointer as u64 as *const A
 }
+/// turn a pointer of one type into another, mega hacky!!!
+pub unsafe fn transmute_ref<B, A>(pointer: &B) -> *const A {
+    pointer as *const B as u64 as *const A
+}

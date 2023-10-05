@@ -7,18 +7,18 @@ use crate::display::{
     KernelDebug,
 };
 
-use super::table::{IFunc, EFunc};
+use super::table::{EFunc, IFunc};
 
+#[derive(PartialEq)]
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
 pub struct SegmentSelector(pub u16);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 #[repr(C)]
 pub struct GateDescriptor<FnPointer> {
     pub offset_low: u16,
     pub selector: SegmentSelector,
-    pub ist: u8,
     pub type_attributes: TypeAttribute,
     pub offset_mid: u16,
     pub offset_high: u32,
@@ -30,8 +30,7 @@ impl<T> GateDescriptor<T> {
         Self {
             offset_low: 0,
             selector: SegmentSelector(0),
-            ist: 0,
-            type_attributes: TypeAttribute(0b0000_1110),
+            type_attributes: TypeAttribute(0b0000_1110_0000_0000),
             offset_mid: 0,
             offset_high: 0,
             _zero: 0,
@@ -51,6 +50,8 @@ impl<'a, T> KernelDebug<'a> for GateDescriptor<T> {
         formatter
             .debug_struct("gate")
             .debug_field("addr", &address)
+            .debug_field("seg", &self.selector.0)
+            .debug_field("attr", &self.type_attributes.0)
             .finish()
     }
 }
@@ -69,23 +70,25 @@ pub enum InterruptType {
     Trap = 0xF,
 }
 
-#[derive(Clone, Copy, Default)]
-#[repr(C)]
-pub struct TypeAttribute(pub u8);
+#[derive(Clone, Copy, Default, PartialEq)]
+#[repr(transparent)]
+pub struct TypeAttribute(pub u16);
 
 impl TypeAttribute {
     pub fn new(exists: bool, cpu_privilege: CPUPrivilege, interrupt_type: InterruptType) -> Self {
-        TypeAttribute((exists as u8) << 7 | (cpu_privilege as u8) << 5 | interrupt_type as u8)
+        TypeAttribute(
+            (exists as u16) << 15 | (cpu_privilege as u16) << 13 | (interrupt_type as u16) << 8,
+        )
     }
     pub fn set_existing(&mut self, exists: bool) {
-        self.0 &= 0b0111_1111 + ((exists as u8) << 7);
+        self.0 &= 0b0111_1111_1111_1111 + ((exists as u16) << 15);
     }
 }
 
-impl<T> Default for GateDescriptor<T>{
-        fn default() -> Self {
-                Self::null()
-        }
+impl<T> Default for GateDescriptor<T> {
+    fn default() -> Self {
+        Self::null()
+    }
 }
 
 impl<T> GateDescriptor<T> {
@@ -101,7 +104,6 @@ impl<T> GateDescriptor<T> {
         gate_descriptor.set_address(address);
         gate_descriptor.type_attributes = TypeAttribute::new(exists, cpu_privilege, interrupt_type);
         gate_descriptor.selector = segment_selector;
-        gate_descriptor.ist = ist;
         return gate_descriptor;
     }
 
@@ -117,7 +119,7 @@ impl<T> GateDescriptor<T> {
 }
 
 pub trait GateDescriptorFunction {
-        fn as_addr(&self) -> u64;
+    fn as_addr(&self) -> u64;
 }
 impl GateDescriptorFunction for IFunc {
     fn as_addr(&self) -> u64 {
@@ -125,16 +127,15 @@ impl GateDescriptorFunction for IFunc {
     }
 }
 impl GateDescriptorFunction for EFunc {
-        fn as_addr(&self) -> u64 {
-                self as *const _ as u64
-        }
+    fn as_addr(&self) -> u64 {
+        self as *const _ as u64
+    }
 }
-impl<T: GateDescriptorFunction> GateDescriptor<T> {
-    pub fn set_function(&mut self, func: T, attributes: TypeAttribute, gdt: SegmentSelector) {
-        let addr = func.as_addr();
+impl GateDescriptor<IFunc> {
+    pub fn set_function(&mut self, func: IFunc, attributes: TypeAttribute, gdt: SegmentSelector) {
+        let addr = func as u64;
         self.set_address(addr);
         self.type_attributes = attributes;
         self.selector = gdt;
-
     }
 }
