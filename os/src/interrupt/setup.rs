@@ -1,14 +1,14 @@
-use super::gatedescriptor::{CPUPrivilege, InterruptType, TypeAttribute};
+use super::gatedescriptor::{TypeAttribute};
 use super::table::IDTable;
-use crate::display::macros::{debug, print_hex, print_num, print_str};
-use crate::interrupt::gatedescriptor::{GateDescriptor, SegmentSelector};
-use crate::multiboot_info::{transmute, transmute_ref};
-use core::arch::asm;
-use core::mem::size_of;
-use pic8259;
-use x86_64::instructions::hlt;
-use x86_64::registers::segmentation::Segment;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use crate::display::macros::{debug};
+use crate::interrupt::gatedescriptor::{SegmentSelector};
+
+
+
+
+
+
+use x86_64::structures::idt::{InterruptStackFrame};
 use x86_64::structures::DescriptorTablePointer;
 use x86_64::VirtAddr;
 
@@ -36,6 +36,6 @@ pub unsafe fn setup_interrupts() {
     x86_64::instructions::tables::lidt(&idtdescriptor);
 }
 
-pub extern "x86-interrupt" fn breakpoint(stack_frame: InterruptStackFrame) {
+pub extern "x86-interrupt" fn breakpoint(_stack_frame: InterruptStackFrame) {
     debug!("breakpoint triggered!");
 }

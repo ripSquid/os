@@ -1,11 +1,11 @@
-use core::{mem::size_of, ops::Index};
+use core::{mem::size_of};
 
 use x86_64::{
     structures::{idt::InterruptStackFrame, DescriptorTablePointer},
     VirtAddr,
 };
 
-use super::{gatedescriptor::GateDescriptor, setup::IDTDescriptor};
+use super::{gatedescriptor::GateDescriptor};
 
 pub type IFunc = extern "x86-interrupt" fn(InterruptStackFrame);
 pub type EFunc = extern "x86-interrupt" fn(InterruptStackFrame, error_code: u64);

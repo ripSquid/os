@@ -1,16 +1,11 @@
-use x86_64::{structures::paging::frame, VirtAddr};
+
 
 use crate::display::{
-    macros::{debug, print_str},
     KernelDebug,
 };
 
 use super::{
-    paging::{
-        page::MemoryPage,
-        table::{EntryFlags, Level4Entry, PageTable},
-    },
-    ElfTrustAllocator, MemoryAddress, MemoryAreaIter, PhysicalAddress, VirtualAddress,
+    ElfTrustAllocator, MemoryAreaIter, PhysicalAddress,
     PAGE_SIZE_4K,
 };
 
@@ -140,7 +135,7 @@ impl FrameAllocator for ElfTrustAllocator {
         self.allocate_frame()
     }
 
-    fn deallocate_frame(&mut self, frame: MemoryFrame) {
+    fn deallocate_frame(&mut self, _frame: MemoryFrame) {
         unimplemented!("the ElfTrustAllocator Doesn't keep track of allocated frames!")
     }
 }

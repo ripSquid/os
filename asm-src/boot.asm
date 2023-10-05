@@ -8,7 +8,7 @@ section .text
 bits 32
 start:
     mov esp, stack_top 
-    mov esi, ebx                    ;Moves the pointer to the multiboot info structure, not used until WAAAAY later.
+    mov edi, ebx                    ;Moves the pointer to the multiboot info structure, not used until WAAAAY later.
     call check_multiboot            ;check if proper magic value was returned by bootloader
     call check_cpuid                ;check if cpu supports cpuid
     call check_longmode             ;check if cpu supports long mode

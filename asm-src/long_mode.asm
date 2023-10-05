@@ -39,10 +39,6 @@ long_mode_start:
     mov ss, ax
     mov ds, ax
     mov es, ax
-    
-    ;give address of interrupt_wrapper to rust
-
-    mov rdi, interrupt_wrapper
 
     ;jump into our rust entry point (rust_start in lib.rs)
     extern rust_start

@@ -20,7 +20,7 @@ macro_rules! print_bytes {
     };
 }
 
-pub(crate) use print_bytes;
+
 
 macro_rules! print_hex {
     ($term: expr) => {

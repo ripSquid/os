@@ -6,8 +6,7 @@ use core::{
 use crate::multiboot_info::elf::ElfSectionFlags;
 
 use super::super::{
-    frame::{FrameAllocator, MemoryFrame},
-    MemoryAddress, PhysicalAddress,
+    frame::{FrameAllocator, MemoryFrame}, PhysicalAddress,
 };
 
 pub trait PageLevel {}

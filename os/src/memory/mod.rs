@@ -5,7 +5,7 @@ use core::{
 
 use crate::multiboot_info::memory_map::{MemoryMapEntry, MemoryType};
 
-use self::frame::{FrameAllocator, FrameRangeInclusive, MemoryFrame};
+use self::frame::{FrameRangeInclusive, MemoryFrame};
 pub mod frame;
 pub mod paging;
 
@@ -26,11 +26,11 @@ impl GymnasieAllocator {
 }
 
 unsafe impl GlobalAlloc for GymnasieAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
         core::ptr::null_mut()
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
         todo!()
     }
 }

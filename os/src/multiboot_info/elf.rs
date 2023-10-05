@@ -1,10 +1,10 @@
 use core::{
-    mem::{align_of, size_of},
+    mem::{size_of},
     slice::from_raw_parts,
 };
 
 use crate::{
-    display::{macros::debug, KernelDebug, KernelFormatter},
+    display::{KernelDebug, KernelFormatter},
     memory::frame::{FrameRangeInclusive, MemoryFrame},
 };
 

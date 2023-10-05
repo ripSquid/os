@@ -7,15 +7,13 @@
 #[macro_use]
 extern crate bitflags;
 
-use core::arch::asm;
+
 
 use crate::display::macros::*;
-use crate::interrupt::gatedescriptor::{
-    CPUPrivilege, GateDescriptor, InterruptType, SegmentSelector, TypeAttribute,
-};
+
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
 use crate::memory::paging::table::EntryFlags;
-use interrupt::table::IDTable;
+
 use memory::frame::FrameAllocator;
 use memory::paging::master::{InactivePageTable, PageTableMaster};
 use memory::paging::page::MemoryPage;
@@ -23,25 +21,25 @@ use memory::paging::temporary::TemporaryPage;
 use memory::ElfTrustAllocator;
 use multiboot_info::elf::ElfSectionFlags;
 use multiboot_info::{MultiBootTag, MultibootInfoUnparsed, TagType};
-use x86_64::instructions::{hlt, port::PortWriteOnly};
+use x86_64::instructions::{port::PortWriteOnly};
 use x86_64::registers::control::{Cr0, Cr0Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
-use x86_64::structures::paging::PageTableFlags;
+
+
 pub mod display;
 mod panic;
 use crate::multiboot_info::MultibootInfoHeader;
 mod interrupt;
 mod memory;
 mod multiboot_info;
-use crate::interrupt::setup::{self, IDTDescriptor};
+
 
 // Address of the default 80x25 vga text mode buffer left to us after grub.
 pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
 //no mangle tells the compiler to keep the name of this symbol
 //this is later used in long_mode.asm, at which point the cpu is prepared to run rust code
 #[no_mangle]
-pub extern "C" fn rust_start(address: u64, info: u64) -> ! {
+pub extern "C" fn rust_start(info: u64) -> ! {
     disable_cursor();
 
     print_str!("hello world");
@@ -127,7 +125,7 @@ fn remap_everything(info: MultibootInfoUnparsed) {
         mapper.identity_map(vga_buffer_frame, EntryFlags::WRITABLE, &mut allocator);
     });
 
-    let old_table = active_table.switch(new_table);
+    let _old_table = active_table.switch(new_table);
 
     //let old_p4_page = MemoryPage::inside_address(old_table.as_address());
     //active_table.unmap(old_p4_page, &mut allocator);

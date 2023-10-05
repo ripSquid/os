@@ -7,7 +7,6 @@ use core::{mem::size_of, str::from_utf8};
 
 use crate::{
     display::{
-        macros::{print_hex, print_str},
         KernelDebug,
     },
     memory::frame::{FrameRangeInclusive, MemoryFrame},

@@ -1,9 +1,8 @@
 use core::marker::PhantomData;
 
-use x86_64::structures::idt::InterruptStackFrame;
+
 
 use crate::display::{
-    macros::{print_hex, print_str},
     KernelDebug,
 };
 
@@ -98,7 +97,7 @@ impl<T> GateDescriptor<T> {
         cpu_privilege: CPUPrivilege,
         interrupt_type: InterruptType,
         segment_selector: SegmentSelector,
-        ist: u8,
+        _ist: u8,
     ) -> Self {
         let mut gate_descriptor = Self::default();
         gate_descriptor.set_address(address);

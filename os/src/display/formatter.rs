@@ -45,14 +45,14 @@ impl<'a> KernelFormatter<'a> {
         self
     }
     pub fn debug_hex<const CAP: usize, const LEN: usize>(
-        mut self,
+        self,
         hex: impl PrimitiveDisplay<CAP, LEN>,
     ) -> Self {
         self.writer.write_bytes(hex.as_hexadecimal_ascii().as_ref());
         self
     }
     pub fn debug_num<const CAP: usize, const LEN: usize>(
-        mut self,
+        self,
         hex: impl PrimitiveDisplay<CAP, LEN>,
     ) -> Self {
         self.writer.write_bytes(hex.as_hexadecimal_ascii().as_ref());
