@@ -25,7 +25,7 @@ use x86_64::instructions::{port::PortWriteOnly};
 use x86_64::registers::control::{Cr0, Cr0Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};
 
-
+pub mod cpuid;
 pub mod display;
 mod panic;
 use crate::multiboot_info::MultibootInfoHeader;
@@ -51,7 +51,9 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     remap_everything(multiboot_info);
     unsafe { interrupt::setup::setup_interrupts() }
     x86_64::instructions::interrupts::int3();
-    debug!("bajs");
+    let cpu_info = cpuid::ProcessorIdentification::gather();
+    debug!(&cpu_info);
+    print_str!("everything went well");
     loop {}
 }
 
