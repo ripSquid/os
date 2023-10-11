@@ -26,6 +26,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.4.0",
  "pic8259",
+ "ps2",
  "x86_64",
 ]
 
@@ -35,6 +36,16 @@ version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb844b5b01db1e0b17938685738f113bfc903846f18932b378bc0eabfa40e194"
 dependencies = [
+ "x86_64",
+]
+
+[[package]]
+name = "ps2"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfef03bb1362e6a23a211efe8c72e2eeb6888f51fb329cdfa07bb470986ea7d0"
+dependencies = [
+ "bitflags 1.3.2",
  "x86_64",
 ]
 
