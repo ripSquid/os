@@ -6,6 +6,7 @@ use core::{
 use crate::multiboot_info::memory_map::{MemoryMapEntry, MemoryType};
 
 use self::frame::{FrameRangeInclusive, MemoryFrame};
+pub mod allocator;
 pub mod frame;
 pub mod paging;
 
@@ -37,6 +38,7 @@ unsafe impl GlobalAlloc for GymnasieAllocator {
 
 pub struct ElfTrustAllocator {
     next_free_frame: MemoryFrame,
+    available_frames: usize,
     active_area: Option<&'static MemoryMapEntry>,
     areas: MemoryAreaIter,
     multiboot: FrameRangeInclusive,

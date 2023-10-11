@@ -1,13 +1,6 @@
+use crate::display::KernelDebug;
 
-
-use crate::display::{
-    KernelDebug,
-};
-
-use super::{
-    ElfTrustAllocator, MemoryAreaIter, PhysicalAddress,
-    PAGE_SIZE_4K,
-};
+use super::{ElfTrustAllocator, MemoryAreaIter, PhysicalAddress, PAGE_SIZE_4K};
 
 //A Physical area of memory where usize is offset by 0x1000
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -85,6 +78,9 @@ impl FrameRangeInclusive {
             end_frame: end.0,
         }
     }
+    pub fn span(&self) -> usize {
+        (self.end_frame + 1).saturating_sub(self.start_frame)
+    }
 }
 impl<'a> KernelDebug<'a> for FrameRangeInclusive {
     fn debug(
@@ -122,6 +118,7 @@ impl FrameAllocator for ElfTrustAllocator {
             let addr = area.base_address + area.length - 1;
             MemoryFrame::inside_address(addr)
         };
+
         if frame > calf {
             self.choose_next_area();
         } else if self.kernel.contains(&frame) {
@@ -130,6 +127,7 @@ impl FrameAllocator for ElfTrustAllocator {
             self.next_free_frame = MemoryFrame(self.multiboot.end_frame + 1);
         } else {
             self.next_free_frame.0 += 1;
+            self.available_frames -= 1;
             return Some(frame);
         }
         self.allocate_frame()
@@ -162,14 +160,24 @@ impl ElfTrustAllocator {
         multiboot: FrameRangeInclusive,
         areas: MemoryAreaIter,
     ) -> Self {
+        let available_frames = {
+            let total = areas
+                .clone()
+                .fold(0usize, |acc, entry| (entry.length as usize / 4096) + acc);
+            total - kernel.span() - multiboot.span()
+        };
         let mut ourself = Self {
             next_free_frame: MemoryFrame::inside_address(0),
             active_area: None,
             areas,
             multiboot,
             kernel,
+            available_frames,
         };
         ourself.choose_next_area();
         ourself
+    }
+    pub fn available_frames_left(&self) -> usize {
+        self.available_frames
     }
 }

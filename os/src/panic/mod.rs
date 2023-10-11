@@ -1,8 +1,8 @@
-use crate::{
-    display::{DefaultVgaBuffer, DefaultVgaWriter, VgaColor, VgaColorCombo},
-    VGA_BUFFER_ADDRESS,
-};
+use crate::display::{DefaultVgaBuffer, DefaultVgaWriter, VgaColor, VgaColorCombo};
 use core::panic::PanicInfo;
+
+// Address of the default 80x25 vga text mode buffer left to us after grub.
+pub const VGA_BUFFER_ADDRESS: u64 = 0xB8000;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {

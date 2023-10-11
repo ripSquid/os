@@ -20,8 +20,6 @@ macro_rules! print_bytes {
     };
 }
 
-
-
 macro_rules! print_hex {
     ($term: expr) => {
         let mut writer = crate::display::DefaultVgaWriter::new(unsafe {

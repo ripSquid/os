@@ -6,9 +6,7 @@ use memory_map::*;
 use core::{mem::size_of, str::from_utf8};
 
 use crate::{
-    display::{
-        KernelDebug,
-    },
+    display::KernelDebug,
     memory::frame::{FrameRangeInclusive, MemoryFrame},
 };
 
@@ -33,6 +31,9 @@ pub struct MultibootInfoHeader {
     _reserved: u32,
 }
 impl MultibootInfoUnparsed {
+    pub fn find_tag(&self, tag_type: TagType) -> Option<MultiBootTag> {
+        self.tag_iter().find(|tag| tag.tag_type() == tag_type)
+    }
     pub unsafe fn from_pointer(pointer: *const MultibootInfoHeader) -> Option<Self> {
         if pointer.align_offset(8) != 0 || pointer.is_null() {
             return None;

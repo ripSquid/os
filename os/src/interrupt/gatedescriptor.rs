@@ -1,19 +1,24 @@
-use core::marker::PhantomData;
-use crate::display::KernelDebug;
 use super::table::{EFunc, IFunc};
+use crate::display::KernelDebug;
+use core::marker::PhantomData;
 
 //implements the "set_function" method for a interrupt function type.
 macro_rules! impl_gate_set {
-        ($t:ty) => {
-            impl GateDescriptor<$t> {
-                    pub fn set_function(&mut self, func: $t, attributes: TypeAttribute, gdt: SegmentSelector) {
-                        let addr = func as u64;
-                        self.set_address(addr);
-                        self.type_attributes = attributes;
-                        self.selector = gdt;
-                    }
-                }
-        };
+    ($t:ty) => {
+        impl GateDescriptor<$t> {
+            pub fn set_function(
+                &mut self,
+                func: $t,
+                attributes: TypeAttribute,
+                gdt: SegmentSelector,
+            ) {
+                let addr = func as u64;
+                self.set_address(addr);
+                self.type_attributes = attributes;
+                self.selector = gdt;
+            }
+        }
+    };
 }
 
 #[derive(PartialEq)]
@@ -106,7 +111,6 @@ impl<T> GateDescriptor<T> {
         return self;
     }
 }
-
 
 impl_gate_set!(IFunc);
 impl_gate_set!(EFunc);
