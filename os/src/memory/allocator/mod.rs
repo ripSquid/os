@@ -70,6 +70,7 @@ impl AllocatorChunk {
 
 type RawPageMemory = [u8; 4096];
 
+#[repr(align(4096))]
 pub struct AllocatorChunk {
     next: usize,
     allocations: usize,
@@ -80,7 +81,9 @@ pub struct AllocatorChunk {
 impl AllocatorChunk {
     pub fn allocate(&mut self, layout: Layout) -> Option<*mut u8> {
         self.allocations += 1;
-        let frame = self.frames.get_mut(self.next)?;
+        if self.next >= self.frames.len() {
+            return None;
+        }
         let owner = self.owners.get_mut(self.next)?;
         match owner.allocate(layout) {
             Some(allocation) => return Some(allocation),
@@ -113,7 +116,7 @@ impl FrameState {
                 let alloc_start = (owner.offset as usize + layout.align() - 1) % layout.align();
                 let alloc_end = alloc_start.saturating_add(layout.size());
 
-                if alloc_end <= 4096 {
+                if alloc_end < 4096 {
                     owner.offset = alloc_end as u16;
                     Some((owner.page.starting_address() + alloc_start as u64) as *mut u8)
                 } else {
