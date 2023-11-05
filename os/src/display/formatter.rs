@@ -11,7 +11,6 @@ impl<'a> KernelDebug<'a> for str {
     }
 }
 
-
 impl<'a, T> KernelDebug<'a> for &[T]
 where
     T: KernelDebug<'a>,

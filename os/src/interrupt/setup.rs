@@ -1,4 +1,4 @@
-use super::gatedescriptor::{TypeAttribute};
+use super::gatedescriptor::TypeAttribute;
 use super::table::IDTable;
 use crate::display::macros::{debug};
 use crate::interrupt::gatedescriptor::{SegmentSelector};

@@ -1,7 +1,4 @@
-use core::{
-    mem::{size_of},
-    slice::from_raw_parts,
-};
+use core::{mem::size_of, slice::from_raw_parts};
 
 use crate::{
     display::{KernelDebug, KernelFormatter},

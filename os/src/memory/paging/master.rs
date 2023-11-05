@@ -126,7 +126,14 @@ impl<'a> Mapper<'a> {
         self.translate_page(MemoryPage::inside_address(virtual_address))
             .map(|frame| frame.starting_address() + index)
     }
+    pub fn page_present<A: FrameAllocator>(&mut self, page: MemoryPage, allocator: &mut A) -> bool {
+        let p4 = self.p4_mut();
+        let p3 = p4.child_table_search(page.p4_index(), allocator);
+        let p2 = p3.child_table_search(page.p3_index(), allocator);
+        let p1 = p2.child_table_search(page.p2_index(), allocator);
 
+        !p1[page.p1_index()].is_unused()
+    }
     pub fn map_page<A: FrameAllocator>(
         &mut self,
         page: MemoryPage,

@@ -1,3 +1,5 @@
+use core::ops::{Range, RangeInclusive};
+
 use crate::memory::{VirtualAddress, PAGE_SIZE_4K};
 
 //A Virtual area of memory that with maps to a frame.
@@ -13,5 +15,25 @@ impl MemoryPage {
     #[inline]
     pub fn starting_address(&self) -> VirtualAddress {
         (self.0 * PAGE_SIZE_4K) as u64
+    }
+}
+
+pub struct MemoryPageRange {
+    range: Range<usize>,
+}
+impl MemoryPageRange {
+    pub fn new(start: MemoryPage, end: MemoryPage) -> Self {
+        Self {
+            range: start.0..end.0,
+        }
+    }
+    pub fn iter(&self) -> impl Iterator<Item = MemoryPage> {
+        self.range.clone().into_iter().map(|i| MemoryPage(i))
+    }
+    pub fn span(&self) -> usize {
+        self.range.end.saturating_sub(self.range.start)
+    }
+    pub fn start(&self) -> MemoryPage {
+        MemoryPage(self.range.start)
     }
 }
