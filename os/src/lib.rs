@@ -12,7 +12,6 @@ use crate::display::macros::*;
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
 use crate::memory::paging::table::EntryFlags;
 
-use alloc::vec::Vec;
 use memory::allocator::AllocatorChunk;
 use memory::frame::FrameAllocator;
 use memory::paging::master::{InactivePageTable, PageTableMaster};
@@ -46,7 +45,9 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     .unwrap();
     let mut active_table = unsafe { PageTableMaster::new() };
     let mut allocator = remap_everything(multiboot_info, &mut active_table);
-    unsafe { reserve_memory(&mut active_table, &mut allocator); }
+    unsafe {
+        reserve_memory(&mut active_table, &mut allocator);
+    }
     unsafe { interrupt::setup::setup_interrupts() }
     x86_64::instructions::interrupts::int3();
     let cpu_info = cpuid::ProcessorIdentification::gather();
@@ -69,12 +70,20 @@ pub extern "C" fn keyboard_handler() {
 }
 
 unsafe fn reserve_memory(active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {
-    let pages = MemoryPageRange::new(MemoryPage::inside_address(0x8000000), MemoryPage::inside_address(0x8010000));
-    let reserve = AllocatorChunk::create(active_table, allocator, pages).as_mut().unwrap();
+    let pages = MemoryPageRange::new(
+        MemoryPage::inside_address(0x8000000),
+        MemoryPage::inside_address(0x8010000),
+    );
+    let reserve = AllocatorChunk::create(active_table, allocator, pages)
+        .as_mut()
+        .unwrap();
     debug!("reserved:", &reserve.size_in_pages(), "pages.");
 }
 
-fn remap_everything(info: MultibootInfoUnparsed, active_table: &mut PageTableMaster) -> ElfTrustAllocator {
+fn remap_everything(
+    info: MultibootInfoUnparsed,
+    active_table: &mut PageTableMaster,
+) -> ElfTrustAllocator {
     let MultiBootTag::MemoryMap(memory_tag) = info.find_tag(TagType::MemoryMap).unwrap() else {
         panic!()
     };

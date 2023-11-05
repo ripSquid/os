@@ -1,15 +1,12 @@
 use core::{
-    alloc::{AllocError, Allocator, GlobalAlloc, Layout},
-    cell::UnsafeCell,
+    alloc::{Allocator, GlobalAlloc, Layout},
     mem::size_of,
-    ops::RangeInclusive,
-    sync::atomic::{AtomicU16, Ordering},
 };
 
 use super::{
     frame::{FrameAllocator, MemoryFrame},
     paging::{
-        master::{Mapper, PageTableMaster},
+        master::Mapper,
         page::{MemoryPage, MemoryPageRange},
         table::EntryFlags,
     },
@@ -21,11 +18,11 @@ struct GlobalAllocator {
 }
 
 unsafe impl GlobalAlloc for GlobalAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
         todo!()
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
         todo!()
     }
 }
@@ -93,7 +90,7 @@ impl AllocatorChunk {
             }
         }
     }
-    pub fn deallocate(&mut self, ptr: core::ptr::NonNull<u8>, layout: Layout) {
+    pub fn deallocate(&mut self, _ptr: core::ptr::NonNull<u8>, _layout: Layout) {
         self.allocations -= 1;
     }
 }
@@ -105,10 +102,7 @@ struct FrameOwner {
     page: MemoryPage,
 }
 impl FrameState {
-    fn allocate(
-        &mut self,
-        layout: Layout,
-    ) -> Option<*mut u8> {
+    fn allocate(&mut self, layout: Layout) -> Option<*mut u8> {
         match self {
             FrameState::Unallocated(..) | FrameState::Unused => None,
             FrameState::Allocated(owner) => {
@@ -127,7 +121,7 @@ impl FrameState {
     }
 
     #[allow(invalid_reference_casting)]
-    unsafe fn deallocate(&mut self, ptr: core::ptr::NonNull<u8>, layout: Layout) {
+    unsafe fn deallocate(&mut self, _ptr: core::ptr::NonNull<u8>, _layout: Layout) {
         match self {
             FrameState::Unallocated(..) | FrameState::Unused => panic!("MAJOR DEALLOCATION ERROR"),
             FrameState::Allocated(owner) => {

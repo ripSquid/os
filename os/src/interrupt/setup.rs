@@ -1,10 +1,10 @@
 use super::gatedescriptor::TypeAttribute;
 use super::table::IDTable;
-use crate::display::macros::{debug};
-use crate::interrupt::gatedescriptor::{SegmentSelector};
+use crate::display::macros::debug;
+use crate::interrupt::gatedescriptor::SegmentSelector;
 use pic8259::ChainedPics;
-use ps2::{Controller, error::ControllerError, flags::ControllerConfigFlags};
-use x86_64::structures::idt::{InterruptStackFrame};
+use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
+use x86_64::structures::idt::InterruptStackFrame;
 use x86_64::structures::DescriptorTablePointer;
 use x86_64::VirtAddr;
 
@@ -32,13 +32,16 @@ pub unsafe fn setup_interrupts() {
         TypeAttribute(0b1000_1110_0000_0000),
         SegmentSelector(8),
     );
-    idt.user_interupts[1].set_function(keyboard_handler, TypeAttribute(0b1000_1110_0000_0000), SegmentSelector(8));
+    idt.user_interupts[1].set_function(
+        keyboard_handler,
+        TypeAttribute(0b1000_1110_0000_0000),
+        SegmentSelector(8),
+    );
     idtdescriptor = idt.pointer();
     x86_64::instructions::tables::lidt(&idtdescriptor);
 
     // ps2 setup (structuring no.)
     let _ = keyboard_initialize();
-
 }
 
 pub extern "x86-interrupt" fn breakpoint(_stack_frame: InterruptStackFrame) {
@@ -91,7 +94,7 @@ fn keyboard_initialize() -> Result<(), ControllerError> {
 
     // Step 8: Interface tests
     let keyboard_works = controller.test_keyboard().is_ok();
-    let mouse_works = has_mouse && controller.test_mouse().is_ok();
+    let _mouse_works = has_mouse && controller.test_mouse().is_ok();
 
     // Step 9 - 10: Enable and reset devices
     config = controller.read_config()?;

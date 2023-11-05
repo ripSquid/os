@@ -1,8 +1,4 @@
-use core::{
-    arch::asm,
-    ops::Deref,
-    str::{from_utf8, from_utf8_unchecked},
-};
+use core::{arch::asm, str::from_utf8_unchecked};
 
 use crate::display::KernelDebug;
 

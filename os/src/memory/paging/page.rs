@@ -1,4 +1,4 @@
-use core::ops::{Range, RangeInclusive};
+use core::ops::Range;
 
 use crate::memory::{VirtualAddress, PAGE_SIZE_4K};
 

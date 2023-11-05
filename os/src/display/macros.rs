@@ -32,8 +32,6 @@ macro_rules! print_hex {
     };
 }
 
-pub(crate) use print_hex;
-
 macro_rules! print_num {
     ($term: expr) => {{
         let mut writer = crate::display::DefaultVgaWriter::new(unsafe {
@@ -45,8 +43,6 @@ macro_rules! print_num {
         );
     }};
 }
-
-pub(crate) use print_num;
 
 macro_rules! debug {
     ($($term: expr),+) => {
