@@ -5,7 +5,7 @@ use super::table::IDTable;
 use super::timer;
 use crate::display::macros::debug;
 use crate::interrupt::gatedescriptor::SegmentSelector;
-use crate::keyboard::{keyboard_handler, keyboard_initialize};
+use crate::keyboard::{keyboard_handler, keyboard_initialize, setup_keymap};
 use pic8259::ChainedPics;
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
 use x86_64::registers::segmentation::Segment;
@@ -30,6 +30,9 @@ static mut idtdescriptor: DescriptorTablePointer = DescriptorTablePointer {
 pub static mut pics: ChainedPics = unsafe { ChainedPics::new(0x20, 0x28) };
 
 pub unsafe fn setup_interrupts() {
+
+    setup_keymap();
+
     idt.breakpoint.set_function(
         breakpoint,
         TypeAttribute(0b1000_1110_0000_0000),

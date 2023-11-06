@@ -29,6 +29,12 @@ where
     }
 }
 
+impl<'a> KernelDebug<'a> for char {
+    fn debug(&self, formatter: KernelFormatter<'a>) -> KernelFormatter<'a> {
+        formatter.debug_str(self.encode_utf8(&mut [0; 4]))
+    }
+}
+
 pub trait KernelDebug<'a> {
     fn debug(&self, formatter: KernelFormatter<'a>) -> KernelFormatter<'a>;
 }

@@ -1,133 +1,173 @@
 use alloc::{fmt::format, string::ToString};
 use ps2::{Controller, flags::ControllerConfigFlags, error::ControllerError};
 use x86_64::structures::idt::InterruptStackFrame;
-
-use crate::{interrupt::setup::pics, display::{macros::debug, KernelDebug}};
+use alloc::format;
+use crate::{interrupt::setup::{pics, self}, display::{macros::debug, KernelDebug}};
 
 static mut controller: Controller = unsafe {Controller::new()};
 
-enum Event {
+static mut keymap: [char; 4096] = ['\x00'; 4096];
+
+const SHIFT_MODIFIER: usize = 0b0100_0000_0000;
+const CTRL_MODIFIER:  usize = 0b1000_0000_0000;
+const ALT_MODIFIER:   usize = 0b0010_0000_0000;
+const ALTGR_MODIFIER: usize = 0b0001_0000_0000;
+
+pub unsafe fn setup_keymap() {
+    // 0000 / 0000 0000
+    // Highest 4 bits are for CTRL, SHIFT, ALT, ALTGR
+    // Lowest 8 bits are for the character/keycode from keyboard
+    
+    keymap[0x1C] = 'a';
+    keymap[0x32] = 'b';
+    keymap[0x21] = 'c';
+    keymap[0x23] = 'd';
+    keymap[0x24] = 'e';
+    keymap[0x2B] = 'f';
+    keymap[0x34] = 'g';
+    keymap[0x33] = 'h';
+    keymap[0x43] = 'i';
+    keymap[0x3B] = 'j';
+    keymap[0x42] = 'k';
+    keymap[0x4B] = 'l';
+    keymap[0x3A] = 'm';
+    keymap[0x31] = 'n';
+    keymap[0x44] = 'o';
+    keymap[0x4D] = 'p';
+    keymap[0x15] = 'q';
+    keymap[0x2D] = 'r';
+    keymap[0x1B] = 's';
+    keymap[0x2C] = 't';
+    keymap[0x3C] = 'u';
+    keymap[0x2A] = 'v';
+    keymap[0x1D] = 'w';
+    keymap[0x22] = 'x';
+    keymap[0x35] = 'y';
+    keymap[0x1A] = 'Z';
+    keymap[0x54] = 'å';
+    keymap[0x52] = 'ä';
+    keymap[0x4C] = 'ö';
+
+    keymap[SHIFT_MODIFIER | 0x1C] = 'A';
+    keymap[SHIFT_MODIFIER | 0x32] = 'B';
+    keymap[SHIFT_MODIFIER | 0x21] = 'C';
+    keymap[SHIFT_MODIFIER | 0x23] = 'D';
+    keymap[SHIFT_MODIFIER | 0x24] = 'E';
+    keymap[SHIFT_MODIFIER | 0x2B] = 'F';
+    keymap[SHIFT_MODIFIER | 0x34] = 'G';
+    keymap[SHIFT_MODIFIER | 0x33] = 'H';
+    keymap[SHIFT_MODIFIER | 0x43] = 'I';
+    keymap[SHIFT_MODIFIER | 0x3B] = 'J';
+    keymap[SHIFT_MODIFIER | 0x42] = 'K';
+    keymap[SHIFT_MODIFIER | 0x4B] = 'L';
+    keymap[SHIFT_MODIFIER | 0x3A] = 'M';
+    keymap[SHIFT_MODIFIER | 0x31] = 'N';
+    keymap[SHIFT_MODIFIER | 0x44] = 'O';
+    keymap[SHIFT_MODIFIER | 0x4D] = 'P';
+    keymap[SHIFT_MODIFIER | 0x15] = 'Q';
+    keymap[SHIFT_MODIFIER | 0x2D] = 'R';
+    keymap[SHIFT_MODIFIER | 0x1B] = 'S';
+    keymap[SHIFT_MODIFIER | 0x2C] = 'T';
+    keymap[SHIFT_MODIFIER | 0x3C] = 'U';
+    keymap[SHIFT_MODIFIER | 0x2A] = 'V';
+    keymap[SHIFT_MODIFIER | 0x1D] = 'W';
+    keymap[SHIFT_MODIFIER | 0x22] = 'X';
+    keymap[SHIFT_MODIFIER | 0x35] = 'Y';
+    keymap[SHIFT_MODIFIER | 0x1A] = 'Z';
+    keymap[SHIFT_MODIFIER | 0x54] = 'Å';
+    keymap[SHIFT_MODIFIER | 0x52] = 'Ä';
+    keymap[SHIFT_MODIFIER | 0x4C] = 'Ö';
+
+    keymap[0x16] = '1';
+    keymap[0x1E] = '2';
+    keymap[0x26] = '3';
+    keymap[0x25] = '4';
+    keymap[0x2E] = '5';
+    keymap[0x36] = '6';
+    keymap[0x3D] = '7';
+    keymap[0x3E] = '8';
+    keymap[0x46] = '9';
+    keymap[0x45] = '0';
+
+    keymap[SHIFT_MODIFIER | 0x16] = '!';
+    keymap[SHIFT_MODIFIER | 0x1E] = '"';
+    keymap[SHIFT_MODIFIER | 0x26] = '#';
+    keymap[SHIFT_MODIFIER | 0x25] = '¤';
+    keymap[SHIFT_MODIFIER | 0x2E] = '%';
+    keymap[SHIFT_MODIFIER | 0x36] = '&';
+    keymap[SHIFT_MODIFIER | 0x3D] = '/';
+    keymap[SHIFT_MODIFIER | 0x3E] = '(';
+    keymap[SHIFT_MODIFIER | 0x46] = ')';
+    keymap[SHIFT_MODIFIER | 0x45] = '=';
+
+    keymap[0x41] = ',';
+    keymap[0x49] = '.';
+    keymap[0x4A] = '-';
+    keymap[SHIFT_MODIFIER | 0x41] = ';';
+    keymap[SHIFT_MODIFIER | 0x49] = ':';
+    keymap[SHIFT_MODIFIER | 0x4A] = '_';
+
+    keymap[0x5D] = '\'';
+    keymap[SHIFT_MODIFIER | 0x5D] = '*';
+    keymap[0x5B] = '¨';
+    keymap[SHIFT_MODIFIER |  0x5B] = '^';
+    keymap[0x4E] = '+'; 
+    keymap[SHIFT_MODIFIER | 0x4E] = '?';
+    keymap[0x61] = '<';
+    keymap[SHIFT_MODIFIER | 0x61] = '>';
+
+
+}
+
+#[derive(PartialEq)]
+enum State {
     Waiting,
     KeyRelease,
 }
 
-#[repr(u8)]
-enum Key {
-    A = 0x1C,
-    B = 0x32,
-    C = 0x21,
-    D = 0x23,
-    E = 0x24,
-    F = 0x2B,
-    G = 0x34,
-    H = 0x33,
-    I = 0x43,
-    J = 0x3B,
-    K = 0x42,
-    L = 0x4B,
-    M = 0x3A,
-    N = 0x31,
-    O = 0x44,
-    P = 0x4D,
-    Q = 0x15,
-    R = 0x2D,
-    S = 0x1B,
-    T = 0x2C,
-    U = 0x3C,
-    V = 0x2A,
-    W = 0x1D,
-    X = 0x22,
-    Y = 0x35,
-    Z = 0x1A,
-    Å = 0x54,
-    Ä = 0x52,
-    Ö = 0x4C,
-    One = 0x16,
-    Two = 0x1E,
-    Three = 0x26,
-    Four = 0x25,
-    Five = 0x2E,
-    Six = 0x36,
-    Seven = 0x3D,
-    Eight = 0x3E,
-    Nine = 0x46,
-    Zero = 0x45,
-}
-
-impl<'a> KernelDebug<'a> for Key {
-    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
-        formatter.debug_str(self.to_str())
-    }
-}
-
-impl Key {
-    fn to_str(&self) -> &str {
-        match self {
-            Self::A => "A",
-            Self::B => "B",
-            Self::C => "C",
-            Self::D => "D",
-            Self::E => "E",
-            Self::F => "F",
-            Self::G => "G",
-            Self::H => "H",
-            Self::I => "I",
-            Self::J => "J",
-            Self::K => "K",
-            Self::L => "L",
-            Self::M => "M",
-            Self::N => "N",
-            Self::O => "O",
-            Self::P => "P",
-            Self::Q => "Q",
-            Self::R => "R",
-            Self::S => "S",
-            Self::T => "T",
-            Self::U => "U",
-            Self::V => "V",
-            Self::W => "W",
-            Self::X => "X",
-            Self::Y => "Y",
-            Self::Z => "Z",
-            Self::Å => "Å",
-            Self::Ä => "Ä",
-            Self::Ö => "Ö",
-            Self::One => "1",
-            Self::Two => "2",
-            Self::Three => "3",
-            Self::Four => "4",
-            Self::Five => "5",
-            Self::Six => "6",
-            Self::Seven => "7",
-            Self::Eight => "8",
-            Self::Nine => "9",
-            Self::Zero => "0",
-            _ => "?"
-        }
-    }
-}
-
-// ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ1234567890
-
-enum KeyEvent {
-    KeyDown(Key),
-    KeyUp(Key),
-}
 
 struct KeyboardState {
-    command: Event,
+    command: State,
+    ctrl_pressed: bool,
+    shift_pressed: bool,
+    alt_pressed: bool,
+    altgr_pressed: bool,
 }
+
+static mut keyboard_state: KeyboardState = KeyboardState {command: State::Waiting, ctrl_pressed: false, shift_pressed: false, alt_pressed: false, altgr_pressed: false};
 
 pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
 
     // Implement keyboard 2
 
-
-
     unsafe { if let Ok(data) = controller.read_data() {
-        debug!(&data);
+        if data == 0xF0 {
+            // Start of KeyRelease event
+            keyboard_state.command = State::KeyRelease;
+        } else if keyboard_state.command == State::KeyRelease {
+            // If we are waiting for KeyRelease event then check if its modifier if so switch it back off
+            if data == 0x12 {
+                keyboard_state.shift_pressed = false;
+            }
+            keyboard_state.command = State::Waiting;
+        } else {
+            if data == 0x12 {
+                // If shift gets pressed then switch it on
+                keyboard_state.shift_pressed = true;
+            } else {
+                let mut key: usize = data as usize;
+                if keyboard_state.shift_pressed {
+                    key |= SHIFT_MODIFIER;
+                }
+                if keymap[key] != '\x00' {
+                    debug!(&keymap[key]);
+                } else {
+                    debug!(&key);
+                }
+            }
+        }
     } }
-    debug!("keyboard handler!");
+    //debug!("keyboard handler!");
     unsafe {
         pics.notify_end_of_interrupt(33);
     }
