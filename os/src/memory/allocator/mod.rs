@@ -105,7 +105,7 @@ impl AllocatorChunk {
         }
         let owner = self.owners.get_mut(self.next)?;
         let allocation = owner.allocate(layout);
-        debug!(&(allocation.is_some() as u8));
+        //debug!(&(allocation.is_some() as u8));
         match allocation {
             Some(allocation) => return Some(allocation),
             None => {
