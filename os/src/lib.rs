@@ -3,6 +3,7 @@
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
 #![feature(ptr_metadata)]
+#![feature(const_mut_refs)]
 #[macro_use]
 extern crate bitflags;
 extern crate alloc;
@@ -13,6 +14,7 @@ use crate::display::macros::*;
 
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
 use crate::memory::paging::table::EntryFlags;
+use crate::memory::populate_global_allocator;
 
 use memory::allocator::AllocatorChunk;
 use memory::frame::FrameAllocator;
@@ -49,8 +51,9 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     let mut active_table = unsafe { PageTableMaster::new() };
     let mut allocator = remap_everything(multiboot_info, &mut active_table);
     unsafe {
-        reserve_memory(&mut active_table, &mut allocator);
+        populate_global_allocator(&mut active_table, &mut allocator);
     }
+    
     unsafe { interrupt::setup::setup_interrupts() }
     x86_64::instructions::interrupts::int3();
     let cpu_info = cpuid::ProcessorIdentification::gather();
@@ -73,14 +76,6 @@ pub extern "C" fn keyboard_handler() {
 }
 
 unsafe fn reserve_memory(active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {
-    let pages = MemoryPageRange::new(
-        MemoryPage::inside_address(0x8000000),
-        MemoryPage::inside_address(0x8010000),
-    );
-    let reserve = AllocatorChunk::create(active_table, allocator, pages)
-        .as_mut()
-        .unwrap();
-    debug!("reserved:", &reserve.size_in_pages(), "pages.");
 }
 
 fn remap_everything(

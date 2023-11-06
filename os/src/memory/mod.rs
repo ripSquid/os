@@ -1,11 +1,13 @@
 use core::{
     alloc::{GlobalAlloc, Layout},
-    iter::Filter,
+    iter::Filter, cell::{UnsafeCell, RefCell}, sync::atomic::AtomicUsize,
 };
 
-use crate::multiboot_info::memory_map::{MemoryMapEntry, MemoryType};
+use alloc::string::{String, ToString};
 
-use self::frame::{FrameRangeInclusive, MemoryFrame};
+use crate::{multiboot_info::memory_map::{MemoryMapEntry, MemoryType}, display::macros::print_str};
+
+use self::{frame::{FrameRangeInclusive, MemoryFrame}, allocator::{GlobalAllocator, AllocatorChunk}, paging::master::PageTableMaster};
 pub mod allocator;
 pub mod frame;
 pub mod paging;
@@ -19,20 +21,49 @@ const PAGE_SIZE_4K: usize = 4096;
 
 #[global_allocator]
 static GLOBAL_ALLOCATOR: GymnasieAllocator = GymnasieAllocator::new();
-struct GymnasieAllocator {}
+struct GymnasieAllocator {
+    readers: AtomicUsize,
+    writers: AtomicUsize,
+    actual_allocator: GlobalAllocator,
+}
 impl GymnasieAllocator {
+
     pub const fn new() -> Self {
-        Self {}
+        Self {
+            readers: AtomicUsize::new(0),
+            writers: AtomicUsize::new(0),
+            actual_allocator: GlobalAllocator::null(),
+        }
     }
+    fn write_a(&self) -> &mut GlobalAllocator {
+        assert!(self.actual_allocator.is_active());
+        while self.writers.load(core::sync::atomic::Ordering::Relaxed) != 0 {}
+        unsafe { self.write_a_unchecked() }
+    }
+    unsafe fn write_a_unchecked(&self) -> &mut GlobalAllocator {
+        &mut (self as *const Self as *mut Self).as_mut().unwrap().actual_allocator
+    }
+
+}
+pub unsafe fn populate_global_allocator(active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {
+    GLOBAL_ALLOCATOR.write_a_unchecked().populate(active_table, allocator);
+    allocator_test();
+}
+fn allocator_test() {
+    let mut test_string = String::from("this is a heap allocated string!");
+    print_str!(&test_string.as_str());
+    test_string = "this is a new value of string".to_string();
+    print_str!(&test_string.as_str());
+
 }
 
 unsafe impl GlobalAlloc for GymnasieAllocator {
-    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
-        core::ptr::null_mut()
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+       self.actual_allocator.alloc(layout)
     }
 
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        todo!()
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        self.actual_allocator.dealloc(ptr, layout)
     }
 }
 

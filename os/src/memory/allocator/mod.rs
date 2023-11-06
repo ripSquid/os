@@ -3,27 +3,48 @@ use core::{
     mem::size_of,
 };
 
+use crate::display::macros::debug;
+
 use super::{
     frame::{FrameAllocator, MemoryFrame},
     paging::{
-        master::Mapper,
+        master::{Mapper, PageTableMaster},
         page::{MemoryPage, MemoryPageRange},
         table::EntryFlags,
-    },
+    }, ElfTrustAllocator,
 };
 
-struct GlobalAllocator {
+pub struct GlobalAllocator {
     next: (usize, usize),
     start: Option<&'static mut AllocatorChunk>,
 }
-
+impl GlobalAllocator {
+    pub const fn null() -> Self {
+        Self { next: (0,0), start: None }
+    }
+    pub fn is_active(&self) -> bool {
+        self.start.is_some()
+    }
+    pub unsafe fn start_unchecked(&self) -> &mut AllocatorChunk {
+        (self as *const Self as *mut Self).as_mut().unwrap().start.as_mut().unwrap()
+    }
+    fn start(&self) -> &mut AllocatorChunk {
+        unsafe { self.start_unchecked() }
+    }
+    pub unsafe fn populate(&mut self, active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {
+        let pages = MemoryPageRange::new(MemoryPage::inside_address(0x8000000), MemoryPage::inside_address(0x8040000));
+        let reserve = AllocatorChunk::create(active_table, allocator, pages).as_mut().unwrap();
+        debug!("reserved:", &reserve.size_in_pages(), "pages.");
+        self.start = Some(reserve);
+    }
+}
 unsafe impl GlobalAlloc for GlobalAllocator {
-    unsafe fn alloc(&self, _layout: Layout) -> *mut u8 {
-        todo!()
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        self.start().allocate(layout).unwrap()
     }
 
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        todo!()
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        self.start().deallocate(ptr, layout);
     }
 }
 impl AllocatorChunk {
@@ -47,7 +68,7 @@ impl AllocatorChunk {
             size += 1;
             *(page.starting_address() as *mut RawPageMemory) = [0; 4096];
             let handle = &mut *pointer;
-            handle.owners[i] = FrameState::Unallocated(page);
+            handle.owners[i] = FrameState::Allocated(FrameOwner { allocations: 0, offset: 0, index: 0, page });
         }
         {
             let handle = &mut *pointer;
@@ -58,6 +79,7 @@ impl AllocatorChunk {
                 size,
             );
         }
+        
         pointer
     }
     pub fn size_in_pages(&self) -> usize {
@@ -82,7 +104,9 @@ impl AllocatorChunk {
             return None;
         }
         let owner = self.owners.get_mut(self.next)?;
-        match owner.allocate(layout) {
+        let allocation = owner.allocate(layout);
+        debug!(&(allocation.is_some() as u8));
+        match allocation {
             Some(allocation) => return Some(allocation),
             None => {
                 self.next += 1;
@@ -90,8 +114,11 @@ impl AllocatorChunk {
             }
         }
     }
-    pub fn deallocate(&mut self, _ptr: core::ptr::NonNull<u8>, _layout: Layout) {
+    pub fn deallocate(&mut self, ptr: *mut u8, layout: Layout) {
         self.allocations -= 1;
+    }
+    pub fn allocations(&self) -> usize {
+        self.allocations
     }
 }
 
@@ -127,8 +154,7 @@ impl FrameState {
             FrameState::Allocated(owner) => {
                 owner.allocations -= 1;
                 if owner.allocations == 0 {
-                    let state = FrameState::Unallocated(owner.page);
-                    *self = state;
+                    owner.offset = 0;
                 }
             }
         }
@@ -139,8 +165,4 @@ enum FrameState {
     Unallocated(MemoryPage),
     Allocated(FrameOwner),
     Unused,
-}
-
-pub struct AllocatorCell {
-    frame: Option<MemoryFrame>,
 }
