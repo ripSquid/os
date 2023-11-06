@@ -33,6 +33,7 @@ use crate::multiboot_info::MultibootInfoHeader;
 mod interrupt;
 mod memory;
 mod multiboot_info;
+mod keyboard;
 
 //no mangle tells the compiler to keep the name of this symbol
 //this is later used in long_mode.asm, at which point the cpu is prepared to run rust code
