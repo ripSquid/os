@@ -100,6 +100,16 @@ pub unsafe fn setup_keymap() {
     keymap[SHIFT_MODIFIER | 0x46] = ')';
     keymap[SHIFT_MODIFIER | 0x45] = '=';
 
+    keymap[ALTGR_MODIFIER | 0x1E] = '@';
+    keymap[ALTGR_MODIFIER | 0x26] = '£';
+    keymap[ALTGR_MODIFIER | 0x25] = '$';
+    keymap[ALTGR_MODIFIER | 0x3D] = '{';
+    keymap[ALTGR_MODIFIER | 0x3E] = '[';
+    keymap[ALTGR_MODIFIER | 0x46] = ']';
+    keymap[ALTGR_MODIFIER | 0x45] = '}';
+    keymap[ALTGR_MODIFIER | 0x4E] = '\\';
+    keymap[ALTGR_MODIFIER | 0x61] = '|';
+
     keymap[0x41] = ',';
     keymap[0x49] = '.';
     keymap[0x4A] = '-';
@@ -123,6 +133,8 @@ pub unsafe fn setup_keymap() {
 enum State {
     Waiting,
     KeyRelease,
+    WaitingForRightCommand,
+    RightKeyRelease,
 }
 
 
@@ -141,16 +153,35 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
     // Implement keyboard 2
 
     unsafe { if let Ok(data) = controller.read_data() {
-        if data == 0xF0 {
+        if data == 0xF0 && keyboard_state.command == State::Waiting {
             // Start of KeyRelease event
             keyboard_state.command = State::KeyRelease;
+        } else if data == 0xE0 && keyboard_state.command == State::Waiting {
+            // We got indication that a "right" key is getting specific commands
+            keyboard_state.command = State::WaitingForRightCommand;
+        } else if data == 0xF0 && keyboard_state.command == State::WaitingForRightCommand {
+            // We got a key release event after receiving a "right" key
+            keyboard_state.command = State::RightKeyRelease;
         } else if keyboard_state.command == State::KeyRelease {
             // If we are waiting for KeyRelease event then check if its modifier if so switch it back off
             if data == 0x12 {
                 keyboard_state.shift_pressed = false;
+            } else if data == 0x11 {
+                keyboard_state.alt_pressed = false;
+            }
+            keyboard_state.command = State::Waiting;
+        } else if keyboard_state.command == State::RightKeyRelease {
+            if data == 0x11 {
+                keyboard_state.altgr_pressed = false;
             }
             keyboard_state.command = State::Waiting;
         } else {
+            if data == 0x11 && keyboard_state.command == State::WaitingForRightCommand {
+                keyboard_state.altgr_pressed = true;
+                keyboard_state.command = State::Waiting;
+            } else if data == 0x11 {
+                keyboard_state.alt_pressed = true;
+            }
             if data == 0x12 {
                 // If shift gets pressed then switch it on
                 keyboard_state.shift_pressed = true;
@@ -159,6 +190,16 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
                 if keyboard_state.shift_pressed {
                     key |= SHIFT_MODIFIER;
                 }
+                if keyboard_state.altgr_pressed {
+                    key |= ALTGR_MODIFIER;
+                }
+                if keyboard_state.alt_pressed {
+                    key |= ALT_MODIFIER;
+                }
+                if keyboard_state.ctrl_pressed {
+                    key |= CTRL_MODIFIER;
+                }
+
                 if keymap[key] != '\x00' {
                     debug!(&keymap[key]);
                 } else {
