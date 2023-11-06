@@ -1,9 +1,13 @@
+use core::arch::asm;
+
 use super::gatedescriptor::TypeAttribute;
 use super::table::IDTable;
+use super::timer;
 use crate::display::macros::debug;
 use crate::interrupt::gatedescriptor::SegmentSelector;
 use pic8259::ChainedPics;
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
+use x86_64::registers::segmentation::Segment;
 use x86_64::structures::idt::InterruptStackFrame;
 use x86_64::structures::DescriptorTablePointer;
 use x86_64::VirtAddr;
@@ -22,11 +26,11 @@ static mut idtdescriptor: DescriptorTablePointer = DescriptorTablePointer {
     base: VirtAddr::zero(),
 };
 
-pub unsafe fn setup_interrupts() {
-    let mut pics = ChainedPics::new_contiguous(0x20);
-    pics.initialize();
-    pics.write_masks(0b1111_1101, 0b1111_1111);
+static mut pics: ChainedPics = unsafe { ChainedPics::new(0x20, 0x28) };
 
+static mut controller: Controller = unsafe { Controller::new() };
+
+pub unsafe fn setup_interrupts() {
     idt.breakpoint.set_function(
         breakpoint,
         TypeAttribute(0b1000_1110_0000_0000),
@@ -37,11 +41,27 @@ pub unsafe fn setup_interrupts() {
         TypeAttribute(0b1000_1110_0000_0000),
         SegmentSelector(8),
     );
+    idt.user_interupts[0].set_function(
+        timer,
+        TypeAttribute(0b1000_1110_0000_0000),
+        SegmentSelector(8),
+    );
+
+    // --- TIMER TESTING
+
+    // --- TIMER TESTING
+
+    pics.write_masks(0b0000_0001, 0u8);
+    pics.initialize();
+
     idtdescriptor = idt.pointer();
     x86_64::instructions::tables::lidt(&idtdescriptor);
 
     // ps2 setup (structuring no.)
-    let _ = keyboard_initialize();
+    unsafe { _ = keyboard_initialize() };
+
+    // Enable interrupts
+    asm!("sti");
 }
 
 pub extern "x86-interrupt" fn breakpoint(_stack_frame: InterruptStackFrame) {
@@ -49,13 +69,24 @@ pub extern "x86-interrupt" fn breakpoint(_stack_frame: InterruptStackFrame) {
 }
 
 pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
+    unsafe { if let Ok(data) = controller.read_data() {
+        debug!(&data);
+    } }
     debug!("keyboard handler!");
+    unsafe {
+        pics.notify_end_of_interrupt(33);
+    }
 }
 
-fn keyboard_initialize() -> Result<(), ControllerError> {
-    // Ska egentligen kolla ifall tangentbord och ps2 kontroller finns men vi antar att det finns
+pub extern "x86-interrupt" fn timer(_stack_frame: InterruptStackFrame) {
+    debug!(".");
+    unsafe {
+        pics.notify_end_of_interrupt(32);
+    }
+}
 
-    let mut controller = unsafe { Controller::new() };
+unsafe fn keyboard_initialize() -> Result<(), ControllerError> {
+    // Ska egentligen kolla ifall tangentbord och ps2 kontroller finns men vi antar att det finns
 
     // Step 3: Disable devices
     controller.disable_keyboard()?;

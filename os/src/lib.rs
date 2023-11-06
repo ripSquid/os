@@ -7,6 +7,8 @@
 extern crate bitflags;
 extern crate alloc;
 
+use core::arch::asm;
+
 use crate::display::macros::*;
 
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
@@ -58,8 +60,8 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
 fn disable_cursor() {
     unsafe {
-        PortWriteOnly::new(0x03D4 as u16).write(0x0A as u8);
-        PortWriteOnly::new(0x03D5 as u16).write(0x20 as u8);
+        PortWriteOnly::new(0x03D4_u16).write(0x0A_u8);
+        PortWriteOnly::new(0x03D5_u16).write(0x20_u8);
     }
 }
 
