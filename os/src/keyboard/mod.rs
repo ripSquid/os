@@ -126,7 +126,8 @@ pub unsafe fn setup_keymap() {
     keymap[0x61] = '<';
     keymap[SHIFT_MODIFIER | 0x61] = '>';
 
-
+    keymap[0x5A] = '\x0A'; // Newline
+    keymap[0x66] = '\x08'; // Backspace
 }
 
 #[derive(PartialEq)]
