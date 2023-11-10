@@ -61,7 +61,7 @@ pub unsafe fn populate_global_allocator(
 ) {
     GLOBAL_ALLOCATOR
         .write_a_unchecked()
-        .populate(active_table, allocator);
+        .populate(active_table, allocator, allocator.available_frames_left());
     allocator_test();
 }
 
