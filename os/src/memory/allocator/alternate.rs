@@ -157,9 +157,9 @@ impl PageStateTree {
     fn try_allocate(&mut self, index: TreeIndex, layout: Layout, memory_span: &MemoryPageRange) -> Option<*mut u8> {
         let addr = self.address_of(index, memory_span);
         let state = &mut self[index];
-        debug!(&state.offset);
+        //debug!(&state.offset);
         let first = align_up(state.offset, layout.align() as u64) + addr - memory_span.start().starting_address();
-        debug!(&first);
+        //debug!(&first);
         let last = first + layout.size() as u64;
         if last <= state.size {
             self.mark_allocated_area(first..last, true);
@@ -211,20 +211,21 @@ impl PageStateTree {
                 if state.allocations == 0 {
                     state.offset = 0;
                 }
-                debug!(&state.size, &state.offset, &state.allocations, &index);
+                //debug!(&state.size, &state.offset, &state.allocations, &index);
             }
             
             let mid_point = self_range.start + (self.size_of(index) as u64 / 2);
 
             if index.right().0 < self.0.len() {
-                self.mark_allocated_area_child(range.clone(), mid_point..self_range.end, index.right());
+                self.mark_area_unnallocated(range.clone(), mid_point..self_range.end, index.right());
             }
             if index.left().0 < self.0.len() {
-                self.mark_allocated_area_child(range, self_range.start..mid_point, index.left());
+                self.mark_area_unnallocated(range, self_range.start..mid_point, index.left());
             }
             
         } else if range.contains(&self_range.start) && range.contains(&self_range.end) {
             self.recursive_op(index, &|state: &mut PageState| {
+                assert!(state.allocations == 1);
                 state.offset = 0;
                 state.allocations -= 1;
             });
@@ -236,34 +237,30 @@ impl PageStateTree {
         self_range: Range<u64>,
         index: TreeIndex,
     ) {
+        let mid_point = self_range.start + (self.size_of(index) as u64 / 2);
         if self_range.contains(&range.start) || self_range.contains(&range.end) {
-            {
+            
                 let state = &mut self[index];
                 assert_eq!(self_range.end - self_range.start, state.size);
 
                 state.allocations += 1;
                 state.offset = (range.end-self_range.start).min(state.size);
-                debug!(&state.size, &state.offset, &state.allocations, &index);
-            }
-            
-            
-
-            let mid_point = self_range.start + (self.size_of(index) as u64 / 2);
-
-            if index.right().0 < self.0.len() {
-                self.mark_allocated_area_child(range.clone(), mid_point..self_range.end, index.right());
-            }
-            if index.left().0 < self.0.len() {
-                self.mark_allocated_area_child(range, self_range.start..mid_point, index.left());
-            }
+                //debug!(&state.size, &state.offset, &state.allocations, &index);
             
         } else if range.contains(&self_range.start) && range.contains(&self_range.end) {
-            self.recursive_op(index, &|state: &mut PageState| {
-                assert!(state.allocations == 0);
-                state.offset = state.size;
-                state.allocations += 1;
-            });
+            debug!("hit recursive op", &index);
+            let state = &mut self[index];
+            assert!(state.allocations == 0);
+            state.offset = state.size;
+            state.allocations += 1;    
         }
+        if index.right().0 < self.0.len() {
+            self.mark_allocated_area_child(range.clone(), mid_point..self_range.end, index.right());
+        }
+        if index.left().0 < self.0.len() {
+            self.mark_allocated_area_child(range, self_range.start..mid_point, index.left());
+        }
+        
         
     }
     fn recursive_op(&mut self, start: TreeIndex, op: &dyn Fn(&mut PageState)) {

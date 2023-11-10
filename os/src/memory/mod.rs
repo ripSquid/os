@@ -5,7 +5,7 @@ use core::{
     sync::atomic::AtomicUsize,
 };
 
-use alloc::string::{String, ToString};
+use alloc::{string::{String, ToString}, format, boxed::Box};
 
 use crate::{
     display::macros::print_str,
@@ -13,7 +13,7 @@ use crate::{
 };
 
 use self::{
-    allocator::{AllocatorChunk, GlobalAllocator},
+    allocator::{GlobalAllocator},
     frame::{FrameRangeInclusive, MemoryFrame},
     paging::master::PageTableMaster,
 };
@@ -66,10 +66,14 @@ pub unsafe fn populate_global_allocator(
 }
 
 fn allocator_test() {
-    let mut test_string = String::from("this is a heap allocated string!");
+    let test_string = String::from("this is a heap allocated string!");
     print_str!(&test_string.as_str());
-    test_string = "this is a new value of string".to_string();
-    print_str!(&test_string.as_str());
+    drop(test_string);
+    let pro = 0;
+    let test_string_2 = format!("this is a heap allocated string again, using format, have the number {}", 0);
+    print_str!(&test_string_2.as_str());
+    drop(test_string_2);
+    let test_box = Box::new([0i32; 4096]);
 }
 
 unsafe impl GlobalAlloc for GymnasieAllocator {

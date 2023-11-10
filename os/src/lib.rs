@@ -16,7 +16,6 @@ use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
 use crate::memory::paging::table::EntryFlags;
 use crate::memory::populate_global_allocator;
 
-use memory::allocator::AllocatorChunk;
 use memory::frame::FrameAllocator;
 use memory::paging::master::{InactivePageTable, PageTableMaster};
 use memory::paging::page::{MemoryPage, MemoryPageRange};
