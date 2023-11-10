@@ -147,23 +147,20 @@ impl PageStateTree {
     pub fn allocate(&mut self, layout: Layout, memory_span: &MemoryPageRange) -> Option<*mut u8> {
         self.try_allocate(TreeIndex::root(), layout, memory_span)
     }
-    pub fn unallocate(&mut self, pointer: *mut u8, layout: Layout, memory_span: &MemoryPageRange) -> Result<(), ()> {
+    pub fn unallocate(&mut self, pointer: *mut u8, layout: Layout, memory_span: &MemoryPageRange) {
         let start = pointer as u64 - memory_span.start().starting_address();
         let end = start + layout.size() as u64;
         let self_range = 0..self.size_of(TreeIndex::root()) as u64;
         self.mark_area_unnallocated(start..end, self_range, TreeIndex::root());
-        Ok(())
     }
     fn try_allocate(&mut self, index: TreeIndex, layout: Layout, memory_span: &MemoryPageRange) -> Option<*mut u8> {
-        let addr = self.address_of(index, memory_span);
+        let addr = self.address_of(index);
         let state = &mut self[index];
-        //debug!(&state.offset);
-        let first = align_up(state.offset, layout.align() as u64) + addr - memory_span.start().starting_address();
-        //debug!(&first);
+        let first = align_up(state.offset, layout.align() as u64) + addr;
         let last = first + layout.size() as u64;
         if last <= state.size {
             self.mark_allocated_area(first..last, true);
-            Some(self.address_of(index, memory_span) as *mut u8)
+            Some((self.address_of(index) + memory_span.start().starting_address()) as *mut u8)
         } else {
             print_str!("NO MORE MEMORY!!!!!!");
             None
@@ -171,7 +168,7 @@ impl PageStateTree {
     }
 
     //Given a memory span, what region of it does this index reffer to?
-    fn address_of(&self, index: TreeIndex, memory_span: &MemoryPageRange) -> MemoryAddress {
+    fn address_of(&self, index: TreeIndex) -> MemoryAddress {
         // How many pages does the index span?
         let span = self.size_of(index) as u64;
 
@@ -181,9 +178,7 @@ impl PageStateTree {
         //The memory offset compared to the start of the memory range
         let final_offset = state_offset * span;
 
-        assert!(final_offset + span <= memory_span.end().starting_address());
-        
-        memory_span.start().starting_address() + final_offset
+        final_offset
     }
     fn size_of(&self, index: TreeIndex) -> usize {
         let level = TreeIndex(self.0.len()-1).level() - index.level();
@@ -194,9 +189,8 @@ impl PageStateTree {
         (index.0+1) - (1 << (index.0 + 1).ilog2())
     }
     pub fn mark_allocated_area(&mut self, range: Range<u64>, allocate: bool) {
-        let full_range = 0..self.size_of(TreeIndex::root()) as u64;
         if allocate { 
-            self.mark_allocated_area_child(range, full_range, TreeIndex::root());
+            self.mark_allocated_area_child(range, TreeIndex::root());
         } else {
 
         }
@@ -234,31 +228,30 @@ impl PageStateTree {
     fn mark_allocated_area_child(
         &mut self,
         range: Range<u64>,
-        self_range: Range<u64>,
         index: TreeIndex,
     ) {
-        let mid_point = self_range.start + (self.size_of(index) as u64 / 2);
-        if self_range.contains(&range.start) || self_range.contains(&range.end) {
-            
-                let state = &mut self[index];
-                assert_eq!(self_range.end - self_range.start, state.size);
-
-                state.allocations += 1;
-                state.offset = (range.end-self_range.start).min(state.size);
-                //debug!(&state.size, &state.offset, &state.allocations, &index);
-            
-        } else if range.contains(&self_range.start) && range.contains(&self_range.end) {
-            debug!("hit recursive op", &index);
+        
+        let (self_range, state) = {
+            let base = self.address_of(index);
             let state = &mut self[index];
+            (base..base+state.size, state)
+        };
+        
+        if self_range.contains(&range.start) || self_range.contains(&(range.end-1)) {
+            state.allocations += 1;
+            state.offset = (range.end-self_range.start).min(state.size);
+        } else if range.contains(&self_range.start) && range.contains(&(self_range.end-1)) {
             assert!(state.allocations == 0);
             state.offset = state.size;
-            state.allocations += 1;    
+            state.allocations += 1;
+        } else {
+            return;
         }
         if index.right().0 < self.0.len() {
-            self.mark_allocated_area_child(range.clone(), mid_point..self_range.end, index.right());
+            self.mark_allocated_area_child(range.clone(), index.right());
         }
         if index.left().0 < self.0.len() {
-            self.mark_allocated_area_child(range, self_range.start..mid_point, index.left());
+            self.mark_allocated_area_child(range, index.left());
         }
         
         
