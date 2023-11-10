@@ -19,13 +19,16 @@ impl MemoryPage {
     pub fn move_page(&mut self, offset: isize) {
         self.0.saturating_add_signed(offset);
     }
+    pub const fn null() -> Self {
+        Self(0)
+    }
 }
 
 pub struct MemoryPageRange {
     range: Range<usize>,
 }
 impl MemoryPageRange {
-    pub fn new(start: MemoryPage, end: MemoryPage) -> Self {
+    pub const fn new(start: MemoryPage, end: MemoryPage) -> Self {
         Self {
             range: start.0..end.0,
         }

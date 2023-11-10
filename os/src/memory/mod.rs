@@ -1,13 +1,22 @@
 use core::{
     alloc::{GlobalAlloc, Layout},
-    iter::Filter, cell::{UnsafeCell, RefCell}, sync::atomic::AtomicUsize,
+    cell::{RefCell, UnsafeCell},
+    iter::Filter,
+    sync::atomic::AtomicUsize,
 };
 
 use alloc::string::{String, ToString};
 
-use crate::{multiboot_info::memory_map::{MemoryMapEntry, MemoryType}, display::macros::print_str};
+use crate::{
+    display::macros::print_str,
+    multiboot_info::memory_map::{MemoryMapEntry, MemoryType},
+};
 
-use self::{frame::{FrameRangeInclusive, MemoryFrame}, allocator::{GlobalAllocator, AllocatorChunk}, paging::master::PageTableMaster};
+use self::{
+    allocator::{AllocatorChunk, GlobalAllocator},
+    frame::{FrameRangeInclusive, MemoryFrame},
+    paging::master::PageTableMaster,
+};
 pub mod allocator;
 pub mod frame;
 pub mod paging;
@@ -27,7 +36,6 @@ struct GymnasieAllocator {
     actual_allocator: GlobalAllocator,
 }
 impl GymnasieAllocator {
-
     pub const fn new() -> Self {
         Self {
             readers: AtomicUsize::new(0),
@@ -41,25 +49,32 @@ impl GymnasieAllocator {
         unsafe { self.write_a_unchecked() }
     }
     unsafe fn write_a_unchecked(&self) -> &mut GlobalAllocator {
-        &mut (self as *const Self as *mut Self).as_mut().unwrap().actual_allocator
+        &mut (self as *const Self as *mut Self)
+            .as_mut()
+            .unwrap()
+            .actual_allocator
     }
-
 }
-pub unsafe fn populate_global_allocator(active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {
-    GLOBAL_ALLOCATOR.write_a_unchecked().populate(active_table, allocator);
+pub unsafe fn populate_global_allocator(
+    active_table: &mut PageTableMaster,
+    allocator: &mut ElfTrustAllocator,
+) {
+    GLOBAL_ALLOCATOR
+        .write_a_unchecked()
+        .populate(active_table, allocator);
     allocator_test();
 }
+
 fn allocator_test() {
     let mut test_string = String::from("this is a heap allocated string!");
     print_str!(&test_string.as_str());
     test_string = "this is a new value of string".to_string();
     print_str!(&test_string.as_str());
-
 }
 
 unsafe impl GlobalAlloc for GymnasieAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-       self.actual_allocator.alloc(layout)
+        self.actual_allocator.alloc(layout)
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {

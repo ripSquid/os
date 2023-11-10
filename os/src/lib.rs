@@ -33,9 +33,9 @@ pub mod display;
 mod panic;
 use crate::multiboot_info::MultibootInfoHeader;
 mod interrupt;
+mod keyboard;
 mod memory;
 mod multiboot_info;
-mod keyboard;
 
 //no mangle tells the compiler to keep the name of this symbol
 //this is later used in long_mode.asm, at which point the cpu is prepared to run rust code
@@ -53,7 +53,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     unsafe {
         populate_global_allocator(&mut active_table, &mut allocator);
     }
-    
+
     unsafe { interrupt::setup::setup_interrupts() }
     x86_64::instructions::interrupts::int3();
     let cpu_info = cpuid::ProcessorIdentification::gather();
@@ -75,8 +75,7 @@ pub extern "C" fn keyboard_handler() {
     panic!();
 }
 
-unsafe fn reserve_memory(active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {
-}
+unsafe fn reserve_memory(active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {}
 
 fn remap_everything(
     info: MultibootInfoUnparsed,

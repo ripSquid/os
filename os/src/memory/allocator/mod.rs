@@ -5,46 +5,67 @@ use core::{
 pub mod alternate;
 use crate::display::macros::debug;
 
+use self::alternate::BigManAllocator;
+
 use super::{
     frame::{FrameAllocator, MemoryFrame},
     paging::{
         master::{Mapper, PageTableMaster},
         page::{MemoryPage, MemoryPageRange},
         table::EntryFlags,
-    }, ElfTrustAllocator,
+    },
+    ElfTrustAllocator,
 };
 
 pub struct GlobalAllocator {
     next: (usize, usize),
-    start: Option<&'static mut AllocatorChunk>,
+    start: Option<BigManAllocator>,
 }
 impl GlobalAllocator {
     pub const fn null() -> Self {
-        Self { next: (0,0), start: None }
+        Self {
+            next: (0, 0),
+            start: None,
+        }
     }
     pub fn is_active(&self) -> bool {
         self.start.is_some()
     }
-    pub unsafe fn start_unchecked(&self) -> &mut AllocatorChunk {
-        (self as *const Self as *mut Self).as_mut().unwrap().start.as_mut().unwrap()
+    pub unsafe fn start_unchecked(&self) -> &mut BigManAllocator {
+        (self as *const Self as *mut Self)
+            .as_mut()
+            .unwrap()
+            .start
+            .as_mut()
+            .unwrap()
     }
-    fn start(&self) -> &mut AllocatorChunk {
+    fn start(&self) -> &mut BigManAllocator {
         unsafe { self.start_unchecked() }
     }
-    pub unsafe fn populate(&mut self, active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {
-        let pages = MemoryPageRange::new(MemoryPage::inside_address(0x8000000), MemoryPage::inside_address(0x8040000));
-        let reserve = AllocatorChunk::create(active_table, allocator, pages).as_mut().unwrap();
-        debug!("reserved:", &reserve.size_in_pages(), "pages.");
-        self.start = Some(reserve);
+    pub unsafe fn populate(
+        &mut self,
+        active_table: &mut PageTableMaster,
+        allocator: &mut ElfTrustAllocator,
+    ) {
+        let pages = MemoryPageRange::new(
+            MemoryPage::inside_address(0x8000000),
+            MemoryPage::inside_address(0x8040000),
+        );
+        let big_man = BigManAllocator::begin(pages, active_table, allocator);
+        //let reserve = AllocatorChunk::create(active_table, allocator, pages)
+        //    .as_mut()
+        //    .unwrap();
+        //debug!("reserved:", &reserve.size_in_pages(), "pages.");
+        self.start = Some(big_man);
     }
 }
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.start().allocate(layout).unwrap()
+        self.start().allocate_mut(layout).unwrap()
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.start().deallocate(ptr, layout);
+        self.start().deallocate_mut(ptr, layout);
     }
 }
 impl AllocatorChunk {
@@ -68,7 +89,12 @@ impl AllocatorChunk {
             size += 1;
             *(page.starting_address() as *mut RawPageMemory) = [0; 4096];
             let handle = &mut *pointer;
-            handle.owners[i] = FrameState::Allocated(FrameOwner { allocations: 0, offset: 0, index: 0, page });
+            handle.owners[i] = FrameState::Allocated(FrameOwner {
+                allocations: 0,
+                offset: 0,
+                index: 0,
+                page,
+            });
         }
         {
             let handle = &mut *pointer;
@@ -79,7 +105,7 @@ impl AllocatorChunk {
                 size,
             );
         }
-        
+
         pointer
     }
     pub fn size_in_pages(&self) -> usize {
