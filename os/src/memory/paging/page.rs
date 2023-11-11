@@ -16,9 +16,6 @@ impl MemoryPage {
     pub fn starting_address(&self) -> VirtualAddress {
         (self.0 * PAGE_SIZE_4K) as u64
     }
-    pub const fn null() -> Self {
-        Self(0)
-    }
 }
 
 pub struct MemoryPageRange {

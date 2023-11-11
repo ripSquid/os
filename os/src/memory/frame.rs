@@ -59,7 +59,6 @@ impl Iterator for FrameIter {
 }
 pub struct FrameIter {
     frame: MemoryFrame,
-    start: usize,
     end: usize,
 }
 
@@ -101,7 +100,6 @@ impl IntoIterator for FrameRangeInclusive {
     fn into_iter(self) -> Self::IntoIter {
         FrameIter {
             frame: MemoryFrame(self.start_frame),
-            start: self.start_frame,
             end: self.end_frame,
         }
     }

@@ -8,18 +8,16 @@
 extern crate bitflags;
 extern crate alloc;
 
-use core::arch::asm;
-
-use crate::display::macros::*;
+use crate::display::{macros::*, DefaultVgaWriter, VgaColorCombo};
 
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
-use crate::memory::paging::table::EntryFlags;
+use crate::memory::paging::EntryFlags;
 use crate::memory::populate_global_allocator;
 
+use alloc::string::{String, ToString};
 use memory::frame::FrameAllocator;
-use memory::paging::master::{InactivePageTable, PageTableMaster};
-use memory::paging::page::{MemoryPage, MemoryPageRange};
-use memory::paging::temporary::TemporaryPage;
+use memory::paging::{InactivePageTable, MemoryPage, PageTableMaster, TemporaryPage};
+
 use memory::ElfTrustAllocator;
 use multiboot_info::elf::ElfSectionFlags;
 use multiboot_info::{MultiBootTag, MultibootInfoUnparsed, TagType};
@@ -42,7 +40,9 @@ mod multiboot_info;
 pub extern "C" fn rust_start(info: u64) -> ! {
     disable_cursor();
 
-    print_str!("hello world");
+    let version = env!("CARGO_PKG_VERSION");
+    let authors = env!("CARGO_PKG_AUTHORS");
+
     let multiboot_info = unsafe {
         multiboot_info::MultibootInfoUnparsed::from_pointer(info as *const MultibootInfoHeader)
     }
@@ -57,7 +57,27 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     x86_64::instructions::interrupts::int3();
     let cpu_info = cpuid::ProcessorIdentification::gather();
     debug!(&cpu_info);
-    print_str!("everything went well");
+
+    let author_text: String = authors.replace(":", " and ");
+    let mut formatter = unsafe { DefaultVgaWriter::new_unsafe() };
+    formatter
+        .clear_screen(display::VgaColor::Black)
+        .set_default_colors(VgaColorCombo::on_black(display::VgaColor::Green))
+        .write_str("I've succesfully booted, hello world!")
+        .next_line();
+        
+    formatter
+        .next_line()
+        .set_default_colors(VgaColorCombo::on_black(display::VgaColor::White))
+        .write_str("Version: ")
+        .write_str(version)
+        .next_line()
+        .write_str("Code by: ")
+        .write_str(&author_text.as_str())
+        .next_line()
+        .write_str("CPU vendor: ")
+        .write_str(cpu_info.vendor());
+
     loop {}
 }
 
@@ -73,8 +93,6 @@ pub extern "C" fn keyboard_handler() {
     print_str!("Interrupt Keyboard");
     panic!();
 }
-
-unsafe fn reserve_memory(active_table: &mut PageTableMaster, allocator: &mut ElfTrustAllocator) {}
 
 fn remap_everything(
     info: MultibootInfoUnparsed,

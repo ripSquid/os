@@ -1,32 +1,24 @@
-use core::{
-    alloc::{Allocator, GlobalAlloc, Layout},
-    mem::size_of,
-};
-pub mod alternate;
+use core::alloc::{GlobalAlloc, Layout};
+mod big_man;
+mod binary_tree;
+mod state;
 use crate::display::macros::debug;
+pub use binary_tree::{PageStateTree, TreeIndex};
+pub use state::PageState;
 
-use self::alternate::BigManAllocator;
+use self::big_man::BigManAllocator;
 
 use super::{
-    frame::{FrameAllocator, MemoryFrame},
-    paging::{
-        master::{Mapper, PageTableMaster},
-        page::{MemoryPage, MemoryPageRange},
-        table::EntryFlags,
-    },
+    paging::{MemoryPage, MemoryPageRange, PageTableMaster},
     ElfTrustAllocator, PAGE_SIZE_4K,
 };
 
 pub struct GlobalAllocator {
-    next: (usize, usize),
     start: Option<BigManAllocator>,
 }
 impl GlobalAllocator {
     pub const fn null() -> Self {
-        Self {
-            next: (0, 0),
-            start: None,
-        }
+        Self { start: None }
     }
     pub fn is_active(&self) -> bool {
         self.start.is_some()
@@ -40,7 +32,11 @@ impl GlobalAllocator {
             .unwrap()
     }
     fn start(&self) -> &mut BigManAllocator {
-        unsafe { self.start_unchecked() }
+        if self.is_active() {
+            unsafe { self.start_unchecked() }
+        } else {
+            panic!()
+        }
     }
     pub unsafe fn populate(
         &mut self,
@@ -67,6 +63,3 @@ unsafe impl GlobalAlloc for GlobalAllocator {
         self.start().deallocate_mut(ptr, layout);
     }
 }
-
-type RawPageMemory = [u8; 4096];
-

@@ -1,4 +1,6 @@
-use super::ScreenBuffer;
+use core::ops::{Deref, DerefMut};
+
+use super::{KernelDebug, KernelFormatter, ScreenBuffer};
 
 const DEFAULT_VGA_BUFFER_WIDTH: usize = 80;
 const DEFAULT_VGA_BUFFER_HEIGHT: usize = 25;
@@ -12,6 +14,9 @@ pub struct DefaultVgaWriter {
 }
 
 impl DefaultVgaWriter {
+    pub unsafe fn new_unsafe() -> Self {
+        Self::new(&mut *(0xB8000 as *mut crate::display::DefaultVgaBuffer))
+    }
     pub fn new(buffer: &'static mut DefaultVgaBuffer) -> Self {
         Self {
             buffer,
@@ -19,18 +24,40 @@ impl DefaultVgaWriter {
             fallback_color: VgaColorCombo::new(VgaColor::White, VgaColor::Black),
         }
     }
-    pub fn set_default_colors(&mut self, color: VgaColorCombo) {
-        self.fallback_color = color;
+    pub fn write_horizontally_centerd(&mut self, text: &str, line: usize) -> &mut Self {
+        self.position.1 = line;
+        self.position.0 = { (self.buffer.width() - text.len().min(self.buffer.width())) / 2 };
+        self.write_str(text);
+        self
     }
-    pub fn write_str(&mut self, chars: &str) {
+    pub fn set_default_colors(&mut self, color: VgaColorCombo) -> &mut Self {
+        self.fallback_color = color;
+        self
+    }
+    pub fn clear_screen(&mut self, color: VgaColor) -> &mut Self {
+        let color = VgaColorCombo::new(VgaColor::White, color);
+        for line in self.buffer.chars.iter_mut() {
+            for char in line.iter_mut() {
+                *char = VgaChar::BLANK.color(color);
+            }
+        }
+        self.position = (0, 0);
+        self
+    }
+    pub fn write_str(&mut self, chars: &str) -> &mut Self {
         for byte in chars.bytes() {
             self.write_byte(byte);
         }
+        self
     }
-    pub fn write_bytes(&mut self, bytes: &[u8]) {
+    pub fn write_debugable<'a, T: KernelDebug<'a>>(&'a mut self, debug: T) {
+        debug.debug(KernelFormatter::new(self));
+    }
+    pub fn write_bytes(&mut self, bytes: &[u8]) -> &mut Self {
         for byte in bytes {
             self.write_byte(*byte)
         }
+        self
     }
     pub fn write_byte(&mut self, byte: u8) {
         self.write_char(VgaChar {
@@ -38,10 +65,11 @@ impl DefaultVgaWriter {
             color: self.fallback_color,
         })
     }
-    pub fn next_line(&mut self) {
+    pub fn next_line(&mut self) -> &mut Self {
         let (col, row) = &mut self.position;
         *col = 0;
-        *row += 1
+        *row += 1;
+        self
     }
     pub fn write_char(&mut self, char: VgaChar) {
         match char.char {
@@ -82,6 +110,10 @@ impl VgaChar {
         char: b' ',
         color: VgaColorCombo(0),
     };
+    pub fn color(mut self, color: VgaColorCombo) -> Self {
+        self.color = color;
+        self
+    }
 }
 #[derive(Clone, Copy)]
 #[repr(transparent)]
