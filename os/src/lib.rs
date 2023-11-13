@@ -4,6 +4,7 @@
 #![feature(allocator_api)]
 #![feature(ptr_metadata)]
 #![feature(const_mut_refs)]
+#![feature(panic_info_message)]
 #[macro_use]
 extern crate bitflags;
 extern crate alloc;
@@ -65,7 +66,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .set_default_colors(VgaColorCombo::on_black(display::VgaColor::Green))
         .write_str("I've succesfully booted, hello world!")
         .next_line();
-        
+
     formatter
         .next_line()
         .set_default_colors(VgaColorCombo::on_black(display::VgaColor::White))

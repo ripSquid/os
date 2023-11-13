@@ -43,15 +43,22 @@ impl GlobalAllocator {
         active_table: &mut PageTableMaster,
         allocator: &mut ElfTrustAllocator,
         available_pages: usize,
-    ) {
+    ) -> MemoryPageRange {
         let available_pages = available_pages * 8 / 10;
         let pages = MemoryPageRange::new(
             MemoryPage::inside_address(0x8000000),
             MemoryPage::inside_address(0x8000000 + (available_pages * PAGE_SIZE_4K) as u64),
         );
         debug!("Total Available memory:", &available_pages, "* 4KB");
-        let big_man = BigManAllocator::begin(pages, active_table, allocator);
-        self.start = Some(big_man);
+        self.start = {
+            let big_man = BigManAllocator::begin(
+                MemoryPageRange::new(pages.start(), pages.end()),
+                active_table,
+                allocator,
+            );
+            Some(big_man)
+        };
+        pages
     }
 }
 unsafe impl GlobalAlloc for GlobalAllocator {

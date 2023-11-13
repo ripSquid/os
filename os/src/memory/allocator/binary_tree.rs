@@ -8,7 +8,7 @@ use x86_64::align_up;
 use super::PageState;
 
 use crate::{
-    display::{macros::print_str, KernelDebug},
+    display::{macros::{print_str, debug}, KernelDebug, DEFAULT_VGA_WRITER},
     memory::{paging::MemoryPageRange, MemoryAddress, PAGE_SIZE_4K},
 };
 
@@ -97,7 +97,7 @@ impl PageStateTree {
         self_range: Range<u64>,
         index: TreeIndex,
     ) {
-        if self_range.contains(&range.start) || self_range.contains(&range.end) {
+        if self_range.contains(&range.start) || self_range.contains(&(range.end)) {
             {
                 let state = &mut self[index];
                 assert_eq!(self_range.end - self_range.start, state.size());
@@ -117,7 +117,7 @@ impl PageStateTree {
             if index.left().0 < self.0.len() {
                 self.mark_area_unnallocated(range, self_range.start..mid_point, index.left());
             }
-        } else if range.contains(&self_range.start) && range.contains(&self_range.end) {
+        } else if range.contains(&self_range.start) && range.contains(&(self_range.end)) {
             self.recursive_op(index, &|state: &mut PageState| {
                 state.deallocate_whole();
             });
@@ -130,9 +130,12 @@ impl PageStateTree {
             (base..base + state.size(), state)
         };
 
-        if self_range.contains(&range.start) || self_range.contains(&(range.end - 1)) {
+        if self_range.contains(&range.start) || self_range.contains(&(range.end)) {
             state.allocate_once(range.end - self_range.start);
-        } else if range.contains(&self_range.start) && range.contains(&(self_range.end - 1)) {
+        } else if range.contains(&self_range.start) && range.contains(&(self_range.end)) {
+            unsafe {
+                DEFAULT_VGA_WRITER.next_line().jump_lines(15).write_debugable(range.start);
+            }
             state.allocate_whole();
         } else {
             return;
