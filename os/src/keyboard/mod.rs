@@ -1,9 +1,10 @@
 use crate::{
-    display::{macros::debug, KernelDebug},
+    display::{macros::debug, KernelDebug, KernelFormatter, STATIC_VGA_WRITER},
     interrupt::setup::{self, pics},
 };
 use alloc::format;
 use alloc::{fmt::format, string::ToString};
+use heapless::spsc::Queue;
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
 use x86_64::structures::idt::InterruptStackFrame;
 
@@ -15,6 +16,8 @@ const SHIFT_MODIFIER: usize = 0b0100_0000_0000;
 const CTRL_MODIFIER: usize = 0b1000_0000_0000;
 const ALT_MODIFIER: usize = 0b0010_0000_0000;
 const ALTGR_MODIFIER: usize = 0b0001_0000_0000;
+
+pub static mut KEYBOARD_QUEUE: Queue<char, 256> = Queue::new();
 
 pub unsafe fn setup_keymap() {
     // 0000 / 0000 0000
@@ -159,10 +162,10 @@ static mut keyboard_state: KeyboardState = KeyboardState {
 
 pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     // Implement keyboard 2
-
+    
     unsafe {
         if let Ok(data) = controller.read_data() {
-            if data == 0xF0 && keyboard_state.command == State::Waiting {
+            /* if data == 0xF0 && keyboard_state.command == State::Waiting {
                 // Start of KeyRelease event
                 keyboard_state.command = State::KeyRelease;
             } else if data == 0xE0 && keyboard_state.command == State::Waiting {
@@ -211,10 +214,15 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
 
                     if keymap[key] != '\x00' {
                         debug!(&keymap[key]);
+                        
                     } else {
-                        debug!(&key);
+                        //debug!(&key);
                     }
                 }
+            } */
+            unsafe {
+                STATIC_VGA_WRITER.write_byte(data);
+                STATIC_VGA_WRITER.write_str(" ");
             }
         }
     }
@@ -239,10 +247,12 @@ pub unsafe fn keyboard_initialize() -> Result<(), ControllerError> {
     // Disable interrupts and scancode translation
     config.set(
         ControllerConfigFlags::ENABLE_KEYBOARD_INTERRUPT
-            | ControllerConfigFlags::ENABLE_MOUSE_INTERRUPT
-            | ControllerConfigFlags::ENABLE_TRANSLATE,
+            | ControllerConfigFlags::ENABLE_MOUSE_INTERRUPT,
         false,
     );
+
+    config.set(ControllerConfigFlags::ENABLE_TRANSLATE, true);
+
     controller.write_config(config)?;
 
     // Step 6: Controller self-test
@@ -250,21 +260,11 @@ pub unsafe fn keyboard_initialize() -> Result<(), ControllerError> {
     // Write config again in case of controller reset
     controller.write_config(config)?;
 
-    // Step 7: Determine if there are 2 devices
-    let has_mouse = if config.contains(ControllerConfigFlags::DISABLE_MOUSE) {
-        controller.enable_mouse()?;
-        config = controller.read_config()?;
-        // If mouse is working, this should now be unset
-        !config.contains(ControllerConfigFlags::DISABLE_MOUSE)
-    } else {
-        false
-    };
     // Disable mouse. If there's no mouse, this is ignored
     controller.disable_mouse()?;
 
     // Step 8: Interface tests
     let keyboard_works = controller.test_keyboard().is_ok();
-    let _mouse_works = has_mouse && controller.test_mouse().is_ok();
 
     // Step 9 - 10: Enable and reset devices
     config = controller.read_config()?;

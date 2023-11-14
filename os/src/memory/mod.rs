@@ -88,7 +88,7 @@ pub unsafe fn populate_global_allocator(
         allocator,
         allocator.available_frames_left(),
     );
-    allocator_test();
+    if false {allocator_test();}
 }
 unsafe fn allocator_test() {
     STATIC_VGA_WRITER.clear_screen(crate::display::VgaColor::Black);

@@ -79,6 +79,11 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .write_str("CPU vendor: ")
         .write_str(cpu_info.vendor());
 
+
+    // Start forth application
+    
+    
+
     loop {}
 }
 
