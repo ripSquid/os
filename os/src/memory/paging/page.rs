@@ -16,16 +16,13 @@ impl MemoryPage {
     pub fn starting_address(&self) -> VirtualAddress {
         (self.0 * PAGE_SIZE_4K) as u64
     }
-    pub fn move_page(&mut self, offset: isize) {
-        self.0.saturating_add_signed(offset);
-    }
 }
 
 pub struct MemoryPageRange {
     range: Range<usize>,
 }
 impl MemoryPageRange {
-    pub fn new(start: MemoryPage, end: MemoryPage) -> Self {
+    pub const fn new(start: MemoryPage, end: MemoryPage) -> Self {
         Self {
             range: start.0..end.0,
         }

@@ -1,23 +1,26 @@
-use alloc::{fmt::format, string::ToString};
-use ps2::{Controller, flags::ControllerConfigFlags, error::ControllerError};
-use x86_64::structures::idt::InterruptStackFrame;
+use crate::{
+    display::{macros::debug, KernelDebug},
+    interrupt::setup::{self, pics},
+};
 use alloc::format;
-use crate::{interrupt::setup::{pics, self}, display::{macros::debug, KernelDebug}};
+use alloc::{fmt::format, string::ToString};
+use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
+use x86_64::structures::idt::InterruptStackFrame;
 
-static mut controller: Controller = unsafe {Controller::new()};
+static mut controller: Controller = unsafe { Controller::new() };
 
 static mut keymap: [char; 4096] = ['\x00'; 4096];
 
 const SHIFT_MODIFIER: usize = 0b0100_0000_0000;
-const CTRL_MODIFIER:  usize = 0b1000_0000_0000;
-const ALT_MODIFIER:   usize = 0b0010_0000_0000;
+const CTRL_MODIFIER: usize = 0b1000_0000_0000;
+const ALT_MODIFIER: usize = 0b0010_0000_0000;
 const ALTGR_MODIFIER: usize = 0b0001_0000_0000;
 
 pub unsafe fn setup_keymap() {
     // 0000 / 0000 0000
     // Highest 4 bits are for CTRL, SHIFT, ALT, ALTGR
     // Lowest 8 bits are for the character/keycode from keyboard
-    
+
     keymap[0x1C] = 'a';
     keymap[0x32] = 'b';
     keymap[0x21] = 'c';
@@ -120,8 +123,8 @@ pub unsafe fn setup_keymap() {
     keymap[0x5D] = '\'';
     keymap[SHIFT_MODIFIER | 0x5D] = '*';
     keymap[0x5B] = '¨';
-    keymap[SHIFT_MODIFIER |  0x5B] = '^';
-    keymap[0x4E] = '+'; 
+    keymap[SHIFT_MODIFIER | 0x5B] = '^';
+    keymap[0x4E] = '+';
     keymap[SHIFT_MODIFIER | 0x4E] = '?';
     keymap[0x61] = '<';
     keymap[SHIFT_MODIFIER | 0x61] = '>';
@@ -138,7 +141,6 @@ enum State {
     RightKeyRelease,
 }
 
-
 struct KeyboardState {
     command: State,
     ctrl_pressed: bool,
@@ -147,74 +149,80 @@ struct KeyboardState {
     altgr_pressed: bool,
 }
 
-static mut keyboard_state: KeyboardState = KeyboardState {command: State::Waiting, ctrl_pressed: false, shift_pressed: false, alt_pressed: false, altgr_pressed: false};
+static mut keyboard_state: KeyboardState = KeyboardState {
+    command: State::Waiting,
+    ctrl_pressed: false,
+    shift_pressed: false,
+    alt_pressed: false,
+    altgr_pressed: false,
+};
 
 pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
-
     // Implement keyboard 2
 
-    unsafe { if let Ok(data) = controller.read_data() {
-        if data == 0xF0 && keyboard_state.command == State::Waiting {
-            // Start of KeyRelease event
-            keyboard_state.command = State::KeyRelease;
-        } else if data == 0xE0 && keyboard_state.command == State::Waiting {
-            // We got indication that a "right" key is getting specific commands
-            keyboard_state.command = State::WaitingForRightCommand;
-        } else if data == 0xF0 && keyboard_state.command == State::WaitingForRightCommand {
-            // We got a key release event after receiving a "right" key
-            keyboard_state.command = State::RightKeyRelease;
-        } else if keyboard_state.command == State::KeyRelease {
-            // If we are waiting for KeyRelease event then check if its modifier if so switch it back off
-            if data == 0x12 {
-                keyboard_state.shift_pressed = false;
-            } else if data == 0x11 {
-                keyboard_state.alt_pressed = false;
-            }
-            keyboard_state.command = State::Waiting;
-        } else if keyboard_state.command == State::RightKeyRelease {
-            if data == 0x11 {
-                keyboard_state.altgr_pressed = false;
-            }
-            keyboard_state.command = State::Waiting;
-        } else {
-            if data == 0x11 && keyboard_state.command == State::WaitingForRightCommand {
-                keyboard_state.altgr_pressed = true;
+    unsafe {
+        if let Ok(data) = controller.read_data() {
+            if data == 0xF0 && keyboard_state.command == State::Waiting {
+                // Start of KeyRelease event
+                keyboard_state.command = State::KeyRelease;
+            } else if data == 0xE0 && keyboard_state.command == State::Waiting {
+                // We got indication that a "right" key is getting specific commands
+                keyboard_state.command = State::WaitingForRightCommand;
+            } else if data == 0xF0 && keyboard_state.command == State::WaitingForRightCommand {
+                // We got a key release event after receiving a "right" key
+                keyboard_state.command = State::RightKeyRelease;
+            } else if keyboard_state.command == State::KeyRelease {
+                // If we are waiting for KeyRelease event then check if its modifier if so switch it back off
+                if data == 0x12 {
+                    keyboard_state.shift_pressed = false;
+                } else if data == 0x11 {
+                    keyboard_state.alt_pressed = false;
+                }
                 keyboard_state.command = State::Waiting;
-            } else if data == 0x11 {
-                keyboard_state.alt_pressed = true;
-            }
-            if data == 0x12 {
-                // If shift gets pressed then switch it on
-                keyboard_state.shift_pressed = true;
+            } else if keyboard_state.command == State::RightKeyRelease {
+                if data == 0x11 {
+                    keyboard_state.altgr_pressed = false;
+                }
+                keyboard_state.command = State::Waiting;
             } else {
-                let mut key: usize = data as usize;
-                if keyboard_state.shift_pressed {
-                    key |= SHIFT_MODIFIER;
+                if data == 0x11 && keyboard_state.command == State::WaitingForRightCommand {
+                    keyboard_state.altgr_pressed = true;
+                    keyboard_state.command = State::Waiting;
+                } else if data == 0x11 {
+                    keyboard_state.alt_pressed = true;
                 }
-                if keyboard_state.altgr_pressed {
-                    key |= ALTGR_MODIFIER;
-                }
-                if keyboard_state.alt_pressed {
-                    key |= ALT_MODIFIER;
-                }
-                if keyboard_state.ctrl_pressed {
-                    key |= CTRL_MODIFIER;
-                }
-
-                if keymap[key] != '\x00' {
-                    debug!(&keymap[key]);
+                if data == 0x12 {
+                    // If shift gets pressed then switch it on
+                    keyboard_state.shift_pressed = true;
                 } else {
-                    debug!(&key);
+                    let mut key: usize = data as usize;
+                    if keyboard_state.shift_pressed {
+                        key |= SHIFT_MODIFIER;
+                    }
+                    if keyboard_state.altgr_pressed {
+                        key |= ALTGR_MODIFIER;
+                    }
+                    if keyboard_state.alt_pressed {
+                        key |= ALT_MODIFIER;
+                    }
+                    if keyboard_state.ctrl_pressed {
+                        key |= CTRL_MODIFIER;
+                    }
+
+                    if keymap[key] != '\x00' {
+                        debug!(&keymap[key]);
+                    } else {
+                        debug!(&key);
+                    }
                 }
             }
         }
-    } }
+    }
     //debug!("keyboard handler!");
     unsafe {
         pics.notify_end_of_interrupt(33);
     }
 }
-
 
 pub unsafe fn keyboard_initialize() -> Result<(), ControllerError> {
     // Ska egentligen kolla ifall tangentbord och ps2 kontroller finns men vi antar att det finns

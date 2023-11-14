@@ -34,9 +34,6 @@ impl InactivePageTable {
         temp_page.unmap(active_table);
         Self(frame)
     }
-    pub fn as_address(&self) -> u64 {
-        self.0.starting_address()
-    }
 }
 
 pub struct PageTableMaster<'a> {
@@ -126,7 +123,11 @@ impl<'a> Mapper<'a> {
         self.translate_page(MemoryPage::inside_address(virtual_address))
             .map(|frame| frame.starting_address() + index)
     }
-    pub fn page_present<A: FrameAllocator>(&mut self, page: MemoryPage, allocator: &mut A) -> bool {
+    pub fn _page_present<A: FrameAllocator>(
+        &mut self,
+        page: MemoryPage,
+        allocator: &mut A,
+    ) -> bool {
         let p4 = self.p4_mut();
         let p3 = p4.child_table_search(page.p4_index(), allocator);
         let p2 = p3.child_table_search(page.p3_index(), allocator);

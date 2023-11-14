@@ -30,7 +30,6 @@ static mut idtdescriptor: DescriptorTablePointer = DescriptorTablePointer {
 pub static mut pics: ChainedPics = unsafe { ChainedPics::new(0x20, 0x28) };
 
 pub unsafe fn setup_interrupts() {
-
     setup_keymap();
 
     idt.breakpoint.set_function(
