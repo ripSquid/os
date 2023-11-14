@@ -1,33 +1,34 @@
-use crate::display::{KernelDebug, STATIC_VGA_WRITER, macros::debug};
-
-
+use crate::display::{macros::debug, KernelDebug, STATIC_VGA_WRITER};
 
 /// The state for a given region of memory
 #[derive(Default)]
 pub struct PageState {
-    
     // The size of the region this state belongs to in bytes
     size: u64,
-    
-    // The last known available offset in this state 
+
+    // The last known available offset in this state
     // where no allocation lives
     offset: u64,
-    
+
     //The amount of allocations found in this state
     allocations: u64,
 
-    pub debug: u32,
-    pub debug2: u32,
+    _padding: u64,
 }
 impl<'a> KernelDebug<'a> for PageState {
-    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
-        formatter.debug_struct("MemState").debug_field("size", &self.size).debug_field("offset", &self.offset).debug_field("allocations", &self.allocations).finish()
+    fn debug(
+        &self,
+        formatter: crate::display::KernelFormatter<'a>,
+    ) -> crate::display::KernelFormatter<'a> {
+        formatter
+            .debug_struct("MemState")
+            .debug_field("size", &self.size)
+            .debug_field("offset", &self.offset)
+            .debug_field("allocations", &self.allocations)
+            .finish()
     }
 }
 impl PageState {
-    pub fn _is_null(&self) -> bool {
-        self.size == 0
-    }
     pub fn set_size(&mut self, size: usize) {
         self.size = size as u64;
     }
@@ -40,16 +41,14 @@ impl PageState {
     //Mark a new allocation inside this state
     //offset is the first non inclusive address of the allocation in relation to this state
     pub fn allocate_once(&mut self, offset: u64) {
-        self.debug += 1;
         self.allocations += 1;
         self.offset = (offset).min(self.size)
     }
     //Remove an allocation from this state
     pub fn deallocate_once(&mut self) {
-        self.debug2 += 1;
-        assert!(self.allocations > 0, "DEALLOCATION OVERFLOW {} {}", self.debug, self.debug2);
+        assert!(self.allocations > 0, "DEALLOCATION OVERFLOW");
         self.allocations -= 1;
-        //Where have no idea where the allocation was, 
+        //Where have no idea where the allocation was,
         //but we know that if we don't have *any* allocations
         //this state is empty.
         if self.allocations == 0 {
@@ -58,16 +57,14 @@ impl PageState {
     }
     //Mark the whole state as being taken up by one big allocation
     pub fn allocate_whole(&mut self) {
-        self.debug += 1;
         assert_eq!(self.allocations, 0, "ERROR ON ALLOCATION WHOLE");
-        
+
         self.offset = self.size;
         self.allocations += 1;
     }
     //Mark the whole state as being deallocated
     pub fn deallocate_whole(&mut self) {
-        self.debug2 += 1;
-        assert_eq!(self.allocations, 1, "ERROR ON DEALLOCATION WHOLE {} {}", self.debug, self.debug2);
+        assert_eq!(self.allocations, 1, "ERROR ON DEALLOCATION WHOLE");
         self.offset = 0;
         self.allocations = 0;
     }

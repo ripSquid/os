@@ -8,7 +8,10 @@ use x86_64::align_up;
 use super::PageState;
 
 use crate::{
-    display::{macros::{print_str, debug}, KernelDebug, STATIC_VGA_WRITER},
+    display::{
+        macros::{debug, print_str},
+        KernelDebug, STATIC_VGA_WRITER,
+    },
     memory::{paging::MemoryPageRange, MemoryAddress, PAGE_SIZE_4K},
 };
 
@@ -25,11 +28,13 @@ impl PageStateTree {
         for state in &mut *slice {
             *state = PageState::default();
         }
-        let total_size_bytes = (page_count*PAGE_SIZE_4K);
+        let total_size_bytes = (page_count * PAGE_SIZE_4K);
         let mut ourself = Self(slice);
         for i in 0..ourself.0.len() {
             let index = TreeIndex(i);
-            let size = ourself.size_of(index).min(total_size_bytes - (ourself.address_of(index) as usize).min(total_size_bytes));
+            let size = ourself
+                .size_of(index)
+                .min(total_size_bytes - (ourself.offset_of(index) as usize).min(total_size_bytes));
             ourself[index].set_size(size);
         }
         ourself
@@ -48,20 +53,22 @@ impl PageStateTree {
     }
 
     /// Try to allocate a piece of memory
-    /// TODO: look for sub levels of the tree for free memory.
+    /// If a piece of memory cannot be found at the root level,
+    /// sub levels are searched for free memory regions.
     fn try_allocate(
         &mut self,
         index: TreeIndex,
         layout: Layout,
         memory_span: &MemoryPageRange,
     ) -> Option<*mut u8> {
-        let addr = self.address_of(index);
+        let offset = self.offset_of(index);
         let state = &mut self[index];
-        let first = align_up(state.offset(), layout.align() as u64) + addr;
+        let first = align_up(state.offset(), layout.align() as u64);
         let last = first + layout.size() as u64;
-        if last - addr <= state.size() {
-            self.mark_allocated_area_child(first..last, TreeIndex::root());
-            Some((first + memory_span.start().starting_address()) as *mut u8)
+        let range = first + offset..last + offset;
+        if last <= state.size() {
+            self.mark_area_allocated(range, TreeIndex::root());
+            Some((first + offset + memory_span.start().starting_address()) as *mut u8)
         } else {
             //debug!(&state.size(), &state.offset(), &layout.size());
             if index.left().0 < self.0.len() {
@@ -74,49 +81,45 @@ impl PageStateTree {
                     return Some(pointer);
                 }
             }
-            
+
             None
         }
     }
 
-    //Given a memory span, what region of it does this index reffer to?
-    fn address_of(&self, index: TreeIndex) -> MemoryAddress {
-        // How many pages does the index span?
-        let span = self.size_of(index) as u64;
-
-        // Find How far away this state is from the 0th of this level.
-        let state_offset = self.offset(index) as u64;
-
-        //The memory offset compared to the start of the memory range
-        let final_offset = state_offset * span;
-
-        final_offset
+    // The offset this index starts at relative to the root of the tree.
+    fn offset_of(&self, index: TreeIndex) -> MemoryAddress {
+        let span = self.size_of(index) as u64; // How big this state is
+        let state_offset = self.offset_within_level(index) as u64; // How far away this state is from the 0th of this level.
+        state_offset * span // The memory offset compared to the start of the tree
     }
+
+    //The size of this entry, in bytes.
     fn size_of(&self, index: TreeIndex) -> usize {
         let level = TreeIndex(self.0.len() - 1).level() - index.level();
         2usize.pow(level as u32) * PAGE_SIZE_4K
     }
+
     //what offset this index has on it's level of the binary tree
-    fn offset(&self, index: TreeIndex) -> usize {
+    fn offset_within_level(&self, index: TreeIndex) -> usize {
         (index.0 + 1) - (1 << (index.0 + 1).ilog2())
     }
 
     /// Marks an area of the tree as unallocated, which drips down to all levels below
-    fn mark_area_unnallocated(
-        &mut self,
-        range: Range<u64>,
-        index: TreeIndex,
-    ) {
+    fn mark_area_unnallocated(&mut self, range: Range<u64>, index: TreeIndex) {
         let (self_range, state) = {
-            let base = self.address_of(index);
+            let base = self.offset_of(index);
             let state = &mut self[index];
             (base..base + state.size(), state)
         };
+
         if self_range.contains(&range.start) || self_range.contains(&(range.end)) {
+            // Range partially overlaps the state region
             state.deallocate_once();
         } else if range.contains(&self_range.start) && range.contains(&(self_range.end)) {
+            // Range overlaps the entirety of the state region
             state.deallocate_whole();
         } else {
+            // Range doesn't overlap the state region at all, and we know it won't for children either.
             return;
         }
         if index.right().0 < self.0.len() {
@@ -126,9 +129,11 @@ impl PageStateTree {
             self.mark_area_unnallocated(range, index.left());
         }
     }
-    fn mark_allocated_area_child(&mut self, range: Range<u64>, index: TreeIndex) {
+
+    /// Marks an area of the tree as allocated, which drips down to all levels below
+    fn mark_area_allocated(&mut self, range: Range<u64>, index: TreeIndex) {
         let (self_range, state) = {
-            let base = self.address_of(index);
+            let base = self.offset_of(index);
             let state = &mut self[index];
             (base..base + state.size(), state)
         };
@@ -140,10 +145,10 @@ impl PageStateTree {
             return;
         }
         if index.right().0 < self.0.len() {
-            self.mark_allocated_area_child(range.clone(), index.right());
+            self.mark_area_allocated(range.clone(), index.right());
         }
         if index.left().0 < self.0.len() {
-            self.mark_allocated_area_child(range, index.left());
+            self.mark_area_allocated(range, index.left());
         }
     }
 }

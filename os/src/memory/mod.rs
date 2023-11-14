@@ -10,17 +10,21 @@ use self::{
     paging::PageTableMaster,
 };
 use crate::{
-    display::{macros::{debug, print_str}, DefaultVgaWriter, STATIC_VGA_WRITER},
+    display::{
+        macros::{debug, print_str},
+        DefaultVgaWriter, STATIC_VGA_WRITER,
+    },
     multiboot_info::memory_map::{MemoryMapEntry, MemoryType},
 };
 use alloc::{
+    alloc::Global,
     boxed::Box,
     format,
     string::{String, ToString},
-    vec::Vec, alloc::Global,
+    vec::Vec,
 };
 use core::{
-    alloc::{GlobalAlloc, Layout, Allocator},
+    alloc::{Allocator, GlobalAlloc, Layout},
     iter::Filter,
     slice::Iter,
     sync::atomic::AtomicUsize,
@@ -92,19 +96,26 @@ unsafe fn allocator_test() {
     let lingering_allocation = Box::new(0x7E57135_u64);
     const MEM_TEST_ITER: usize = 15000;
     for i in 0..MEM_TEST_ITER {
-        STATIC_VGA_WRITER.write_horizontally_centerd(&format!("{}% done", i*100/MEM_TEST_ITER), 20);
+        STATIC_VGA_WRITER
+            .write_horizontally_centerd(&format!("{}% done", i * 100 / MEM_TEST_ITER), 20);
         let progress_bar = {
             let width = 30;
             let progress = i * width / MEM_TEST_ITER;
-            let string: String = (0..width).into_iter().map(|num| if num > progress {"."} else {"O"}).collect();
+            let string: String = (0..width)
+                .into_iter()
+                .map(|num| if num > progress { "." } else { "O" })
+                .collect();
             string
         };
         STATIC_VGA_WRITER.write_horizontally_centerd(&progress_bar, 21);
-        
+
         let mut vec: Vec<u64> = Vec::with_capacity(i);
         vec.push(0);
     }
-    STATIC_VGA_WRITER.write_horizontally_centerd(&format!("were just doing {lingering_allocation}").as_str(), 1);
+    STATIC_VGA_WRITER.write_horizontally_centerd(
+        &format!("were just doing {lingering_allocation}").as_str(),
+        1,
+    );
 }
 
 // This is the allocator initially used at startup

@@ -1,4 +1,4 @@
-use core::fmt::{Write, Result};
+use core::fmt::{Result, Write};
 
 use crate::display::DefaultVgaWriter;
 
@@ -16,4 +16,3 @@ impl<'a> Write for PanicBuffer<'a> {
         Ok(())
     }
 }
-

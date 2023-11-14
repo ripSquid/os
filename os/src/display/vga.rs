@@ -23,10 +23,10 @@ impl Deref for StaticVgaWriter {
 }
 impl DerefMut for StaticVgaWriter {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.get_or_insert_with(|| unsafe {DefaultVgaWriter::new_unsafe()})
+        self.0
+            .get_or_insert_with(|| unsafe { DefaultVgaWriter::new_unsafe() })
     }
 }
-
 
 pub type DefaultVgaBuffer =
     ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
@@ -73,7 +73,7 @@ impl DefaultVgaWriter {
     }
     pub fn write_horizontally_centerd(&mut self, text: &str, line: usize) -> &mut Self {
         self.position.1 = line;
-        self.position.0 = (self.buffer.width() - text.len().min(self.buffer.width())) / 2 ;
+        self.position.0 = (self.buffer.width() - text.len().min(self.buffer.width())) / 2;
         self.write_str(text);
         self
     }
@@ -91,7 +91,7 @@ impl DefaultVgaWriter {
     }
     pub fn write_str(&mut self, chars: &str) -> &mut Self {
         for byte in chars.bytes() {
-            self.write_byte(byte);
+            self.write_raw_char(byte);
         }
         self
     }
@@ -101,15 +101,18 @@ impl DefaultVgaWriter {
     }
     pub fn write_bytes(&mut self, bytes: &[u8]) -> &mut Self {
         for byte in bytes {
-            self.write_byte(*byte)
+            self.write_raw_char(*byte)
         }
         self
     }
-    pub fn write_byte(&mut self, byte: u8) {
+    pub fn write_raw_char(&mut self, byte: u8) {
         self.write_char(VgaChar {
             char: byte,
             color: self.fallback_color,
         })
+    }
+    pub fn write_byte(&mut self, byte: u8) {
+        self.write_debugable(byte);
     }
     pub fn next_line(&mut self) -> &mut Self {
         let (col, row) = &mut self.position;

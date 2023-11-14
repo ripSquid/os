@@ -35,7 +35,10 @@ impl<'a> KernelDebug<'a> for char {
     }
 }
 
-impl<'a, T> KernelDebug<'a> for &T where T: KernelDebug<'a> {
+impl<'a, T> KernelDebug<'a> for &T
+where
+    T: KernelDebug<'a>,
+{
     fn debug(&self, formatter: KernelFormatter<'a>) -> KernelFormatter<'a> {
         (*self).debug(formatter)
     }

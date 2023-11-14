@@ -1,5 +1,5 @@
 use crate::display::{DefaultVgaBuffer, DefaultVgaWriter, VgaColor, VgaColorCombo};
-use core::{panic::PanicInfo, str::from_utf8_unchecked, fmt::Write};
+use core::{fmt::Write, panic::PanicInfo, str::from_utf8_unchecked};
 
 use self::formatter::PanicBuffer;
 
@@ -16,29 +16,33 @@ fn panic(info: &PanicInfo) -> ! {
     writer.set_default_colors(error_color);
     writer.write_horizontally_centerd("PANIC OCCURED:", 3);
     if let Some(location) = info.location() {
-        writer.write_horizontally_centerd("file:", 4)
-        .write_horizontally_centerd(location.file(), 5)
-        .write_horizontally_centerd("line:", 6)
-        .write_horizontally_centerd(
-            unsafe { from_utf8_unchecked(U32Str::from(location.line()).as_ref()) },
-            7,
-        );
+        writer
+            .write_horizontally_centerd("file:", 4)
+            .write_horizontally_centerd(location.file(), 5)
+            .write_horizontally_centerd("line:", 6)
+            .write_horizontally_centerd(
+                unsafe { from_utf8_unchecked(U32Str::from(location.line()).as_ref()) },
+                7,
+            );
 
-        writer.write_horizontally_centerd("column:", 8)
-        .write_horizontally_centerd(
-            unsafe { from_utf8_unchecked(U32Str::from(location.column()).as_ref()) },
-            9,
-        );
-        
+        writer
+            .write_horizontally_centerd("column:", 8)
+            .write_horizontally_centerd(
+                unsafe { from_utf8_unchecked(U32Str::from(location.column()).as_ref()) },
+                9,
+            );
+
         if let Some(message) = info.message() {
-            writer.write_horizontally_centerd("error:", 10).next_line().set_default_colors(VgaColorCombo::on_black(VgaColor::Red));
-        
+            writer
+                .write_horizontally_centerd("error:", 10)
+                .next_line()
+                .set_default_colors(VgaColorCombo::on_black(VgaColor::Red));
+
             let mut buffer = PanicBuffer::new(&mut writer);
             let _ = write!(&mut buffer, "{message}");
         } else {
             writer.write_horizontally_centerd("(no attached error message)", 10);
         }
-
     }
 
     loop {}

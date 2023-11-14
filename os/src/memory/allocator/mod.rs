@@ -49,7 +49,11 @@ impl GlobalAllocator {
             MemoryPage::inside_address(0x8000000),
             MemoryPage::inside_address(0x8000000 + (available_pages * PAGE_SIZE_4K) as u64),
         );
-        STATIC_VGA_WRITER.set_position((0,14)).write_str("Total Available memory: ").write_debugable(&available_pages).write_str(" * 4KB");
+        STATIC_VGA_WRITER
+            .set_position((0, 14))
+            .write_str("Total Available memory: ")
+            .write_debugable(&available_pages)
+            .write_str(" * 4KB");
         self.start = {
             let big_man = BigManAllocator::begin(
                 MemoryPageRange::new(pages.start(), pages.end()),
