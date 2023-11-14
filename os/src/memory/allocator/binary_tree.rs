@@ -37,7 +37,6 @@ impl PageStateTree {
 
     /// Generic public allocation
     pub fn allocate(&mut self, layout: Layout, memory_span: &MemoryPageRange) -> Option<*mut u8> {
-        unsafe { STATIC_VGA_WRITER.set_position((0,22)).write_debugable(&self.0[0]); }
         self.try_allocate(TreeIndex::root(), layout, memory_span)
     }
 
@@ -60,11 +59,11 @@ impl PageStateTree {
         let state = &mut self[index];
         let first = align_up(state.offset(), layout.align() as u64) + addr;
         let last = first + layout.size() as u64;
-        if last <= state.size() {
+        if last - addr <= state.size() {
             self.mark_allocated_area_child(first..last, TreeIndex::root());
             Some((first + memory_span.start().starting_address()) as *mut u8)
         } else {
-            return None;
+            //debug!(&state.size(), &state.offset(), &layout.size());
             if index.left().0 < self.0.len() {
                 if let Some(pointer) = self.try_allocate(index.left(), layout, memory_span) {
                     return Some(pointer);
@@ -75,7 +74,7 @@ impl PageStateTree {
                     return Some(pointer);
                 }
             }
-            debug!("NO MORE MEMORY FOUND. ABORTING.");
+            
             None
         }
     }

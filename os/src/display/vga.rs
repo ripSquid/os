@@ -84,9 +84,7 @@ impl DefaultVgaWriter {
     pub fn clear_screen(&mut self, color: VgaColor) -> &mut Self {
         let color = VgaColorCombo::new(VgaColor::White, color);
         for line in self.buffer.chars.iter_mut() {
-            for char in line.iter_mut() {
-                *char = VgaChar::BLANK.color(color);
-            }
+            *line = [VgaChar::BLANK.color(color); DefaultVgaBuffer::BUFFER_WIDTH];
         }
         self.position = (0, 0);
         self
