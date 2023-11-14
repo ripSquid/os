@@ -64,7 +64,18 @@ impl PageStateTree {
             self.mark_allocated_area_child(first..last, TreeIndex::root());
             Some((first + memory_span.start().starting_address()) as *mut u8)
         } else {
-            print_str!("NO MORE MEMORY!!!!!!");
+            return None;
+            if index.left().0 < self.0.len() {
+                if let Some(pointer) = self.try_allocate(index.left(), layout, memory_span) {
+                    return Some(pointer);
+                }
+            }
+            if index.right().0 < self.0.len() {
+                if let Some(pointer) = self.try_allocate(index.right(), layout, memory_span) {
+                    return Some(pointer);
+                }
+            }
+            debug!("NO MORE MEMORY FOUND. ABORTING.");
             None
         }
     }
