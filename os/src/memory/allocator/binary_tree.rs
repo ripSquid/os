@@ -8,7 +8,7 @@ use x86_64::align_up;
 use super::PageState;
 
 use crate::{
-    display::{macros::{print_str, debug}, KernelDebug, DEFAULT_VGA_WRITER},
+    display::{macros::{print_str, debug}, KernelDebug, STATIC_VGA_WRITER},
     memory::{paging::MemoryPageRange, MemoryAddress, PAGE_SIZE_4K},
 };
 
@@ -25,10 +25,11 @@ impl PageStateTree {
         for state in &mut *slice {
             *state = PageState::default();
         }
+        let total_size_bytes = (page_count*PAGE_SIZE_4K);
         let mut ourself = Self(slice);
         for i in 0..ourself.0.len() {
             let index = TreeIndex(i);
-            let size = ourself.size_of(index);
+            let size = ourself.size_of(index).min(total_size_bytes - (ourself.address_of(index) as usize).min(total_size_bytes));
             ourself[index].set_size(size);
         }
         ourself
@@ -36,6 +37,7 @@ impl PageStateTree {
 
     /// Generic public allocation
     pub fn allocate(&mut self, layout: Layout, memory_span: &MemoryPageRange) -> Option<*mut u8> {
+        unsafe { STATIC_VGA_WRITER.set_position((0,22)).write_debugable(&self.0[0]); }
         self.try_allocate(TreeIndex::root(), layout, memory_span)
     }
 
@@ -43,8 +45,7 @@ impl PageStateTree {
     pub fn unallocate(&mut self, pointer: *mut u8, layout: Layout, memory_span: &MemoryPageRange) {
         let start = pointer as u64 - memory_span.start().starting_address();
         let end = start + layout.size() as u64;
-        let self_range = 0..self.size_of(TreeIndex::root()) as u64;
-        self.mark_area_unnallocated(start..end, self_range, TreeIndex::root());
+        self.mark_area_unnallocated(start..end, TreeIndex::root());
     }
 
     /// Try to allocate a piece of memory
@@ -61,7 +62,7 @@ impl PageStateTree {
         let last = first + layout.size() as u64;
         if last <= state.size() {
             self.mark_allocated_area_child(first..last, TreeIndex::root());
-            Some((self.address_of(index) + memory_span.start().starting_address()) as *mut u8)
+            Some((first + memory_span.start().starting_address()) as *mut u8)
         } else {
             print_str!("NO MORE MEMORY!!!!!!");
             None
@@ -94,33 +95,25 @@ impl PageStateTree {
     fn mark_area_unnallocated(
         &mut self,
         range: Range<u64>,
-        self_range: Range<u64>,
         index: TreeIndex,
     ) {
+        let (self_range, state) = {
+            let base = self.address_of(index);
+            let state = &mut self[index];
+            (base..base + state.size(), state)
+        };
         if self_range.contains(&range.start) || self_range.contains(&(range.end)) {
-            {
-                let state = &mut self[index];
-                assert_eq!(self_range.end - self_range.start, state.size());
-                state.deallocate_once();
-                //debug!(&state.size, &state.offset, &state.allocations, &index);
-            }
-
-            let mid_point = self_range.start + (self.size_of(index) as u64 / 2);
-
-            if index.right().0 < self.0.len() {
-                self.mark_area_unnallocated(
-                    range.clone(),
-                    mid_point..self_range.end,
-                    index.right(),
-                );
-            }
-            if index.left().0 < self.0.len() {
-                self.mark_area_unnallocated(range, self_range.start..mid_point, index.left());
-            }
+            state.deallocate_once();
         } else if range.contains(&self_range.start) && range.contains(&(self_range.end)) {
-            self.recursive_op(index, &|state: &mut PageState| {
-                state.deallocate_whole();
-            });
+            state.deallocate_whole();
+        } else {
+            return;
+        }
+        if index.right().0 < self.0.len() {
+            self.mark_area_unnallocated(range.clone(), index.right());
+        }
+        if index.left().0 < self.0.len() {
+            self.mark_area_unnallocated(range, index.left());
         }
     }
     fn mark_allocated_area_child(&mut self, range: Range<u64>, index: TreeIndex) {
@@ -129,13 +122,9 @@ impl PageStateTree {
             let state = &mut self[index];
             (base..base + state.size(), state)
         };
-
-        if self_range.contains(&range.start) || self_range.contains(&(range.end)) {
+        if self_range.contains(&range.start) || self_range.contains(&range.end) {
             state.allocate_once(range.end - self_range.start);
         } else if range.contains(&self_range.start) && range.contains(&(self_range.end)) {
-            unsafe {
-                DEFAULT_VGA_WRITER.next_line().jump_lines(15).write_debugable(range.start);
-            }
             state.allocate_whole();
         } else {
             return;
@@ -145,16 +134,6 @@ impl PageStateTree {
         }
         if index.left().0 < self.0.len() {
             self.mark_allocated_area_child(range, index.left());
-        }
-    }
-    fn recursive_op(&mut self, start: TreeIndex, op: &dyn Fn(&mut PageState)) {
-        let state = &mut self[start];
-        op(state);
-        if start.right().0 < self.0.len() {
-            self.recursive_op(start.right(), &op);
-        }
-        if start.left().0 < self.0.len() {
-            self.recursive_op(start.left(), &op);
         }
     }
 }

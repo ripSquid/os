@@ -2,7 +2,7 @@ use core::alloc::{GlobalAlloc, Layout};
 mod big_man;
 mod binary_tree;
 mod state;
-use crate::display::macros::debug;
+use crate::display::{macros::debug, STATIC_VGA_WRITER};
 pub use binary_tree::{PageStateTree, TreeIndex};
 pub use state::PageState;
 
@@ -49,7 +49,7 @@ impl GlobalAllocator {
             MemoryPage::inside_address(0x8000000),
             MemoryPage::inside_address(0x8000000 + (available_pages * PAGE_SIZE_4K) as u64),
         );
-        debug!("Total Available memory:", &available_pages, "* 4KB");
+        STATIC_VGA_WRITER.set_position((0,14)).write_str("Total Available memory: ").write_debugable(&available_pages).write_str(" * 4KB");
         self.start = {
             let big_man = BigManAllocator::begin(
                 MemoryPageRange::new(pages.start(), pages.end()),

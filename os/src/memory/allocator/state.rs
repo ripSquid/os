@@ -1,3 +1,5 @@
+use crate::display::{KernelDebug, STATIC_VGA_WRITER, macros::debug};
+
 
 
 /// The state for a given region of memory
@@ -14,7 +16,13 @@ pub struct PageState {
     //The amount of allocations found in this state
     allocations: u64,
 
-    _padding: u64,
+    pub debug: u32,
+    pub debug2: u32,
+}
+impl<'a> KernelDebug<'a> for PageState {
+    fn debug(&self, formatter: crate::display::KernelFormatter<'a>) -> crate::display::KernelFormatter<'a> {
+        formatter.debug_struct("MemState").debug_field("size", &self.size).debug_field("offset", &self.offset).debug_field("allocations", &self.allocations).finish()
+    }
 }
 impl PageState {
     pub fn _is_null(&self) -> bool {
@@ -32,11 +40,14 @@ impl PageState {
     //Mark a new allocation inside this state
     //offset is the first non inclusive address of the allocation in relation to this state
     pub fn allocate_once(&mut self, offset: u64) {
+        self.debug += 1;
         self.allocations += 1;
         self.offset = (offset).min(self.size)
     }
     //Remove an allocation from this state
     pub fn deallocate_once(&mut self) {
+        self.debug2 += 1;
+        assert!(self.allocations > 0, "DEALLOCATION OVERFLOW {} {}", self.debug, self.debug2);
         self.allocations -= 1;
         //Where have no idea where the allocation was, 
         //but we know that if we don't have *any* allocations
@@ -47,13 +58,16 @@ impl PageState {
     }
     //Mark the whole state as being taken up by one big allocation
     pub fn allocate_whole(&mut self) {
+        self.debug += 1;
         assert_eq!(self.allocations, 0, "ERROR ON ALLOCATION WHOLE");
+        
         self.offset = self.size;
         self.allocations += 1;
     }
     //Mark the whole state as being deallocated
     pub fn deallocate_whole(&mut self) {
-        assert_eq!(self.allocations, 1, "ERROR ON DEALLOCATION WHOLE");
+        self.debug2 += 1;
+        assert_eq!(self.allocations, 1, "ERROR ON DEALLOCATION WHOLE {} {}", self.debug, self.debug2);
         self.offset = 0;
         self.allocations = 0;
     }

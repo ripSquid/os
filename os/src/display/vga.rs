@@ -7,7 +7,7 @@ use super::{KernelDebug, KernelFormatter, ScreenBuffer};
 const DEFAULT_VGA_BUFFER_WIDTH: usize = 80;
 const DEFAULT_VGA_BUFFER_HEIGHT: usize = 25;
 
-pub static mut DEFAULT_VGA_WRITER: StaticVgaWriter = unsafe { StaticVgaWriter::new() };
+pub static mut STATIC_VGA_WRITER: StaticVgaWriter = unsafe { StaticVgaWriter::new() };
 pub struct StaticVgaWriter(Option<DefaultVgaWriter>);
 impl StaticVgaWriter {
     const unsafe fn new() -> Self {
@@ -37,7 +37,10 @@ pub struct DefaultVgaWriter {
 }
 
 impl DefaultVgaWriter {
-
+    pub fn set_position(&mut self, position: (usize, usize)) -> &mut Self {
+        self.position = position;
+        self
+    }
     pub fn disable_cursor(&mut self) -> &mut Self {
         unsafe {
             PortWriteOnly::new(0x03D4_u16).write(0x0A_u8);

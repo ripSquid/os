@@ -10,17 +10,17 @@ use self::{
     paging::PageTableMaster,
 };
 use crate::{
-    display::{macros::{debug, print_str}, DefaultVgaWriter},
+    display::{macros::{debug, print_str}, DefaultVgaWriter, STATIC_VGA_WRITER},
     multiboot_info::memory_map::{MemoryMapEntry, MemoryType},
 };
 use alloc::{
     boxed::Box,
     format,
     string::{String, ToString},
-    vec::Vec,
+    vec::Vec, alloc::Global,
 };
 use core::{
-    alloc::{GlobalAlloc, Layout},
+    alloc::{GlobalAlloc, Layout, Allocator},
     iter::Filter,
     slice::Iter,
     sync::atomic::AtomicUsize,
@@ -84,39 +84,25 @@ pub unsafe fn populate_global_allocator(
         allocator,
         allocator.available_frames_left(),
     );
-    //allocator_test();
+    allocator_test();
 }
-fn allocator_test() {
-    let test_string = String::from("this is a heap allocated string!");
-    print_str!(&test_string.as_str());
-    drop(test_string);
-    let pro = 10;
-    let mut formatter = unsafe { DefaultVgaWriter::new_unsafe() };
-    let mut test_string_2 = format!(
-        "this is a heap allocated string again, using format, have the number {}",
-        pro
-    );
-    print_str!(&test_string_2.as_str());
-    drop(test_string_2);
+unsafe fn allocator_test() {
+    let lingering_allocation = Box::new(0x7E57135_u64);
     const MEM_TEST_ITER: usize = 10000;
     for i in 0..MEM_TEST_ITER {
-        formatter.write_horizontally_centerd(&format!("Iteration: {}", i), 0);
+        STATIC_VGA_WRITER.write_horizontally_centerd(&format!("Iteration: {}", i), 0);
         let progress_bar = {
             let width = 30;
             let progress = i * width / MEM_TEST_ITER;
             let string: String = (0..width).into_iter().map(|num| if num > progress {"."} else {"O"}).collect();
             string
         };
-        formatter.write_horizontally_centerd(&progress_bar, 2);
+        STATIC_VGA_WRITER.write_horizontally_centerd(&progress_bar, 2);
+        
         let mut vec: Vec<u64> = Vec::with_capacity(i);
         vec.push(0);
-
     }
-    let _test_box = Box::new([0i32; 4096]);
-    test_string_2 =
-        "this is a reassignment of the string, after allocating a big block of data, it works too!"
-            .to_string();
-    print_str!(&test_string_2);
+    debug!(&format!("were just doing {lingering_allocation}").as_str())
 }
 
 // This is the allocator initially used at startup
