@@ -87,22 +87,24 @@ pub unsafe fn populate_global_allocator(
     allocator_test();
 }
 unsafe fn allocator_test() {
+    STATIC_VGA_WRITER.clear_screen(crate::display::VgaColor::Black);
+    STATIC_VGA_WRITER.write_horizontally_centerd("Performing a quick memory test...", 2);
     let lingering_allocation = Box::new(0x7E57135_u64);
-    const MEM_TEST_ITER: usize = 10000;
+    const MEM_TEST_ITER: usize = 15000;
     for i in 0..MEM_TEST_ITER {
-        STATIC_VGA_WRITER.write_horizontally_centerd(&format!("Iteration: {}", i), 0);
+        STATIC_VGA_WRITER.write_horizontally_centerd(&format!("{}% done", i*100/MEM_TEST_ITER), 20);
         let progress_bar = {
             let width = 30;
             let progress = i * width / MEM_TEST_ITER;
             let string: String = (0..width).into_iter().map(|num| if num > progress {"."} else {"O"}).collect();
             string
         };
-        STATIC_VGA_WRITER.write_horizontally_centerd(&progress_bar, 2);
+        STATIC_VGA_WRITER.write_horizontally_centerd(&progress_bar, 21);
         
         let mut vec: Vec<u64> = Vec::with_capacity(i);
         vec.push(0);
     }
-    debug!(&format!("were just doing {lingering_allocation}").as_str())
+    STATIC_VGA_WRITER.write_horizontally_centerd(&format!("were just doing {lingering_allocation}").as_str(), 1);
 }
 
 // This is the allocator initially used at startup

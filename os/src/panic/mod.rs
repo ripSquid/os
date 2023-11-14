@@ -31,7 +31,7 @@ fn panic(info: &PanicInfo) -> ! {
         );
         
         if let Some(message) = info.message() {
-            writer.write_horizontally_centerd("attached error below:", 10).next_line().set_default_colors(VgaColorCombo::on_black(VgaColor::Red));
+            writer.write_horizontally_centerd("error:", 10).next_line().set_default_colors(VgaColorCombo::on_black(VgaColor::Red));
         
             let mut buffer = PanicBuffer::new(&mut writer);
             let _ = write!(&mut buffer, "{message}");
