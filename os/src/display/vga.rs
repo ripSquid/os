@@ -41,6 +41,15 @@ impl DefaultVgaWriter {
         self.position = position;
         self
     }
+
+    pub fn get_position(&mut self) -> (usize, usize) {
+        self.position
+    }
+
+    pub fn get_size(&mut self) -> (usize, usize) {
+        (self.buffer.width(), self.buffer.height())
+    }
+
     pub fn disable_cursor(&mut self) -> &mut Self {
         unsafe {
             PortWriteOnly::new(0x03D4_u16).write(0x0A_u8);

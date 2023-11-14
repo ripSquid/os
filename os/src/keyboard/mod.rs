@@ -24,116 +24,120 @@ pub unsafe fn setup_keymap() {
     // Highest 4 bits are for CTRL, SHIFT, ALT, ALTGR
     // Lowest 8 bits are for the character/keycode from keyboard
 
-    keymap[0x1C] = 'a';
-    keymap[0x32] = 'b';
-    keymap[0x21] = 'c';
-    keymap[0x23] = 'd';
-    keymap[0x24] = 'e';
-    keymap[0x2B] = 'f';
-    keymap[0x34] = 'g';
-    keymap[0x33] = 'h';
-    keymap[0x43] = 'i';
-    keymap[0x3B] = 'j';
-    keymap[0x42] = 'k';
-    keymap[0x4B] = 'l';
-    keymap[0x3A] = 'm';
+    keymap[0x1E] = 'a';
+    keymap[0x30] = 'b';
+    keymap[0x2E] = 'c';
+    keymap[0x20] = 'd';
+    keymap[0x12] = 'e';
+    keymap[0x21] = 'f';
+    keymap[0x22] = 'g';
+    keymap[0x23] = 'h';
+    keymap[0x17] = 'i';
+    keymap[0x24] = 'j';
+    keymap[0x25] = 'k';
+    keymap[0x26] = 'l';
+    keymap[0x32] = 'm';
     keymap[0x31] = 'n';
-    keymap[0x44] = 'o';
-    keymap[0x4D] = 'p';
-    keymap[0x15] = 'q';
-    keymap[0x2D] = 'r';
-    keymap[0x1B] = 's';
-    keymap[0x2C] = 't';
-    keymap[0x3C] = 'u';
-    keymap[0x2A] = 'v';
-    keymap[0x1D] = 'w';
-    keymap[0x22] = 'x';
-    keymap[0x35] = 'y';
-    keymap[0x1A] = 'Z';
-    keymap[0x54] = 'å';
-    keymap[0x52] = 'ä';
-    keymap[0x4C] = 'ö';
+    keymap[0x18] = 'o';
+    keymap[0x19] = 'p';
+    keymap[0x10] = 'q';
+    keymap[0x13] = 'r';
+    keymap[0x1F] = 's';
+    keymap[0x14] = 't';
+    keymap[0x16] = 'u';
+    keymap[0x2F] = 'v';
+    keymap[0x11] = 'w';
+    keymap[0x2D] = 'x';
+    keymap[0x15] = 'y';
+    keymap[0x2C] = 'z';
 
-    keymap[SHIFT_MODIFIER | 0x1C] = 'A';
-    keymap[SHIFT_MODIFIER | 0x32] = 'B';
-    keymap[SHIFT_MODIFIER | 0x21] = 'C';
-    keymap[SHIFT_MODIFIER | 0x23] = 'D';
-    keymap[SHIFT_MODIFIER | 0x24] = 'E';
-    keymap[SHIFT_MODIFIER | 0x2B] = 'F';
-    keymap[SHIFT_MODIFIER | 0x34] = 'G';
-    keymap[SHIFT_MODIFIER | 0x33] = 'H';
-    keymap[SHIFT_MODIFIER | 0x43] = 'I';
-    keymap[SHIFT_MODIFIER | 0x3B] = 'J';
-    keymap[SHIFT_MODIFIER | 0x42] = 'K';
-    keymap[SHIFT_MODIFIER | 0x4B] = 'L';
-    keymap[SHIFT_MODIFIER | 0x3A] = 'M';
+    keymap[SHIFT_MODIFIER | 0x1E] = 'A';
+    keymap[SHIFT_MODIFIER | 0x30] = 'B';
+    keymap[SHIFT_MODIFIER | 0x2E] = 'C';
+    keymap[SHIFT_MODIFIER | 0x20] = 'D';
+    keymap[SHIFT_MODIFIER | 0x12] = 'E';
+    keymap[SHIFT_MODIFIER | 0x21] = 'F';
+    keymap[SHIFT_MODIFIER | 0x22] = 'G';
+    keymap[SHIFT_MODIFIER | 0x23] = 'H';
+    keymap[SHIFT_MODIFIER | 0x17] = 'I';
+    keymap[SHIFT_MODIFIER | 0x24] = 'J';
+    keymap[SHIFT_MODIFIER | 0x25] = 'K';
+    keymap[SHIFT_MODIFIER | 0x26] = 'L';
+    keymap[SHIFT_MODIFIER | 0x32] = 'M';
     keymap[SHIFT_MODIFIER | 0x31] = 'N';
-    keymap[SHIFT_MODIFIER | 0x44] = 'O';
-    keymap[SHIFT_MODIFIER | 0x4D] = 'P';
-    keymap[SHIFT_MODIFIER | 0x15] = 'Q';
-    keymap[SHIFT_MODIFIER | 0x2D] = 'R';
-    keymap[SHIFT_MODIFIER | 0x1B] = 'S';
-    keymap[SHIFT_MODIFIER | 0x2C] = 'T';
-    keymap[SHIFT_MODIFIER | 0x3C] = 'U';
-    keymap[SHIFT_MODIFIER | 0x2A] = 'V';
-    keymap[SHIFT_MODIFIER | 0x1D] = 'W';
-    keymap[SHIFT_MODIFIER | 0x22] = 'X';
-    keymap[SHIFT_MODIFIER | 0x35] = 'Y';
-    keymap[SHIFT_MODIFIER | 0x1A] = 'Z';
-    keymap[SHIFT_MODIFIER | 0x54] = 'Å';
-    keymap[SHIFT_MODIFIER | 0x52] = 'Ä';
-    keymap[SHIFT_MODIFIER | 0x4C] = 'Ö';
+    keymap[SHIFT_MODIFIER | 0x18] = 'O';
+    keymap[SHIFT_MODIFIER | 0x19] = 'P';
+    keymap[SHIFT_MODIFIER | 0x10] = 'Q';
+    keymap[SHIFT_MODIFIER | 0x13] = 'R';
+    keymap[SHIFT_MODIFIER | 0x1F] = 'S';
+    keymap[SHIFT_MODIFIER | 0x14] = 'T';
+    keymap[SHIFT_MODIFIER | 0x16] = 'U';
+    keymap[SHIFT_MODIFIER | 0x2F] = 'V';
+    keymap[SHIFT_MODIFIER | 0x11] = 'W';
+    keymap[SHIFT_MODIFIER | 0x2D] = 'X';
+    keymap[SHIFT_MODIFIER | 0x15] = 'Y';
+    keymap[SHIFT_MODIFIER | 0x2C] = 'Z';
 
-    keymap[0x16] = '1';
-    keymap[0x1E] = '2';
-    keymap[0x26] = '3';
-    keymap[0x25] = '4';
-    keymap[0x2E] = '5';
-    keymap[0x36] = '6';
-    keymap[0x3D] = '7';
-    keymap[0x3E] = '8';
-    keymap[0x46] = '9';
-    keymap[0x45] = '0';
+    keymap[0xB] = '0';
+    keymap[0x2] = '1';
+    keymap[0x3] = '2';
+    keymap[0x4] = '3';
+    keymap[0x5] = '4';
+    keymap[0x6] = '5';
+    keymap[0x7] = '6';
+    keymap[0x8] = '7';
+    keymap[0x9] = '8';
+    keymap[0xA] = '9';
 
-    keymap[SHIFT_MODIFIER | 0x16] = '!';
-    keymap[SHIFT_MODIFIER | 0x1E] = '"';
-    keymap[SHIFT_MODIFIER | 0x26] = '#';
-    keymap[SHIFT_MODIFIER | 0x25] = '¤';
-    keymap[SHIFT_MODIFIER | 0x2E] = '%';
-    keymap[SHIFT_MODIFIER | 0x36] = '&';
-    keymap[SHIFT_MODIFIER | 0x3D] = '/';
-    keymap[SHIFT_MODIFIER | 0x3E] = '(';
-    keymap[SHIFT_MODIFIER | 0x46] = ')';
-    keymap[SHIFT_MODIFIER | 0x45] = '=';
+    keymap[SHIFT_MODIFIER | 0xB] = '=';
+    keymap[SHIFT_MODIFIER | 0x2] = '!';
+    keymap[SHIFT_MODIFIER | 0x3] = '"';
+    keymap[SHIFT_MODIFIER | 0x4] = '#';
+    keymap[SHIFT_MODIFIER | 0x5] = '3';
+    keymap[SHIFT_MODIFIER | 0x6] = '%';
+    keymap[SHIFT_MODIFIER | 0x7] = '&';
+    keymap[SHIFT_MODIFIER | 0x8] = '/';
+    keymap[SHIFT_MODIFIER | 0x9] = '(';
+    keymap[SHIFT_MODIFIER | 0xA] = ')';
 
-    keymap[ALTGR_MODIFIER | 0x1E] = '@';
-    keymap[ALTGR_MODIFIER | 0x26] = '£';
-    keymap[ALTGR_MODIFIER | 0x25] = '$';
-    keymap[ALTGR_MODIFIER | 0x3D] = '{';
-    keymap[ALTGR_MODIFIER | 0x3E] = '[';
-    keymap[ALTGR_MODIFIER | 0x46] = ']';
-    keymap[ALTGR_MODIFIER | 0x45] = '}';
-    keymap[ALTGR_MODIFIER | 0x4E] = '\\';
-    keymap[ALTGR_MODIFIER | 0x61] = '|';
+    keymap[ALT_MODIFIER | 0x3] = '@';
+    keymap[ALT_MODIFIER | 0x5] = '$';
 
-    keymap[0x41] = ',';
-    keymap[0x49] = '.';
-    keymap[0x4A] = '-';
-    keymap[SHIFT_MODIFIER | 0x41] = ';';
-    keymap[SHIFT_MODIFIER | 0x49] = ':';
-    keymap[SHIFT_MODIFIER | 0x4A] = '_';
+    keymap[0x0C] = '+';
+    keymap[SHIFT_MODIFIER | 0x0C] = '?';
+    keymap[ALT_MODIFIER | 0x0C] = '\\';
 
-    keymap[0x5D] = '\'';
-    keymap[SHIFT_MODIFIER | 0x5D] = '*';
-    keymap[0x5B] = '¨';
-    keymap[SHIFT_MODIFIER | 0x5B] = '^';
-    keymap[0x4E] = '+';
-    keymap[SHIFT_MODIFIER | 0x4E] = '?';
-    keymap[0x61] = '<';
-    keymap[SHIFT_MODIFIER | 0x61] = '>';
+    keymap[0x33] = ',';
+    keymap[0x34] = '.';
+    keymap[0x35] = '-';
 
-    keymap[0x5A] = '\x0A'; // Newline
-    keymap[0x66] = '\x08'; // Backspace
+    keymap[SHIFT_MODIFIER | 0x33] = ';';
+    keymap[SHIFT_MODIFIER | 0x34] = ':';
+    keymap[SHIFT_MODIFIER | 0x35] = '_';
+
+    keymap[0x2B] = '\'';
+    keymap[SHIFT_MODIFIER | 0x2B] = '*';
+    keymap[SHIFT_MODIFIER | 0x1B] = '^';
+
+    keymap[0x56] = '<';
+    keymap[SHIFT_MODIFIER | 0x56] = '>';
+    keymap[ALT_MODIFIER | 0x56] = '|';
+
+    // Space
+    keymap[0x39] = ' ';
+    // Enter
+    keymap[0x1C] = '\x0A';
+    // Backspace
+    keymap[0x0E] = '\x08';
+    // Escape
+    keymap[0x01] = '\x1B';
+
+    // 0x39 SPACE
+    // 0x1C ENTER
+    // 0xE  BACKSPACE
+    // 0x2A 0xAA SHIFT
+    // 0x1D 0x9D CTRL
+    // 0x38 0xB8 ALT
 }
 
 #[derive(PartialEq)]
@@ -152,6 +156,12 @@ struct KeyboardState {
     altgr_pressed: bool,
 }
 
+impl KeyboardState {
+    fn get_modifier_usize(&self) -> usize {
+        (if self.ctrl_pressed {CTRL_MODIFIER} else {0}) | (if self.shift_pressed {SHIFT_MODIFIER} else {0}) | (if self.alt_pressed {ALT_MODIFIER} else {0})
+    }
+}
+
 static mut keyboard_state: KeyboardState = KeyboardState {
     command: State::Waiting,
     ctrl_pressed: false,
@@ -160,70 +170,58 @@ static mut keyboard_state: KeyboardState = KeyboardState {
     altgr_pressed: false,
 };
 
+
+
 pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     // Implement keyboard 2
-    
+
+    // 0x39 SPACE
+    // 0x1C ENTER
+    // 0xE  BACKSPACE
+    // 0x2A 0xAA SHIFT
+    // 0x1D 0x9D CTRL
+    // 0x38 0xB8 ALT
+
     unsafe {
         if let Ok(data) = controller.read_data() {
-            /* if data == 0xF0 && keyboard_state.command == State::Waiting {
-                // Start of KeyRelease event
-                keyboard_state.command = State::KeyRelease;
-            } else if data == 0xE0 && keyboard_state.command == State::Waiting {
-                // We got indication that a "right" key is getting specific commands
-                keyboard_state.command = State::WaitingForRightCommand;
-            } else if data == 0xF0 && keyboard_state.command == State::WaitingForRightCommand {
-                // We got a key release event after receiving a "right" key
-                keyboard_state.command = State::RightKeyRelease;
-            } else if keyboard_state.command == State::KeyRelease {
-                // If we are waiting for KeyRelease event then check if its modifier if so switch it back off
-                if data == 0x12 {
-                    keyboard_state.shift_pressed = false;
-                } else if data == 0x11 {
-                    keyboard_state.alt_pressed = false;
-                }
-                keyboard_state.command = State::Waiting;
-            } else if keyboard_state.command == State::RightKeyRelease {
-                if data == 0x11 {
-                    keyboard_state.altgr_pressed = false;
-                }
-                keyboard_state.command = State::Waiting;
-            } else {
-                if data == 0x11 && keyboard_state.command == State::WaitingForRightCommand {
-                    keyboard_state.altgr_pressed = true;
-                    keyboard_state.command = State::Waiting;
-                } else if data == 0x11 {
-                    keyboard_state.alt_pressed = true;
-                }
-                if data == 0x12 {
-                    // If shift gets pressed then switch it on
+            match data {
+                0x2A => {
+                    // Shift Pressed
                     keyboard_state.shift_pressed = true;
-                } else {
-                    let mut key: usize = data as usize;
-                    if keyboard_state.shift_pressed {
-                        key |= SHIFT_MODIFIER;
-                    }
-                    if keyboard_state.altgr_pressed {
-                        key |= ALTGR_MODIFIER;
-                    }
-                    if keyboard_state.alt_pressed {
-                        key |= ALT_MODIFIER;
-                    }
-                    if keyboard_state.ctrl_pressed {
-                        key |= CTRL_MODIFIER;
-                    }
-
-                    if keymap[key] != '\x00' {
-                        debug!(&keymap[key]);
-                        
+                },
+                0xAA => {
+                    // Shift released
+                    keyboard_state.shift_pressed = false;
+                },
+                0x1D => {
+                    // CTRL pressed
+                    keyboard_state.ctrl_pressed = true;
+                },
+                0x9D => {
+                    // CTRL released
+                    keyboard_state.ctrl_pressed = false;
+                },
+                0x38 => {
+                    // Alt pressed
+                    keyboard_state.alt_pressed = true;
+                },
+                0xB8 => {
+                    // Alt released
+                    keyboard_state.alt_pressed = false;
+                },
+                _ => {
+                    let keymap_entry = keymap[keyboard_state.get_modifier_usize() | data as usize];
+                    if keymap_entry != '\0' {
+                        //STATIC_VGA_WRITER.write_raw_char(keymap_entry as u8);
+                        KEYBOARD_QUEUE.enqueue_unchecked(keymap_entry);
                     } else {
-                        //debug!(&key);
+                        //STATIC_VGA_WRITER.write_str(&format!("0x{:X}", data));
                     }
                 }
-            } */
-            unsafe {
-                STATIC_VGA_WRITER.write_byte(data);
-                STATIC_VGA_WRITER.write_str(" ");
             }
+            
+            
+            
         }
     }
     //debug!("keyboard handler!");

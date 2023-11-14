@@ -8,10 +8,10 @@ run-qemu:
   -no-reboot                                     \
   -no-shutdown \
   -drive format=raw,media=cdrom,file=build/os-gymnasie.iso    \
-  -monitor stdio                                  \
+  -serial stdio                                  \
   -smp 1                                         \
   -vga std \
-  -d int \
+
 
 
 arch ?= gymnasie

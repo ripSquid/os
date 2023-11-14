@@ -9,13 +9,16 @@
 extern crate bitflags;
 extern crate alloc;
 
-use crate::display::{macros::*, DefaultVgaWriter, VgaColorCombo};
+use crate::display::{macros::*, DefaultVgaWriter, VgaColorCombo, STATIC_VGA_WRITER};
 
+use crate::keyboard::KEYBOARD_QUEUE;
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
 use crate::memory::paging::EntryFlags;
 use crate::memory::populate_global_allocator;
 
+use alloc::format;
 use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use memory::frame::FrameAllocator;
 use memory::paging::{InactivePageTable, MemoryPage, PageTableMaster, TemporaryPage};
 
@@ -34,6 +37,7 @@ mod interrupt;
 mod keyboard;
 mod memory;
 mod multiboot_info;
+mod forth;
 
 //no mangle tells the compiler to keep the name of this symbol
 //this is later used in long_mode.asm, at which point the cpu is prepared to run rust code
@@ -83,8 +87,50 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     // Start forth application
     
     
+    let alphabet = ('a'..='z').into_iter().chain(('0'..='9').into_iter()).collect::<Vec<char>>();
+    unsafe {STATIC_VGA_WRITER.clear_screen(display::VgaColor::Black);
+    loop {
+        /* for character in &alphabet {
+            STATIC_VGA_WRITER.write_str(&format!("Press {}", character));
+            let mut chars_i = 0;
+            while (chars_i < 2) {
+                let tmp = KEYBOARD_QUEUE.dequeue();
+                if let Some(c) = tmp {
+                    if chars_i == 0 {
+                        tmp_write(format!("{}:{:X};",character, c as u8));
+                    }
+                    chars_i += 1;
+                }
+            }
+        } */
+        if let Some(c) = KEYBOARD_QUEUE.dequeue() {
+            if c == '\x08' {
+                let mut pos = STATIC_VGA_WRITER.get_position();
+                if pos.0 > 0 {
+                    pos.0 -= 1;
+                } else if pos.1 > 0 {
+                    pos.1 -= 1;
+                    pos.0 = STATIC_VGA_WRITER.get_size().0 - 1;
+                }
+                STATIC_VGA_WRITER.set_position(pos);
+                STATIC_VGA_WRITER.write_raw_char(' ' as u8);
+                STATIC_VGA_WRITER.set_position(pos);
+            } else {
+                STATIC_VGA_WRITER.write_raw_char(c as u8);
+            }
+            
+        }
 
-    loop {}
+    }};
+}
+
+unsafe fn tmp_write(s: String) {
+    for char in s.chars() {
+        while ((x86_64::instructions::port::PortReadOnly::<u8>::new(0x3F8 + 5).read() & 0x20) == 0) {};
+        PortWriteOnly::new(0x3f8).write(char as u8);
+    }
+    
+    
 }
 
 fn disable_cursor() {
