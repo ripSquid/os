@@ -69,8 +69,22 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     let cpu_info = cpuid::ProcessorIdentification::gather();
     debug!(&cpu_info);
 
+    unsafe {
+        pitinit(600);
+    }
+    // Start forth application
+    easter_eggs::show_lars();
+
+
+    
     let author_text: String = authors.replace(":", " and ");
     let mut formatter = unsafe { DefaultVgaWriter::new_unsafe() };
+    formatter
+    .clear_screen(display::VgaColor::Black);
+    for i in 0..255 {
+        formatter.write_raw_char(i);
+    }
+    /* 
     formatter
         .clear_screen(display::VgaColor::Black)
         .set_default_colors(VgaColorCombo::on_black(display::VgaColor::Green))
@@ -88,45 +102,11 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .next_line()
         .write_str("CPU vendor: ")
         .write_str(cpu_info.vendor());
+    */
 
-    unsafe {
-        pitinit(100000);
-    }
-    loop {
-        unsafe {
-            STATIC_VGA_WRITER.set_position((0,0)).write_str(&format!("Time: {}s", global_os_time));
-        }
-        
-    }
-    // Start forth application
-    // easter_eggs::show_lars();
-    // loop {}
-    
- 
-    let mut g_formatter = unsafe { BitmapVgaWriter::new_unsafe() };
-    g_formatter.set_palette(VgaPalette::greys());
-    g_formatter.set_position((0,0));
-    display::switch_graphics_mode(VgaModeSwitch::VGA_320X200_BITMAP_MODEX);
-    let mut i: u8 = 0;
-    loop {
-
-        for _ in 0..80 {
-            g_formatter.write_char(i);
-        }
-        i += 1;
-        
-        for _ in 0..0xFFFF {
-            unsafe {
-                asm!{
-                    "nop",
-                }
-            }
-        }
-                
-    }
 
     let alphabet = ('a'..='z').into_iter().chain(('0'..='9').into_iter()).collect::<Vec<char>>();
-    unsafe {STATIC_VGA_WRITER.clear_screen(display::VgaColor::Black);
+    unsafe {//STATIC_VGA_WRITER.clear_screen(display::VgaColor::Black);
     loop {
         /* for character in &alphabet {
             STATIC_VGA_WRITER.write_str(&format!("Press {}", character));

@@ -1,4 +1,4 @@
-use x86_64::instructions::port::{PortWriteOnly, PortReadOnly};
+use x86_64::instructions::port::{PortWriteOnly, PortReadOnly, Port};
 
 const VGA_AC_INDEX: u16 =		    0x3C0;
 const VGA_AC_WRITE: u16 =		    0x3C0;
@@ -88,6 +88,83 @@ impl VgaModeSwitch {
 
 pub fn switch_graphics_mode(mode: VgaModeSwitch) {
     unsafe {write_registers(mode) };
+}
+
+pub unsafe fn restore_text_mode_font() {
+    let font = include_bytes!("font.bin");
+    let (s2, s4, gc4, gc5, gc6);
+    let mut gc_index = Port::<u8>::new(VGA_GC_INDEX);
+    let mut gc_data = Port::<u8>::new(VGA_GC_DATA);
+    let mut seq_index = Port::<u8>::new(VGA_SEQ_INDEX);
+    let mut seq_data = Port::<u8>::new(VGA_SEQ_DATA);
+    seq_index.write(2);
+    s2 = seq_data.read();
+
+    seq_index.write(4);
+    s4 = seq_data.read();
+
+    seq_data.write( s4 | 0x04);
+
+    gc_index.write(4);
+    gc4 = gc_data.read();
+
+    gc_index.write(5);
+    gc5 = gc_data.read();
+
+    gc_data.write(gc5 & !0x10);
+
+    gc_index.write(6);
+    gc6 = gc_data.read();
+
+    gc_data.write(gc6 & !0x02);
+
+    set_plane(2);
+
+    let start = get_start_addr();
+    for (i, byte) in font.iter().enumerate() {
+        *((start + i as u64) as *mut u8) = *byte;
+   }
+
+    seq_index.write(2);
+    seq_data.write(s2);
+
+    seq_index.write(4);
+    seq_data.write(s4);
+
+    gc_index.write(4);
+    gc_data.write(gc4);
+    gc_index.write(5);
+    gc_data.write(gc5);
+    gc_index.write(6);
+    gc_data.write(gc6);
+
+
+}
+unsafe fn get_start_addr() -> u64 {
+    PortWriteOnly::<u8>::new(VGA_GC_INDEX).write(6);
+    let mut seg: u8 = PortReadOnly::new(VGA_GC_DATA).read();
+    seg >>= 2;
+    seg &= 3;
+    match seg {
+        0 | 1 => {
+            0xA0000
+        },
+        2 => {
+            0xB0000
+        }
+        3 => {
+            0xB8000
+        }
+        _ => unreachable!(),
+    }
+}
+unsafe fn set_plane(mut plane: u8) {
+    plane &= 3;
+    let pmask = 1 << plane;
+    PortWriteOnly::<u8>::new(VGA_GC_INDEX).write(4);
+    PortWriteOnly::<u8>::new(VGA_GC_DATA).write(plane);
+    PortWriteOnly::<u8>::new(VGA_SEQ_INDEX).write(2);
+    PortWriteOnly::<u8>::new(VGA_SEQ_DATA).write(pmask);
 }
 
 unsafe fn write_registers(mut set: VgaModeSwitch) {

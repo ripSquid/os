@@ -13,8 +13,8 @@ unsafe fn outb(port: u16, value: u8) {
     );
 }
 
-pub unsafe fn pitinit(freq: u32) {
-    let divisor: u16 = (1193180u32 / freq).try_into().unwrap();
+pub unsafe fn pitinit(freq: u16) {
+    let divisor: u16 = freq;
 
     let command: u8 = (1 << 4) | (1 << 5) | ((3) << 1);
 

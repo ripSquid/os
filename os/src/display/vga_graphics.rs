@@ -7,10 +7,11 @@ use super::{KernelDebug, KernelFormatter, ScreenBuffer};
 const VGA_256COLORX_BUFFER_WIDTH: usize = 320;
 const VGA_256COLORX_BUFFER_HEIGHT: usize = 200;
 
-
+#[derive(Clone, Copy)]
 pub struct VgaPaletteColor([u8; 3]);
 
 impl VgaPaletteColor {
+    pub const BLACK: Self = Self([0; 3]);
     pub const fn from_rgb(r: u8, g: u8, b: u8) -> Self {
         Self([r >> 2, g >> 2, b >> 2])
     }
@@ -20,16 +21,29 @@ impl VgaPaletteColor {
     pub const fn from_grey_usize(value: usize) -> Self {
         Self::from_grey(value as u8)
     }
+    pub fn fade(self, factor: u8) -> Self {
+        let Self([r,g,b]) = self;
+        Self([
+            ((r as u16) * (factor as u16) / (u8::MAX as u16)) as u8, 
+            ((g as u16) * (factor as u16) / (u8::MAX as u16)) as u8,
+            ((b as u16) * (factor as u16) / (u8::MAX as u16)) as u8,
+        ])
+    }
 }
 
+#[derive(Clone)]
 pub struct VgaPalette([VgaPaletteColor; 256]);
 
 impl VgaPalette {
+    pub const ALL_BLACK: Self = Self([VgaPaletteColor::BLACK; 256]);
     pub fn greys() -> Self {
         Self(core::array::from_fn(VgaPaletteColor::from_grey_usize))
     }
     pub fn from_array(array: [VgaPaletteColor; 256]) -> Self {
         Self(array)
+    }
+    pub fn fade_factor(&self, factor: u8) -> Self {
+        Self(core::array::from_fn(|i| self.0[i].fade(factor)))
     }
 }
 

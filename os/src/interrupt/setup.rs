@@ -71,8 +71,7 @@ pub extern "x86-interrupt" fn breakpoint(_stack_frame: InterruptStackFrame) {
 
 pub extern "x86-interrupt" fn timer(_stack_frame: InterruptStackFrame) {
     unsafe {
-        debug!("timer");
-        //global_os_time += 1;
+        global_os_time += 1;
         pics.notify_end_of_interrupt(32);
     }
 }
