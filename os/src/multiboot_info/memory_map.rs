@@ -7,11 +7,13 @@ use crate::{
 
 use super::{transmute, type_after, TagHeader, TagType};
 
+#[allow(dead_code)]
 pub struct MemoryMapTag {
     header: &'static MemoryMapHeader,
     entries: &'static [MemoryMapEntry],
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct BasicMemoryTag {
     tag_type: TagType,

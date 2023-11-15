@@ -10,21 +10,20 @@ use self::{
     paging::PageTableMaster,
 };
 use crate::{
-    display::{
-        macros::{debug, print_str},
-        DefaultVgaWriter, STATIC_VGA_WRITER,
-    },
+    display::
+
+         STATIC_VGA_WRITER
+    ,
     multiboot_info::memory_map::{MemoryMapEntry, MemoryType},
 };
 use alloc::{
-    alloc::Global,
     boxed::Box,
     format,
-    string::{String, ToString},
+    string::String,
     vec::Vec,
 };
 use core::{
-    alloc::{Allocator, GlobalAlloc, Layout},
+    alloc::{ GlobalAlloc, Layout},
     iter::Filter,
     slice::Iter,
     sync::atomic::AtomicUsize,
@@ -47,16 +46,16 @@ const PAGE_SIZE_4K: usize = 4096;
 // This is a very barebones (and dangerous) implementation, but allows for future improvements.
 // Just like a student in Gymnasiet. (Secondary school)
 struct GymnasieAllocator {
-    readers: AtomicUsize,
-    writers: AtomicUsize,
+    _readers: AtomicUsize,
+    _writers: AtomicUsize,
     actual_allocator: GlobalAllocator,
 }
 impl GymnasieAllocator {
     //creates a new allocator (done at startup)
     pub const fn new() -> Self {
         Self {
-            readers: AtomicUsize::new(0),
-            writers: AtomicUsize::new(0),
+            _readers: AtomicUsize::new(0),
+            _writers: AtomicUsize::new(0),
             actual_allocator: GlobalAllocator::null(),
         }
     }

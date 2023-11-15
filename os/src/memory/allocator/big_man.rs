@@ -4,7 +4,7 @@ use super::PageState;
 use crate::{
     display::macros::debug,
     memory::{
-        allocator::PageStateTree,
+        allocator::MemoryStateTree,
         paging::{EntryFlags, MemoryPage, MemoryPageRange, PageTableMaster},
         ElfTrustAllocator, PAGE_SIZE_4K,
     },
@@ -14,7 +14,7 @@ const STATES_PER_PAGE: usize = PAGE_SIZE_4K / size_of::<PageState>();
 
 pub struct BigManAllocator {
     range: MemoryPageRange,
-    tree: PageStateTree,
+    tree: MemoryStateTree,
 }
 
 impl BigManAllocator {
@@ -43,7 +43,7 @@ impl BigManAllocator {
         debug!("Available memory:", &free_page_count, "* 4KB");
 
         let tree = unsafe {
-            PageStateTree::new(
+            MemoryStateTree::new(
                 free_page_count,
                 state_page.starting_address() as *mut PageState,
             )

@@ -120,6 +120,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
             }
             
         }
+    //display::switch_graphics_mode();
 
     }};
 }
@@ -192,8 +193,10 @@ fn remap_everything(
             mapper.identity_map(frame, EntryFlags::PRESENT, &mut allocator);
         }
         //map vga buffer
-        let vga_buffer_frame = MemoryFrame::inside_address(0xb8000);
-        mapper.identity_map(vga_buffer_frame, EntryFlags::WRITABLE, &mut allocator);
+        for i in 0xA0..0xBF {
+            let vga_buffer_frame = MemoryFrame::inside_address(i * 0x1000);
+            mapper.identity_map(vga_buffer_frame, EntryFlags::WRITABLE, &mut allocator);
+        }
     });
 
     let _old_table = active_table.switch(new_table);

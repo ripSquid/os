@@ -1,4 +1,4 @@
-use crate::display::{macros::debug, KernelDebug, STATIC_VGA_WRITER};
+use crate::display::KernelDebug;
 
 /// The state for a given region of memory
 #[derive(Default)]

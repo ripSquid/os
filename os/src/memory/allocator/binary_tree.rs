@@ -8,27 +8,26 @@ use x86_64::align_up;
 use super::PageState;
 
 use crate::{
-    display::{
-        macros::{debug, print_str},
-        KernelDebug, STATIC_VGA_WRITER,
-    },
+    display::
+        KernelDebug, 
+    
     memory::{paging::MemoryPageRange, MemoryAddress, PAGE_SIZE_4K},
 };
 
 /// A Binary tree keeping track of the state of a bunch of memory regions.
-/// the pointer must point to an unused piece of memory, that can never be allocated.
-pub struct PageStateTree(&'static mut [PageState]);
+/// the pointer must point to an unused piece of memory, that will never be used.
+pub struct MemoryStateTree(&'static mut [PageState]);
 
-impl PageStateTree {
+impl MemoryStateTree {
     /// Create a new Tree.
     /// This function assumes the pointer points to an unused piece of memory that will never be allocated
-    pub unsafe fn new(page_count: usize, start: *mut PageState) -> Self {
+    pub unsafe fn new(page_count: usize, tree_start: *mut PageState) -> Self {
         let size = (1 << usize::ilog2(page_count + 1)) - 1;
-        let slice = core::slice::from_raw_parts_mut(start, size);
+        let slice = core::slice::from_raw_parts_mut(tree_start, size);
         for state in &mut *slice {
             *state = PageState::default();
         }
-        let total_size_bytes = (page_count * PAGE_SIZE_4K);
+        let total_size_bytes = page_count * PAGE_SIZE_4K;
         let mut ourself = Self(slice);
         for i in 0..ourself.0.len() {
             let index = TreeIndex(i);
@@ -153,14 +152,14 @@ impl PageStateTree {
     }
 }
 
-impl Index<TreeIndex> for PageStateTree {
+impl Index<TreeIndex> for MemoryStateTree {
     type Output = PageState;
 
     fn index(&self, index: TreeIndex) -> &Self::Output {
         &self.0[index.0]
     }
 }
-impl IndexMut<TreeIndex> for PageStateTree {
+impl IndexMut<TreeIndex> for MemoryStateTree {
     fn index_mut(&mut self, index: TreeIndex) -> &mut Self::Output {
         &mut self.0[index.0]
     }

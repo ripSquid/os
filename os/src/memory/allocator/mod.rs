@@ -2,8 +2,8 @@ use core::alloc::{GlobalAlloc, Layout};
 mod big_man;
 mod binary_tree;
 mod state;
-use crate::display::{macros::debug, STATIC_VGA_WRITER};
-pub use binary_tree::{PageStateTree, TreeIndex};
+use crate::display::STATIC_VGA_WRITER;
+pub use binary_tree::{MemoryStateTree, TreeIndex};
 pub use state::PageState;
 
 use self::big_man::BigManAllocator;

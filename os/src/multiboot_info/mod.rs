@@ -128,7 +128,6 @@ impl Iterator for MultiBootTagIter {
                 TagType::ApmTable => (),
                 TagType::VbeInfo => (),
                 TagType::Module => (),
-                _ => panic!(),
             }
             //rounds upward to nearest multiple of 8
         }
@@ -195,16 +194,16 @@ pub struct TagHeader {
 }
 
 pub struct BootloaderNameTag {
-    head: &'static TagHeader,
+    _head: &'static TagHeader,
     name: &'static str,
 }
 impl BootloaderNameTag {
-    pub unsafe fn from_ref(head: &'static TagHeader) -> Self {
-        let pointer: *const u8 = type_after(head as *const TagHeader);
-        let sting_len = head.size as usize - size_of::<TagHeader>() - 1;
+    pub unsafe fn from_ref(_head: &'static TagHeader) -> Self {
+        let pointer: *const u8 = type_after(_head as *const TagHeader);
+        let sting_len = _head.size as usize - size_of::<TagHeader>() - 1;
         let string_bytes = core::slice::from_raw_parts(pointer as *const u8, sting_len);
         let name = from_utf8(string_bytes).unwrap();
-        Self { head, name }
+        Self { _head, name }
     }
     pub fn as_str(&self) -> &'static str {
         self.name
@@ -219,8 +218,4 @@ pub unsafe fn type_after<B, A>(pointer: *const B) -> *const A {
 /// turn a pointer of one type into another, mega hacky!!!
 pub unsafe fn transmute<B, A>(pointer: *const B) -> *const A {
     pointer as u64 as *const A
-}
-/// turn a pointer of one type into another, mega hacky!!!
-pub unsafe fn transmute_ref<B, A>(pointer: &B) -> *const A {
-    pointer as *const B as u64 as *const A
 }

@@ -16,6 +16,7 @@ pub struct ElfSymbolTagHeader {
     sh_index: u32,
 }
 
+#[allow(dead_code)]
 pub struct ElfSectionHeaders<'a> {
     raw: &'a [u32],
     pub parsed: &'a [ElfSectionHeader],
@@ -25,6 +26,9 @@ pub struct ElfSymbolTag {
     pub header: &'static ElfSymbolTagHeader,
     pub entries: ElfSectionHeaders<'static>,
 }
+
+
+#[allow(dead_code)]
 #[derive(PartialEq, Eq)]
 #[repr(u32)]
 pub enum ElfSectionType {

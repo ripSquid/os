@@ -10,40 +10,6 @@ macro_rules! print_str {
 
 pub(crate) use print_str;
 
-macro_rules! print_bytes {
-    ($term: expr) => {
-        let mut writer = crate::display::DefaultVgaWriter::new(unsafe {
-            &mut *(0xB8000 as *mut crate::display::DefaultVgaBuffer)
-        });
-        writer.prepare_print();
-        writer.write_bytes($term);
-    };
-}
-
-macro_rules! print_hex {
-    ($term: expr) => {
-        let mut writer = crate::display::DefaultVgaWriter::new(unsafe {
-            &mut *(0xB8000 as *mut crate::display::DefaultVgaBuffer)
-        });
-        writer.prepare_print();
-        writer.write_bytes(
-            crate::display::primitives::PrimitiveDisplay::as_hexadecimal_ascii(&$term).as_ref(),
-        );
-    };
-}
-
-macro_rules! print_num {
-    ($term: expr) => {{
-        let mut writer = crate::display::DefaultVgaWriter::new(unsafe {
-            &mut *(0xB8000 as *mut crate::display::DefaultVgaBuffer)
-        });
-        writer.prepare_print();
-        writer.write_bytes(
-            crate::display::primitives::PrimitiveDisplay::as_numeric_ascii(&$term).as_ref(),
-        );
-    }};
-}
-
 macro_rules! debug {
     ($($term: expr),+) => {
         {
