@@ -3,6 +3,8 @@ mod formatter;
 pub mod macros;
 pub mod primitives;
 mod vga;
+mod vga_graphics;
+pub use vga_graphics::*;
 pub use buffer::*;
 pub use formatter::*;
 pub use vga::*;

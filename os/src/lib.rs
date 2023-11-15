@@ -9,7 +9,7 @@
 extern crate bitflags;
 extern crate alloc;
 
-use crate::display::{macros::*, DefaultVgaWriter, VgaColorCombo, STATIC_VGA_WRITER};
+use crate::display::{macros::*, DefaultVgaWriter, VgaColorCombo, STATIC_VGA_WRITER, BitmapVgaWriter};
 
 use crate::keyboard::KEYBOARD_QUEUE;
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
@@ -87,6 +87,18 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     // Start forth application
     
     
+/* 
+    let mut g_formatter = unsafe { BitmapVgaWriter::new_unsafe() };
+    display::switch_graphics_mode();
+    let mut i: u8 = 0;
+    loop {
+        
+        
+
+                g_formatter.write_char(i);
+                i += 1;
+    }
+*/
     let alphabet = ('a'..='z').into_iter().chain(('0'..='9').into_iter()).collect::<Vec<char>>();
     unsafe {STATIC_VGA_WRITER.clear_screen(display::VgaColor::Black);
     loop {
@@ -120,7 +132,6 @@ pub extern "C" fn rust_start(info: u64) -> ! {
             }
             
         }
-    //display::switch_graphics_mode();
 
     }};
 }
