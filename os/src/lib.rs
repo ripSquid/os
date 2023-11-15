@@ -13,6 +13,8 @@ use core::arch::asm;
 
 use crate::display::{macros::*, DefaultVgaWriter, VgaColorCombo, STATIC_VGA_WRITER, BitmapVgaWriter, VgaModeSwitch, VgaPalette};
 
+use crate::interrupt::pitinit;
+use crate::interrupt::setup::global_os_time;
 use crate::keyboard::KEYBOARD_QUEUE;
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
 use crate::memory::paging::EntryFlags;
@@ -61,6 +63,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         populate_global_allocator(&mut active_table, &mut allocator);
     }
 
+
     unsafe { interrupt::setup::setup_interrupts() }
     x86_64::instructions::interrupts::int3();
     let cpu_info = cpuid::ProcessorIdentification::gather();
@@ -86,7 +89,15 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .write_str("CPU vendor: ")
         .write_str(cpu_info.vendor());
 
-
+    unsafe {
+        pitinit(100000);
+    }
+    loop {
+        unsafe {
+            STATIC_VGA_WRITER.set_position((0,0)).write_str(&format!("Time: {}s", global_os_time));
+        }
+        
+    }
     // Start forth application
     // easter_eggs::show_lars();
     // loop {}
