@@ -9,7 +9,9 @@
 extern crate bitflags;
 extern crate alloc;
 
-use crate::display::{macros::*, DefaultVgaWriter, VgaColorCombo, STATIC_VGA_WRITER, BitmapVgaWriter};
+use core::arch::asm;
+
+use crate::display::{macros::*, DefaultVgaWriter, VgaColorCombo, STATIC_VGA_WRITER, BitmapVgaWriter, VgaModeSwitch, VgaPalette};
 
 use crate::keyboard::KEYBOARD_QUEUE;
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
@@ -31,6 +33,7 @@ use x86_64::registers::model_specific::{Efer, EferFlags};
 
 pub mod cpuid;
 pub mod display;
+mod easter_eggs;
 mod panic;
 use crate::multiboot_info::MultibootInfoHeader;
 mod interrupt;
@@ -85,20 +88,32 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
 
     // Start forth application
+    // easter_eggs::show_lars();
+    // loop {}
     
-    
-/* 
+ 
     let mut g_formatter = unsafe { BitmapVgaWriter::new_unsafe() };
-    display::switch_graphics_mode();
+    g_formatter.set_palette(VgaPalette::greys());
+    g_formatter.set_position((0,0));
+    display::switch_graphics_mode(VgaModeSwitch::VGA_320X200_BITMAP_MODEX);
     let mut i: u8 = 0;
     loop {
-        
-        
 
-                g_formatter.write_char(i);
-                i += 1;
+        for _ in 0..80 {
+            g_formatter.write_char(i);
+        }
+        i += 1;
+        
+        for _ in 0..0xFFFF {
+            unsafe {
+                asm!{
+                    "nop",
+                }
+            }
+        }
+                
     }
-*/
+
     let alphabet = ('a'..='z').into_iter().chain(('0'..='9').into_iter()).collect::<Vec<char>>();
     unsafe {STATIC_VGA_WRITER.clear_screen(display::VgaColor::Black);
     loop {

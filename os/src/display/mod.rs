@@ -9,4 +9,4 @@ pub use buffer::*;
 pub use formatter::*;
 pub use vga::*;
 mod mode_switch;
-pub use mode_switch::switch_graphics_mode;
+pub use mode_switch::{switch_graphics_mode, VgaModeSwitch};
