@@ -1,4 +1,4 @@
-use alloc::{collections::BTreeMap, string::String, vec::Vec, format};
+use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
 use crate::display::STATIC_VGA_WRITER;
 
@@ -19,16 +19,12 @@ struct ForthMachine {
 impl ForthMachine {
     fn print(s: StackItem) {
         match s {
-            StackItem::String(s) => {
-                unsafe {
-                    STATIC_VGA_WRITER.write_str(&s);
-                }
+            StackItem::String(s) => unsafe {
+                STATIC_VGA_WRITER.write_str(&s);
             },
-            StackItem::Int(i) => {
-                unsafe {
-                    STATIC_VGA_WRITER.write_str(&format!("{}", i));
-                }
-            }
+            StackItem::Int(i) => unsafe {
+                STATIC_VGA_WRITER.write_str(&format!("{}", i));
+            },
         }
     }
 }

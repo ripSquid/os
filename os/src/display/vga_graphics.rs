@@ -11,7 +11,25 @@ const VGA_256COLORX_BUFFER_HEIGHT: usize = 200;
 pub struct VgaPaletteColor([u8; 3]);
 
 impl VgaPaletteColor {
-    pub const BLACK: Self = Self([0; 3]);
+    pub const BLACK: Self =         Self::from_rgb(0, 0, 0);
+    pub const BLUE: Self =          Self::from_rgb(255, 0, 0);
+    pub const GREEN: Self =         Self::from_rgb(0, 255, 0);
+    pub const CYAN: Self =          Self::from_rgb(255, 0, 255);
+    pub const RED: Self =           Self::from_rgb(0,0,255);
+    pub const MAGENTA: Self =       Self::from_rgb(255,0,128);
+    pub const BROWN: Self =         Self::from_rgb(0,30,60);
+    pub const LIGHTGRAY: Self =     Self::from_rgb(200,200,200);
+    pub const DARKGRAY: Self =      Self::from_rgb(40,40,40);
+    pub const LIGHTBLUE: Self =     Self::from_rgb(255,80,80);
+    pub const LIGHTGREEN: Self =    Self::from_rgb(80,255,80);
+    pub const LIGHTCYAN: Self =     Self::from_rgb(255,80,255);
+    pub const LIGHTRED: Self =      Self::from_rgb(80,80,255);
+    pub const PINK: Self =          Self::from_rgb(100,100,255);
+    pub const YELLOW: Self =        Self::from_rgb(0, 255, 255);
+    pub const WHITE: Self =         Self::from_rgb(255, 255, 255);
+
+
+
     pub const fn from_rgb(r: u8, g: u8, b: u8) -> Self {
         Self([r >> 2, g >> 2, b >> 2])
     }
@@ -22,9 +40,9 @@ impl VgaPaletteColor {
         Self::from_grey(value as u8)
     }
     pub fn fade(self, factor: u8) -> Self {
-        let Self([r,g,b]) = self;
+        let Self([r, g, b]) = self;
         Self([
-            ((r as u16) * (factor as u16) / (u8::MAX as u16)) as u8, 
+            ((r as u16) * (factor as u16) / (u8::MAX as u16)) as u8,
             ((g as u16) * (factor as u16) / (u8::MAX as u16)) as u8,
             ((b as u16) * (factor as u16) / (u8::MAX as u16)) as u8,
         ])
@@ -32,19 +50,62 @@ impl VgaPaletteColor {
 }
 
 #[derive(Clone)]
-pub struct VgaPalette([VgaPaletteColor; 256]);
+pub struct VgaPalette<const N: usize>([VgaPaletteColor; N], u8);
 
-impl VgaPalette {
-    pub const ALL_BLACK: Self = Self([VgaPaletteColor::BLACK; 256]);
+impl VgaPalette<256> {
+    
+    pub const ALL_BLACK: Self = Self([VgaPaletteColor::BLACK; 256], 0);
     pub fn greys() -> Self {
-        Self(core::array::from_fn(VgaPaletteColor::from_grey_usize))
+        Self(core::array::from_fn(VgaPaletteColor::from_grey_usize), 0)
     }
     pub fn from_array(array: [VgaPaletteColor; 256]) -> Self {
-        Self(array)
+        Self(array, 0)
     }
     pub fn fade_factor(&self, factor: u8) -> Self {
-        Self(core::array::from_fn(|i| self.0[i].fade(factor)))
+        Self(core::array::from_fn(|i| self.0[i].fade(factor)), 0)
     }
+}
+impl<const N: usize> VgaPalette<N> {
+    pub fn from_array_offset(array: [VgaPaletteColor; N], offset: u8) -> Self {
+        Self(array, offset)
+    }
+    pub const DEFAULT_TEXTMODE: VgaPalette<32> = {
+        VgaPalette([
+            VgaPaletteColor::BLACK,
+            VgaPaletteColor::BLACK,
+            VgaPaletteColor::BLUE,
+            VgaPaletteColor::BLUE,
+            VgaPaletteColor::GREEN,
+            VgaPaletteColor::GREEN,
+            VgaPaletteColor::CYAN,
+            VgaPaletteColor::CYAN,
+            VgaPaletteColor::RED,
+            VgaPaletteColor::RED,
+            VgaPaletteColor::MAGENTA,
+            VgaPaletteColor::MAGENTA,
+            VgaPaletteColor::BROWN,
+            VgaPaletteColor::BROWN,
+            VgaPaletteColor::LIGHTGRAY,
+            VgaPaletteColor::LIGHTGRAY,
+            VgaPaletteColor::DARKGRAY,
+            VgaPaletteColor::DARKGRAY,
+            VgaPaletteColor::LIGHTBLUE,
+            VgaPaletteColor::LIGHTBLUE,
+            VgaPaletteColor::LIGHTGREEN,
+            VgaPaletteColor::LIGHTGREEN,
+            VgaPaletteColor::LIGHTCYAN,
+            VgaPaletteColor::LIGHTCYAN,
+            VgaPaletteColor::LIGHTRED,
+            VgaPaletteColor::LIGHTRED,
+            VgaPaletteColor::PINK,
+            VgaPaletteColor::PINK,
+            VgaPaletteColor::YELLOW,
+            VgaPaletteColor::YELLOW,
+            VgaPaletteColor::WHITE,
+            VgaPaletteColor::WHITE,
+            
+            ], 0)
+    };
 }
 
 pub type Vga256ColorXModeBuffer =
@@ -59,17 +120,17 @@ impl BitmapVgaWriter {
         self.position = position;
         self
     }
-    pub fn set_palette(&mut self, palette: VgaPalette) {
+    pub fn set_palette<const N: usize>(&mut self, palette: VgaPalette<N>) {
         let mut DAC_WRITE = x86_64::instructions::port::Port::<u8>::new(0x3C8u16);
         let mut DAC_DATA = x86_64::instructions::port::Port::<u8>::new(0x3C9u16);
+        assert!(palette.1 as usize + palette.0.len() <= 256);
         unsafe {
             //Prepare DAC for palette write starting at color index 0
-            DAC_WRITE.write(0);
+            DAC_WRITE.write(palette.1);
             //Write palette
             for byte in palette.0.into_iter().flat_map(|c| c.0) {
                 DAC_DATA.write(byte);
             }
-
         }
     }
 

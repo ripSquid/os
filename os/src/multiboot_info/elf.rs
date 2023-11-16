@@ -27,7 +27,6 @@ pub struct ElfSymbolTag {
     pub entries: ElfSectionHeaders<'static>,
 }
 
-
 #[allow(dead_code)]
 #[derive(PartialEq, Eq)]
 #[repr(u32)]

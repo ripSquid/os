@@ -8,9 +8,7 @@ use x86_64::align_up;
 use super::PageState;
 
 use crate::{
-    display::
-        KernelDebug, 
-    
+    display::KernelDebug,
     memory::{paging::MemoryPageRange, MemoryAddress, PAGE_SIZE_4K},
 };
 

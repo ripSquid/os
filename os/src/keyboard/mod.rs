@@ -158,7 +158,13 @@ struct KeyboardState {
 
 impl KeyboardState {
     fn get_modifier_usize(&self) -> usize {
-        (if self.ctrl_pressed {CTRL_MODIFIER} else {0}) | (if self.shift_pressed {SHIFT_MODIFIER} else {0}) | (if self.alt_pressed {ALT_MODIFIER} else {0})
+        (if self.ctrl_pressed { CTRL_MODIFIER } else { 0 })
+            | (if self.shift_pressed {
+                SHIFT_MODIFIER
+            } else {
+                0
+            })
+            | (if self.alt_pressed { ALT_MODIFIER } else { 0 })
     }
 }
 
@@ -169,8 +175,6 @@ static mut keyboard_state: KeyboardState = KeyboardState {
     alt_pressed: false,
     altgr_pressed: false,
 };
-
-
 
 pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     // Implement keyboard 2
@@ -188,27 +192,27 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
                 0x2A => {
                     // Shift Pressed
                     keyboard_state.shift_pressed = true;
-                },
+                }
                 0xAA => {
                     // Shift released
                     keyboard_state.shift_pressed = false;
-                },
+                }
                 0x1D => {
                     // CTRL pressed
                     keyboard_state.ctrl_pressed = true;
-                },
+                }
                 0x9D => {
                     // CTRL released
                     keyboard_state.ctrl_pressed = false;
-                },
+                }
                 0x38 => {
                     // Alt pressed
                     keyboard_state.alt_pressed = true;
-                },
+                }
                 0xB8 => {
                     // Alt released
                     keyboard_state.alt_pressed = false;
-                },
+                }
                 _ => {
                     let keymap_entry = keymap[keyboard_state.get_modifier_usize() | data as usize];
                     if keymap_entry != '\0' {
@@ -219,9 +223,6 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
                     }
                 }
             }
-            
-            
-            
         }
     }
     //debug!("keyboard handler!");

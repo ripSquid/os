@@ -10,20 +10,12 @@ use self::{
     paging::PageTableMaster,
 };
 use crate::{
-    display::
-
-         STATIC_VGA_WRITER
-    ,
+    display::STATIC_VGA_WRITER,
     multiboot_info::memory_map::{MemoryMapEntry, MemoryType},
 };
-use alloc::{
-    boxed::Box,
-    format,
-    string::String,
-    vec::Vec,
-};
+use alloc::{boxed::Box, format, string::String, vec::Vec};
 use core::{
-    alloc::{ GlobalAlloc, Layout},
+    alloc::{GlobalAlloc, Layout},
     iter::Filter,
     slice::Iter,
     sync::atomic::AtomicUsize,
@@ -87,7 +79,9 @@ pub unsafe fn populate_global_allocator(
         allocator,
         allocator.available_frames_left(),
     );
-    if false {allocator_test();}
+    if false {
+        allocator_test();
+    }
 }
 unsafe fn allocator_test() {
     STATIC_VGA_WRITER.clear_screen(crate::display::VgaColor::Black);
