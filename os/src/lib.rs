@@ -12,8 +12,8 @@ extern crate alloc;
 use core::arch::asm;
 
 use crate::display::{
-    macros::*, BitmapVgaWriter, DefaultVgaWriter, VgaColorCombo, VgaModeSwitch, VgaPalette,
-    STATIC_VGA_WRITER, VgaChar, VgaPaletteColor,
+    macros::*, BitmapVgaWriter, DefaultVgaWriter, VgaChar, VgaColorCombo, VgaModeSwitch,
+    VgaPalette, VgaPaletteColor, STATIC_VGA_WRITER,
 };
 
 use crate::interrupt::pitinit;
@@ -83,7 +83,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     for i in 0..255 {
         formatter.write_raw_char(i);
     }
-    
+
     formatter
         .clear_screen(display::VgaColor::Black)
         .set_default_colors(VgaColorCombo::on_black(display::VgaColor::Green))
@@ -103,19 +103,22 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .write_str(cpu_info.vendor())
         .next_line();
 
-
     unsafe {
         let mut string = String::new();
-        let pos = (0,10);
+        let mut pos = (0, 5);
+        formatter.enable_cursor();
         loop {
-            
-            if let Some(c) = KEYBOARD_QUEUE.try_fetch() {
+            string = String::new();
+            pos = (0, pos.1 + 1);
+            formatter.set_position(pos).write_str("> ");
+            pos = (2, pos.1);
+            loop {
+                let c = KEYBOARD_QUEUE.fetch_blocking();
                 match c {
                     '\x08' => {
-                        STATIC_VGA_WRITER.set_position(pos);
-                        for i in 0..string.len() {
-                            STATIC_VGA_WRITER.write_raw_char(b' ');
-                        }
+                        formatter
+                            .set_position(pos)
+                            .write_str(&" ".repeat(string.len()));
                         string.pop();
                     }
                     '\n' => {
@@ -123,38 +126,41 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         if segments.len() == 5 {
                             loop {
                                 match segments[0] {
-                                    "RP" => {
-    
-                                    },
+                                    "RP" => {}
                                     "WP" => {
-                                        let mut g_formatter = unsafe {BitmapVgaWriter::new_unsafe()};
-                                        let Ok(off) = segments[1].parse() else {break;};
-                                        let Ok(r) = segments[2].parse() else {break;};
-                                        let Ok(g) = segments[3].parse() else {break;};
-                                        let Ok(b) = segments[4].parse() else {break;};
-                                        let palette = VgaPalette::from_array_offset([VgaPaletteColor::from_rgb(r, g, b)],off);
+                                        let mut g_formatter =
+                                            unsafe { BitmapVgaWriter::new_unsafe() };
+                                        let Ok(off) = segments[1].parse() else {
+                                            break;
+                                        };
+                                        let Ok(r) = segments[2].parse() else {
+                                            break;
+                                        };
+                                        let Ok(g) = segments[3].parse() else {
+                                            break;
+                                        };
+                                        let Ok(b) = segments[4].parse() else {
+                                            break;
+                                        };
+                                        let palette = VgaPalette::from_array_offset(
+                                            [VgaPaletteColor::from_rgb(r, g, b)],
+                                            off,
+                                        );
                                         g_formatter.set_palette(palette);
-                                    },
-                                    _ => ()
+                                    }
+                                    _ => (),
                                 }
                                 break;
                             }
-                            
                         }
-                        STATIC_VGA_WRITER.set_position(pos);
-                        for i in 0..string.len() {
-                            STATIC_VGA_WRITER.write_raw_char(b' ');
-                        }
-                        string = String::new();
-                    } 
+                        break;
+                    }
                     _ => {
                         string.push(c);
                     }
                 }
-                STATIC_VGA_WRITER.set_position(pos).write_bytes(string.as_bytes());
+                formatter.set_position(pos).write_str(&string);
             }
-            
-
         }
     };
 }

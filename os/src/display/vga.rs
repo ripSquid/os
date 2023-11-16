@@ -2,6 +2,8 @@ use core::ops::{Deref, DerefMut};
 
 use x86_64::instructions::port::{Port, PortWriteOnly};
 
+use crate::disable_cursor;
+
 use super::{KernelDebug, KernelFormatter, ScreenBuffer};
 
 const DEFAULT_VGA_BUFFER_WIDTH: usize = 80;
@@ -34,6 +36,7 @@ pub struct DefaultVgaWriter {
     buffer: &'static mut DefaultVgaBuffer,
     position: (usize, usize),
     fallback_color: VgaColorCombo,
+    cursor: bool,
 }
 
 impl DefaultVgaWriter {
@@ -51,9 +54,20 @@ impl DefaultVgaWriter {
     }
 
     pub fn disable_cursor(&mut self) -> &mut Self {
+        self.cursor = false;
         unsafe {
             PortWriteOnly::new(0x03D4_u16).write(0x0A_u8);
             PortWriteOnly::new(0x03D5_u16).write(0x20_u8);
+        }
+        self
+    }
+    pub fn update_cursor(&mut self, x: u8, y: u8) -> &mut Self {
+        let pos: u16 = y as u16 * 80 + x as u16;
+        unsafe {
+            PortWriteOnly::new(0x03D4_u16).write(0x0F_u8);
+            PortWriteOnly::new(0x03D5_u16).write(pos as u8 & 0xFF);
+            PortWriteOnly::new(0x03D4_u16).write(0x0E_u8);
+            PortWriteOnly::new(0x03D5_u16).write((pos >> 8) as u8 & 0xFF);
         }
         self
     }
@@ -62,12 +76,13 @@ impl DefaultVgaWriter {
             PortWriteOnly::new(0x03D4_u16).write(0x0A_u8);
             let mut d5 = Port::<u8>::new(0x03D5_u16);
             let val = d5.read();
-            d5.write(val & 0xC0 | 0);
+            d5.write(val & 0xC0 | 15);
 
             PortWriteOnly::new(0x013D4_u16).write(0x0B_u8);
             let val = d5.read();
-            d5.write(val & 0xE0 | 0);
+            d5.write(val & 0xE0 | 13);
         }
+        self.cursor = true;
         self
     }
     pub const unsafe fn new_unsafe() -> Self {
@@ -78,6 +93,7 @@ impl DefaultVgaWriter {
             buffer,
             position: (0, 0),
             fallback_color: VgaColorCombo::new(VgaColor::White, VgaColor::Black),
+            cursor: false,
         }
     }
     pub fn write_horizontally_centerd(&mut self, text: &str, line: usize) -> &mut Self {
@@ -99,9 +115,25 @@ impl DefaultVgaWriter {
         self
     }
     pub fn write_str(&mut self, chars: &str) -> &mut Self {
-        for byte in chars.bytes() {
-            self.write_raw_char(byte);
+        if self.cursor {
+            self.update_cursor(self.position.0 as u8, self.position.1 as u8);
         }
+        for byte in chars.chars() {
+            self.write_unicode_char(byte);
+        }
+        self
+    }
+    pub fn write_unicode_char(&mut self, char: char) -> &mut Self {
+        let byte = match char {
+            'å' => 0x86,
+            'ä' => 0x84,
+            'ö' => 0x94,
+            'Å' => 0x8F,
+            'Ä' => 0x8E,
+            'Ö' => 0x99,
+            _ => char as u8,
+        };
+        self.write_raw_char(byte);
         self
     }
     pub fn write_debugable<T: for<'a> KernelDebug<'a>>(&mut self, data: T) -> &mut Self {
@@ -118,7 +150,7 @@ impl DefaultVgaWriter {
         self.write_char(VgaChar {
             char: byte,
             color: self.fallback_color,
-        })
+        });
     }
     pub fn write_byte(&mut self, byte: u8) {
         self.write_debugable(byte);
@@ -150,6 +182,9 @@ impl DefaultVgaWriter {
                 self.buffer.chars[row][col] = char;
                 self.position.0 += 1;
             }
+        }
+        if self.cursor {
+            self.update_cursor(self.position.0 as u8, self.position.1 as u8);
         }
     }
     pub fn prepare_print(&mut self) {

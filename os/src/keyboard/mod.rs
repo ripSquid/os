@@ -20,11 +20,13 @@ const ALTGR_MODIFIER: usize = 0b0001_0000_0000;
 pub static mut KEYBOARD_QUEUE: Keyboard<char> = Keyboard::new();
 
 pub struct Keyboard<T> {
-    queue: Queue<T, 256>
+    queue: Queue<T, 256>,
 }
 impl<T> Keyboard<T> {
     pub const fn new() -> Self {
-        Self { queue: Queue::new() }
+        Self {
+            queue: Queue::new(),
+        }
     }
     pub fn try_fetch(&mut self) -> Option<T> {
         self.queue.dequeue()
@@ -42,7 +44,6 @@ impl<T> Keyboard<T> {
         }
     }
 }
-
 
 pub unsafe fn setup_keymap() {
     // 0000 / 0000 0000
@@ -75,6 +76,14 @@ pub unsafe fn setup_keymap() {
     keymap[0x2D] = 'x';
     keymap[0x15] = 'y';
     keymap[0x2C] = 'z';
+
+    keymap[0x1A] = 'å';
+    keymap[0x27] = 'ö';
+    keymap[0x28] = 'ä';
+
+    keymap[SHIFT_MODIFIER | 0x1A] = 'Å';
+    keymap[SHIFT_MODIFIER | 0x27] = 'Ö';
+    keymap[SHIFT_MODIFIER | 0x28] = 'Ä';
 
     keymap[SHIFT_MODIFIER | 0x1E] = 'A';
     keymap[SHIFT_MODIFIER | 0x30] = 'B';
@@ -241,7 +250,6 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
                 _ => {
                     let keymap_entry = keymap[keyboard_state.get_modifier_usize() | data as usize];
                     if keymap_entry != '\0' {
-                        //STATIC_VGA_WRITER.write_raw_char(keymap_entry as u8);
                         KEYBOARD_QUEUE.insert(keymap_entry);
                     } else {
                         //STATIC_VGA_WRITER.write_str(&format!("0x{:X}", data));

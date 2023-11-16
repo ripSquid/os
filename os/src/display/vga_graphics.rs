@@ -11,24 +11,22 @@ const VGA_256COLORX_BUFFER_HEIGHT: usize = 200;
 pub struct VgaPaletteColor([u8; 3]);
 
 impl VgaPaletteColor {
-    pub const BLACK: Self =         Self::from_rgb(0, 0, 0);
-    pub const BLUE: Self =          Self::from_rgb(0, 0, 255);
-    pub const GREEN: Self =         Self::from_rgb(0, 255, 0);
-    pub const CYAN: Self =          Self::from_rgb(0, 255, 255);
-    pub const RED: Self =           Self::from_rgb(255,0,0);
-    pub const MAGENTA: Self =       Self::from_rgb(255,0,255);
-    pub const BROWN: Self =         Self::from_rgb(60,30,0);
-    pub const LIGHTGRAY: Self =     Self::from_rgb(150,150,150);
-    pub const DARKGRAY: Self =      Self::from_rgb(40,40,40);
-    pub const LIGHTBLUE: Self =     Self::from_rgb(80,80,255);
-    pub const LIGHTGREEN: Self =    Self::from_rgb(80,255,80);
-    pub const LIGHTCYAN: Self =     Self::from_rgb(80,255,255);
-    pub const LIGHTRED: Self =      Self::from_rgb(255,80,80);
-    pub const PINK: Self =          Self::from_rgb(255,100,100);
-    pub const YELLOW: Self =        Self::from_rgb(255, 255, 0);
-    pub const WHITE: Self =         Self::from_rgb(255, 255, 255);
-
-
+    pub const BLACK: Self = Self::from_rgb(0, 0, 0);
+    pub const BLUE: Self = Self::from_rgb(0, 0, 255);
+    pub const GREEN: Self = Self::from_rgb(0, 255, 0);
+    pub const CYAN: Self = Self::from_rgb(0, 255, 255);
+    pub const RED: Self = Self::from_rgb(255, 0, 0);
+    pub const MAGENTA: Self = Self::from_rgb(255, 0, 255);
+    pub const BROWN: Self = Self::from_rgb(60, 30, 0);
+    pub const LIGHTGRAY: Self = Self::from_rgb(150, 150, 150);
+    pub const DARKGRAY: Self = Self::from_rgb(40, 40, 40);
+    pub const LIGHTBLUE: Self = Self::from_rgb(80, 80, 255);
+    pub const LIGHTGREEN: Self = Self::from_rgb(80, 255, 80);
+    pub const LIGHTCYAN: Self = Self::from_rgb(80, 255, 255);
+    pub const LIGHTRED: Self = Self::from_rgb(255, 80, 80);
+    pub const PINK: Self = Self::from_rgb(255, 100, 100);
+    pub const YELLOW: Self = Self::from_rgb(255, 255, 0);
+    pub const WHITE: Self = Self::from_rgb(255, 255, 255);
 
     pub const fn from_rgb(r: u8, g: u8, b: u8) -> Self {
         Self([r >> 2, g >> 2, b >> 2])
@@ -53,7 +51,6 @@ impl VgaPaletteColor {
 pub struct VgaPalette<const N: usize>([VgaPaletteColor; N], u8);
 
 impl VgaPalette<256> {
-    
     pub const ALL_BLACK: Self = Self([VgaPaletteColor::BLACK; 256], 0);
     pub fn greys() -> Self {
         Self(core::array::from_fn(VgaPaletteColor::from_grey_usize), 0)
@@ -70,80 +67,75 @@ impl<const N: usize> VgaPalette<N> {
         Self(array, offset)
     }
     pub const DEFAULT_TEXTMODE: VgaPalette<64> = {
-        VgaPalette([
-            VgaPaletteColor::BLACK,
-            VgaPaletteColor::BLUE,
-            VgaPaletteColor::GREEN,
-            VgaPaletteColor::CYAN,
-            VgaPaletteColor::RED,
-            VgaPaletteColor::MAGENTA,
-            VgaPaletteColor::BROWN,
-            VgaPaletteColor::LIGHTGRAY,
-
-            VgaPaletteColor::from_rgb(64, 32, 0),
-            VgaPaletteColor::from_rgb(64, 32, 32),
-            VgaPaletteColor::from_rgb(64, 32, 64),
-            VgaPaletteColor::from_rgb(64, 32, 96),
-            VgaPaletteColor::from_rgb(64, 32, 128),
-            VgaPaletteColor::from_rgb(64, 32, 160),
-            VgaPaletteColor::from_rgb(64, 32, 192),
-            VgaPaletteColor::from_rgb(64, 32, 255),
-
-            VgaPaletteColor::from_rgb(0, 64, 0),
-            VgaPaletteColor::from_rgb(0, 64, 32),
-            VgaPaletteColor::from_rgb(0, 64, 64),
-            VgaPaletteColor::from_rgb(0, 64, 96),
-            VgaPaletteColor::from_rgb(0, 64, 128),
-            VgaPaletteColor::from_rgb(0, 64, 160),
-            VgaPaletteColor::from_rgb(0, 64, 192),
-            VgaPaletteColor::from_rgb(0, 64, 255),
-
-            VgaPaletteColor::from_rgb(128, 96, 0),
-            VgaPaletteColor::from_rgb(128, 96, 32),
-            VgaPaletteColor::from_rgb(128, 96, 64),
-            VgaPaletteColor::from_rgb(128, 96, 96),
-            VgaPaletteColor::from_rgb(128, 96, 128),
-            VgaPaletteColor::from_rgb(128, 96, 160),
-            VgaPaletteColor::from_rgb(128, 96, 192),
-            VgaPaletteColor::from_rgb(128, 96, 255),
-
-            VgaPaletteColor::from_rgb(0, 128, 0),
-            VgaPaletteColor::from_rgb(0, 128, 32),
-            VgaPaletteColor::from_rgb(0, 128, 64),
-            VgaPaletteColor::from_rgb(0, 128, 96),
-            VgaPaletteColor::from_rgb(0, 128, 128),
-            VgaPaletteColor::from_rgb(0, 128, 160),
-            VgaPaletteColor::from_rgb(0, 128, 192),
-            VgaPaletteColor::from_rgb(0, 128, 255),
-
-            VgaPaletteColor::from_rgb(192, 160, 0),
-            VgaPaletteColor::from_rgb(192, 160, 32),
-            VgaPaletteColor::from_rgb(192, 160, 64),
-            VgaPaletteColor::from_rgb(192, 160, 96),
-            VgaPaletteColor::from_rgb(192, 160, 128),
-            VgaPaletteColor::from_rgb(192, 160, 160),
-            VgaPaletteColor::from_rgb(192, 160, 192),
-            VgaPaletteColor::from_rgb(192, 160, 255),
-
-            VgaPaletteColor::from_rgb(0, 192, 0),
-            VgaPaletteColor::from_rgb(0, 192, 32),
-            VgaPaletteColor::from_rgb(0, 192, 64),
-            VgaPaletteColor::from_rgb(0, 192, 96),
-            VgaPaletteColor::from_rgb(0, 192, 128),
-            VgaPaletteColor::from_rgb(0, 192, 160),
-            VgaPaletteColor::from_rgb(0, 192, 192),
-            VgaPaletteColor::from_rgb(0, 192, 255),
-
-            
-            VgaPaletteColor::DARKGRAY,
-            VgaPaletteColor::LIGHTBLUE,
-            VgaPaletteColor::LIGHTGREEN,
-            VgaPaletteColor::LIGHTCYAN,
-            VgaPaletteColor::LIGHTRED,
-            VgaPaletteColor::PINK,
-            VgaPaletteColor::YELLOW,
-            VgaPaletteColor::WHITE,
-            ], 0)
+        VgaPalette(
+            [
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLUE,
+                VgaPaletteColor::GREEN,
+                VgaPaletteColor::CYAN,
+                VgaPaletteColor::RED,
+                VgaPaletteColor::MAGENTA,
+                VgaPaletteColor::BROWN,
+                VgaPaletteColor::LIGHTGRAY,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::BLACK,
+                VgaPaletteColor::DARKGRAY,
+                VgaPaletteColor::LIGHTBLUE,
+                VgaPaletteColor::LIGHTGREEN,
+                VgaPaletteColor::LIGHTCYAN,
+                VgaPaletteColor::LIGHTRED,
+                VgaPaletteColor::PINK,
+                VgaPaletteColor::YELLOW,
+                VgaPaletteColor::WHITE,
+            ],
+            0,
+        )
     };
 }
 
@@ -165,7 +157,7 @@ impl BitmapVgaWriter {
         assert!(palette.1 as usize + palette.0.len() <= 256);
         unsafe {
             //Prepare DAC for palette write starting at the color index of the offset
-            
+
             //Write palette
             DAC_WRITE.write(palette.1);
             for color in palette.0.into_iter().map(|c| c.0) {
