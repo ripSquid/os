@@ -4,7 +4,7 @@ use crate::{
         restore_text_mode_font, switch_graphics_mode, BitmapVgaWriter, VgaModeSwitch, VgaPalette,
         VgaPaletteColor, STATIC_VGA_WRITER,
     },
-    interrupt::setup::global_os_time,
+    interrupt::setup::global_os_time, keyboard::KEYBOARD_QUEUE,
 };
 
 pub fn show_lars() {
@@ -33,9 +33,16 @@ pub fn show_lars() {
     let total_range = 0..duration;
     let visible_range = 1000..2000;
     while unsafe { global_os_time } < timestamp + duration {
-        g_formatter.set_position((0, 199));
-        for i in 0..320u16 {
-            g_formatter.write_char(unsafe { global_os_time / 10 } as u8 + i as u8);
+        if let Some('w') = unsafe {KEYBOARD_QUEUE.try_fetch()} {
+            break;
+        } 
+        let time = unsafe { global_os_time / 10 } as u8;
+        for line in 196..200 {
+            g_formatter.set_position((0, line));
+            for i in 0..160u16 {
+                g_formatter.write_char(time  + i as u8);
+                g_formatter.write_char(time  + i as u8);
+            }
         }
 
         let old_fade = fade;
@@ -56,10 +63,7 @@ pub fn show_lars() {
         }
     }
     g_formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE);
-    unsafe {
-        switch_graphics_mode(VgaModeSwitch::VGA_80X25_TEXT);
-        
-    }
+    switch_graphics_mode(VgaModeSwitch::VGA_80X25_TEXT);
     disable_cursor();
     unsafe {
         restore_text_mode_font();

@@ -13,7 +13,7 @@ use core::arch::asm;
 
 use crate::display::{
     macros::*, BitmapVgaWriter, DefaultVgaWriter, VgaColorCombo, VgaModeSwitch, VgaPalette,
-    STATIC_VGA_WRITER,
+    STATIC_VGA_WRITER, VgaChar, VgaPaletteColor,
 };
 
 use crate::interrupt::pitinit;
@@ -100,45 +100,61 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .write_str(&author_text.as_str())
         .next_line()
         .write_str("CPU vendor: ")
-        .write_str(cpu_info.vendor());
-    
+        .write_str(cpu_info.vendor())
+        .next_line();
 
-    let alphabet = ('a'..='z')
-        .into_iter()
-        .chain(('0'..='9').into_iter())
-        .collect::<Vec<char>>();
+
     unsafe {
-        //STATIC_VGA_WRITER.clear_screen(display::VgaColor::Black);
+        let mut string = String::new();
+        let pos = (0,10);
         loop {
-            /* for character in &alphabet {
-                STATIC_VGA_WRITER.write_str(&format!("Press {}", character));
-                let mut chars_i = 0;
-                while (chars_i < 2) {
-                    let tmp = KEYBOARD_QUEUE.dequeue();
-                    if let Some(c) = tmp {
-                        if chars_i == 0 {
-                            tmp_write(format!("{}:{:X};",character, c as u8));
+            
+            if let Some(c) = KEYBOARD_QUEUE.try_fetch() {
+                match c {
+                    '\x08' => {
+                        STATIC_VGA_WRITER.set_position(pos);
+                        for i in 0..string.len() {
+                            STATIC_VGA_WRITER.write_raw_char(b' ');
                         }
-                        chars_i += 1;
+                        string.pop();
+                    }
+                    '\n' => {
+                        let segments: Vec<_> = string.split(' ').collect();
+                        if segments.len() == 5 {
+                            loop {
+                                match segments[0] {
+                                    "RP" => {
+    
+                                    },
+                                    "WP" => {
+                                        let mut g_formatter = unsafe {BitmapVgaWriter::new_unsafe()};
+                                        let Ok(off) = segments[1].parse() else {break;};
+                                        let Ok(r) = segments[2].parse() else {break;};
+                                        let Ok(g) = segments[3].parse() else {break;};
+                                        let Ok(b) = segments[4].parse() else {break;};
+                                        let palette = VgaPalette::from_array_offset([VgaPaletteColor::from_rgb(r, g, b)],off);
+                                        g_formatter.set_palette(palette);
+                                    },
+                                    _ => ()
+                                }
+                                break;
+                            }
+                            
+                        }
+                        STATIC_VGA_WRITER.set_position(pos);
+                        for i in 0..string.len() {
+                            STATIC_VGA_WRITER.write_raw_char(b' ');
+                        }
+                        string = String::new();
+                    } 
+                    _ => {
+                        string.push(c);
                     }
                 }
-            } */
-            if let Some(c) = KEYBOARD_QUEUE.dequeue() {
-                if c == '\x08' {
-                    let mut pos = STATIC_VGA_WRITER.get_position();
-                    if pos.0 > 0 {
-                        pos.0 -= 1;
-                    } else if pos.1 > 0 {
-                        pos.1 -= 1;
-                        pos.0 = STATIC_VGA_WRITER.get_size().0 - 1;
-                    }
-                    STATIC_VGA_WRITER.set_position(pos);
-                    STATIC_VGA_WRITER.write_raw_char(' ' as u8);
-                    STATIC_VGA_WRITER.set_position(pos);
-                } else {
-                    STATIC_VGA_WRITER.write_raw_char(c as u8);
-                }
+                STATIC_VGA_WRITER.set_position(pos).write_bytes(string.as_bytes());
             }
+            
+
         }
     };
 }

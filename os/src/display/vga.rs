@@ -182,6 +182,9 @@ impl VgaChar {
 #[repr(transparent)]
 pub struct VgaColorCombo(u8);
 impl VgaColorCombo {
+    pub const fn from_byte(byte: u8) -> Self {
+        Self(byte)
+    }
     pub const fn new(foreground: VgaColor, background: VgaColor) -> Self {
         VgaColorCombo((background as u8) << 4 | (foreground as u8))
     }
