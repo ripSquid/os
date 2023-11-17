@@ -136,36 +136,6 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
                         fm.run(&segments);
 
-                        if segments.len() == 5 {
-                            loop {
-                                match segments[0] {
-                                    "RP" => {}
-                                    "WP" => {
-                                        let mut g_formatter =
-                                            unsafe { BitmapVgaWriter::new_unsafe() };
-                                        let Ok(off) = segments[1].parse() else {
-                                            break;
-                                        };
-                                        let Ok(r) = segments[2].parse() else {
-                                            break;
-                                        };
-                                        let Ok(g) = segments[3].parse() else {
-                                            break;
-                                        };
-                                        let Ok(b) = segments[4].parse() else {
-                                            break;
-                                        };
-                                        let palette = VgaPalette::from_array_offset(
-                                            [VgaPaletteColor::from_rgb(r, g, b)],
-                                            off,
-                                        );
-                                        g_formatter.set_palette(palette);
-                                    }
-                                    _ => (),
-                                }
-                                break;
-                            }
-                        }
                         break;
                     }
                     _ => {
