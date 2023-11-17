@@ -13,7 +13,7 @@ fn panic(info: &PanicInfo) -> ! {
         DefaultVgaWriter::new(unsafe { &mut *(VGA_BUFFER_ADDRESS as *mut DefaultVgaBuffer) });
     let error_color = VgaColorCombo::new(VgaColor::White, VgaColor::Blue);
     //writer.clear_screen(VgaColor::Blue);
-    writer.set_default_colors(error_color);
+    writer.enable_cursor().disable_cursor().set_default_colors(error_color);
     writer.write_horizontally_centerd("PANIC OCCURED:", 3);
     if let Some(location) = info.location() {
         writer

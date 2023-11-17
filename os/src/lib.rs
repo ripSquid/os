@@ -5,18 +5,21 @@
 #![feature(ptr_metadata)]
 #![feature(const_mut_refs)]
 #![feature(panic_info_message)]
+#![feature(error_in_core)]
+#![feature(result_flattening)]
 #[macro_use]
 extern crate bitflags;
 extern crate alloc;
 
 use core::arch::asm;
 
-use crate::apps::{KaggApp, Help};
+use crate::apps::{KaggApp, HelpApp, Help, KaggHandle, GraphicsHandleType, Dir};
 use crate::display::{
     macros::*, BitmapVgaWriter, DefaultVgaWriter, VgaChar, VgaColorCombo, VgaModeSwitch,
     VgaPalette, VgaPaletteColor, STATIC_VGA_WRITER,
 };
 
+use crate::forth::{ForthApp, ForthCon};
 use crate::fs::Path;
 use crate::input::KEYBOARD_QUEUE;
 use crate::interrupt::pitinit;
@@ -113,6 +116,8 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
     fs::start();
     fs::install_app::<Help>();
+    fs::install_app::<ForthCon>();
+    fs::install_app::<Dir>();
     unsafe {
         let mut string;
         formatter.enable_cursor().set_position((0,8));
@@ -129,42 +134,33 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         string.pop();
                     }
                     '\n' => {
-                        let mut segments: Vec<_> = string.split(' ').collect();
-
-                        //fm.run(&segments);
-
-                        if segments.len() == 5 {
-                            loop {
-                                match segments[0] {
-                                    "RP" => {}
-                                    "WP" => {
-                                        let mut g_formatter =
-                                            unsafe { BitmapVgaWriter::new_unsafe() };
-                                        let Ok(off) = segments[1].parse() else {
-                                            break;
-                                        };
-                                        let Ok(r) = segments[2].parse() else {
-                                            break;
-                                        };
-                                        let Ok(g) = segments[3].parse() else {
-                                            break;
-                                        };
-                                        let Ok(b) = segments[4].parse() else {
-                                            break;
-                                        };
-                                        let palette = VgaPalette::from_array_offset(
-                                            [VgaPaletteColor::from_rgb(r, g, b)],
-                                            off,
-                                        );
-                                        g_formatter.set_palette(palette);
-                                    }
-                                    _ => (),
-                                }
-                                break;
-                            }
-                        }
-                        
                         formatter.next_line();
+                        let mut segments: Vec<_> = string.split(' ').collect();
+                        if segments.len() > 0 {
+                            let path = Path::from(segments[0]);
+                            let app = fs::get_file(path).map(|file| file.launch_app()).flatten();
+                            let mut app = match app {
+                                Ok(app) => app,
+                                Err(err) => {
+                                    formatter.write_str(&format!("OS ERROR: {err:?}"));
+                                    break; 
+                                },
+                            };
+                            match app.start(&segments[1..]) {
+                                Ok(_) => {
+                                    let graphics = GraphicsHandleType::TextMode(&mut formatter as *mut _);
+                                    let mut handle = KaggHandle::new(graphics);
+                                    while handle.running() {
+                                        app.update(&mut handle);
+                                    }
+                                    app.shutdown();
+                                },
+                                Err(error) => {
+                                    formatter.write_str(&format!("OS ERROR: {error:?}"));
+                                },
+                            }
+                            formatter.next_line();
+                        }       
                         break;
                     }
                     _ => {

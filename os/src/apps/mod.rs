@@ -1,10 +1,11 @@
 mod help;
+mod dir;
 use alloc::boxed::Box;
 pub use help::*;
-
-use crate::{display::{DefaultVgaWriter, BitmapVgaWriter}, fs::Path};
-pub trait InstallableApp: KaggApp {
-    fn install() -> (Path, Box<dyn KaggApp>);
+pub use dir::*;
+use crate::{display::{DefaultVgaWriter, BitmapVgaWriter}, fs::{Path, AppConstructor}};
+pub trait InstallableApp: AppConstructor {
+    fn install() -> (Path, Box<dyn AppConstructor>);
 }
 pub trait KaggApp: Send + Sync + 'static {
     fn start(&mut self, args: &[&str]) -> Result<(), StartError> {
@@ -13,18 +14,25 @@ pub trait KaggApp: Send + Sync + 'static {
     fn update(&mut self, handle: &mut KaggHandle);
     fn shutdown(&mut self) {}
 }
+#[derive(Debug)]
 pub enum StartError {}
 pub struct KaggHandle {
     control_flow: ControlFlow,
     graphics: GraphicsHandleType
 }
 impl KaggHandle {
+    pub fn running(&self) -> bool {
+        self.control_flow == ControlFlow::Running
+    }
+    pub fn new(formatter: GraphicsHandleType) -> Self {
+        Self { control_flow: ControlFlow::Running, graphics: formatter }
+    }
     pub fn call_exit(&mut self) {
         self.control_flow = ControlFlow::Quit;
     }
     pub fn text_mode_formatter(&mut self) -> Result<&mut DefaultVgaWriter, VideoModeError> {
         if let GraphicsHandleType::TextMode(formatter) = &mut self.graphics {
-            Ok(formatter)
+            Ok(unsafe {&mut **formatter})
         } else {
             Err(VideoModeError::IsInGraphicsMode)
         }
@@ -37,9 +45,10 @@ pub struct GraphicsHandle {
     formatter: GraphicsHandleType,
 }
 pub enum GraphicsHandleType {
-    TextMode(DefaultVgaWriter),
+    TextMode(*mut DefaultVgaWriter),
     GraphicsMode(BitmapVgaWriter),
 }
+#[derive(PartialEq)]
 pub enum ControlFlow {
     Running,
     Quit,

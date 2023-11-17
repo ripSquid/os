@@ -1,21 +1,26 @@
 use alloc::boxed::Box;
 
-use crate::fs::Path;
+use crate::fs::{Path, AppConstructor};
 
 use super::{KaggApp, InstallableApp};
 
-pub struct Help(Language);
-
+pub struct HelpApp(Language);
+pub struct Help;
 enum Language {
     Swedish,
     English,
 }
-impl InstallableApp for Help {
-    fn install() -> (Path, Box<dyn KaggApp>) {
-        (Path::from("help"), Box::new(Self(Language::Swedish)))
+impl AppConstructor for Help {
+    fn instantiate(&self) -> Box<dyn KaggApp> {
+        Box::new(HelpApp(Language::Swedish))
     }
 }
-impl KaggApp for Help {
+impl InstallableApp for Help {
+    fn install() -> (Path, Box<dyn AppConstructor>) {
+        (Path::from("help"), Box::new(Self))
+    }
+}
+impl KaggApp for HelpApp {
     fn start(&mut self, args: &[&str]) -> Result<(), super::StartError> {
         match args.get(0) {
             Some(&"eng") => self.0 = Language::English,

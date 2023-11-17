@@ -1,8 +1,40 @@
+use alloc::boxed::Box;
+use alloc::string::ToString;
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 use alloc::vec;
 
+use crate::apps::{KaggApp, InstallableApp};
 use crate::display::{STATIC_VGA_WRITER, BitmapVgaWriter, VgaPalette, VgaPaletteColor};
+use crate::fs::{Path, AppConstructor};
 
+impl InstallableApp for ForthCon {
+    fn install() -> (Path, Box<dyn AppConstructor>) {
+        (Path::from("forth"), Box::new(ForthCon)) 
+    }
+}
+pub struct ForthCon;
+impl AppConstructor for ForthCon {
+    fn instantiate(&self) -> Box<dyn KaggApp> {
+        Box::new(ForthApp(Vec::new()))
+    }
+}
+
+pub struct ForthApp(Vec<String>);
+
+impl KaggApp for ForthApp {
+    fn start(&mut self, args: &[&str]) -> Result<(), crate::apps::StartError> {
+        self.0 = args.iter().map(|arg| arg.to_string()).collect();
+        Ok(())
+    }
+    fn update(&mut self, handle: &mut crate::apps::KaggHandle) {
+        if let Ok(_) = handle.text_mode_formatter() {
+            let mut fm = ForthMachine::default();
+            let segments: Vec<&str> = self.0.iter().map(|s| s.as_str()).collect();
+            fm.run(&segments)
+        }
+        handle.call_exit();
+    }
+}
 
 type ForthFunction = &'static dyn Fn(&mut ForthMachine);
 
@@ -77,7 +109,7 @@ impl ForthMachine {
         tmp
     }
 
-    pub fn run(&mut self, s:&Vec<&str>) {
+    pub fn run(&mut self, s:&[&str]) {
         for word in s {
             //self.print(StackItem::String(String::from("z")));
             if let Ok(x) = isize::from_str_radix(word, 10) {

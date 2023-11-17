@@ -1,3 +1,5 @@
+use core::error::Error;
+
 use alloc::{boxed::Box, string::{String, ToString}, vec::Vec};
 use hashbrown::HashMap;
 
@@ -6,10 +8,14 @@ use crate::apps::{KaggApp, InstallableApp};
 use spin::{RwLock, RwLockReadGuard, RwLockUpgradableGuard};
 pub struct RamFileSystem(RwLock<Option<HashMap<String, RwLock<KaggFile>>>>);
 
+pub trait AppConstructor: Send + Sync + 'static {
+    fn instantiate(&self) -> Box<dyn KaggApp>;
+}
+
 pub enum KaggFile {
     Directory(HashMap<String, RwLock<KaggFile>>),
     Data(Vec<u8>),
-    App(Box<dyn KaggApp>),
+    App(Box<dyn AppConstructor>),
     Deleted,
 }
 impl KaggFile {
@@ -21,6 +27,7 @@ impl KaggFile {
     }
 }
 
+#[derive(Debug)]
 pub enum FileSystemError {
     FileSystemNotInitialized,
     IncorrectFileType,
@@ -33,11 +40,7 @@ pub enum FileSystemError {
 }
 
 static FILE_SYSTEM: RamFileSystem = RamFileSystem(RwLock::new(None));
-
-enum ActiveDirectory<'a> {
-    Root(RwLockUpgradableGuard<'a, HashMap<String, RwLock<KaggFile>>>),
-    Directory(RwLockUpgradableGuard<'a, KaggFile>),
-}
+static mut ACTIVE_DIRECTORY: Option<Path> = None;
 
 impl RamFileSystem {
     fn init(&self) {
@@ -48,8 +51,9 @@ impl RamFileSystem {
         &'b self,
         path: P,
     ) -> Result<KaggFileHandle<'b>, FileSystemError> {
+        let components = path.as_ref().components();
         let mut handle = KaggFileHandle::new(self.0.upgradeable_read());
-        for component in path.as_ref().components() {
+        for component in components {
             handle = handle.add(component)?;
         }
         Ok(handle)
@@ -65,6 +69,34 @@ pub struct KaggFileHandle<'a> {
     path: String,
 }
 impl<'a> KaggFileHandle<'a> {
+    fn children(&self) -> Result<DirRead, FileSystemError> {
+        match self.read_guards.last() {
+            Some(handle) => {
+                if let KaggFile::Directory(dir) = &**handle {
+                    Ok(DirRead(dir.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
+                } else {
+                    Err(FileSystemError::IncorrectFileType)
+                }
+            },
+            None => {
+                Ok(DirRead(self.filesystem.as_ref().ok_or(FileSystemError::CritikalUnknown)?.as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
+            },
+        }
+    }
+    pub fn launch_app(&self) -> Result<Box<dyn KaggApp>, FileSystemError> {
+        match self.read_guards.last() {
+            Some(handle) => {
+                if let KaggFile::App(constructor) = &**handle {
+                    Ok(constructor.instantiate())
+                } else {
+                    Err(FileSystemError::IncorrectFileType)
+                }
+            },
+            None => {
+                Err(FileSystemError::CritikalUnknown)
+            },
+        }
+    }
     
     fn new_unchecked() -> Self {
         Self::new(FILE_SYSTEM.0.upgradeable_read())
@@ -120,6 +152,9 @@ impl<'a> KaggFileHandle<'a> {
         }
     }
     fn add(mut self, component: &str) -> Result<Self, FileSystemError> {
+        if component == "" {
+            return Ok(self)
+        }
         if self.read_guards.len() == 0 {
             self.path += component;
 
@@ -162,6 +197,9 @@ impl Path {
     pub fn new() -> Self {
         Self(String::new())
     }
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
 }
 impl From<String> for Path {
     fn from(value: String) -> Self {
@@ -199,11 +237,35 @@ pub fn install_app<A: InstallableApp>() -> Result<KaggFileHandle<'static>, FileS
     let (path, app) = A::install();
     create_file(path, KaggFile::App(app))
 }
+
+pub fn read_dir<P: AsRef<Path>>(path: P) -> Result<DirRead, FileSystemError> {
+    match get_file(path) {
+        Ok(file_handle) => {
+            file_handle.children()
+        },
+        Err(err) => {
+            //Err(FileSystemError::Busy)
+            Ok(DirRead(FILE_SYSTEM.0.read().as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
+        },
+    }
+}
+pub struct DirRead(Vec<Path>);
+impl DirRead {
+    pub fn items(self) -> impl Iterator<Item = Path> {
+        self.0.into_iter()
+    }
+}
 impl File {
     pub fn empty<S: ToString>(name: S) -> Self {
         Self { data: KaggFile::Data(Vec::new()), name: name.to_string() }
     }
-    pub fn from_app<S: ToString>(app: Box<dyn KaggApp>, name: S) -> Self {
+    pub fn from_app<S: ToString>(app: Box<dyn AppConstructor>, name: S) -> Self {
         Self { data: KaggFile::App(app), name: name.to_string() }
     }
+}
+pub fn active_directory() -> Path {
+    unsafe {ACTIVE_DIRECTORY.as_ref().unwrap_or(&Path(String::from(""))).clone()}
+}
+pub fn set_active_directory(p: Path) {
+    unsafe {ACTIVE_DIRECTORY = Some(p)}; 
 }
