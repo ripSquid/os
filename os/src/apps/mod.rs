@@ -1,7 +1,11 @@
 mod help;
+use alloc::boxed::Box;
 pub use help::*;
 
-use crate::display::{DefaultVgaWriter, BitmapVgaWriter};
+use crate::{display::{DefaultVgaWriter, BitmapVgaWriter}, fs::Path};
+pub trait InstallableApp: KaggApp {
+    fn install() -> (Path, Box<dyn KaggApp>);
+}
 pub trait KaggApp: Send + Sync + 'static {
     fn start(&mut self, args: &[&str]) -> Result<(), StartError> {
         Ok(())

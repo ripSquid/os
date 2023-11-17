@@ -1,7 +1,7 @@
 use alloc::{boxed::Box, string::{String, ToString}, vec::Vec};
 use hashbrown::HashMap;
 
-use crate::apps::KaggApp;
+use crate::apps::{KaggApp, InstallableApp};
 
 use spin::{RwLock, RwLockReadGuard, RwLockUpgradableGuard};
 pub struct RamFileSystem(RwLock<Option<HashMap<String, RwLock<KaggFile>>>>);
@@ -150,7 +150,11 @@ impl<'a> KaggFileHandle<'a> {
 }
 #[derive(Clone)]
 pub struct Path(String);
-
+impl AsRef<Path> for Path {
+    fn as_ref(&self) -> &Path {
+        self
+    }
+}
 impl Path {
     pub fn components(&self) -> impl Iterator<Item = &str> {
         self.0.split("/")
@@ -190,6 +194,10 @@ pub fn create_data_file<P: AsRef<Path>>(path: P) -> Result<KaggFileHandle<'stati
 }
 pub fn create_dir<P: AsRef<Path>>(path: P) -> Result<KaggFileHandle<'static>, FileSystemError> {
     create_file(path, KaggFile::Directory(HashMap::new()))
+}
+pub fn install_app<A: InstallableApp>() -> Result<KaggFileHandle<'static>, FileSystemError> {
+    let (path, app) = A::install();
+    create_file(path, KaggFile::App(app))
 }
 impl File {
     pub fn empty<S: ToString>(name: S) -> Self {

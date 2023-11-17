@@ -11,7 +11,7 @@ extern crate alloc;
 
 use core::arch::asm;
 
-use crate::apps::KaggApp;
+use crate::apps::{KaggApp, Help};
 use crate::display::{
     macros::*, BitmapVgaWriter, DefaultVgaWriter, VgaChar, VgaColorCombo, VgaModeSwitch,
     VgaPalette, VgaPaletteColor, STATIC_VGA_WRITER,
@@ -107,34 +107,31 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .write_str("CPU vendor: ")
         .write_str(cpu_info.vendor())
         .next_line()
+        .next_line()
         .write_str("Skriv \"help\" för en introduktion till OperativSystemet")
         .next_line();
 
     fs::start();
-    
+    fs::install_app::<Help>();
     unsafe {
-        let mut string = String::new();
-        let mut pos = (0, 5);
-        let mut fm = forth::ForthMachine::default();
-        formatter.enable_cursor();
+        let mut string;
+        formatter.enable_cursor().set_position((0,8));
         loop {
             string = String::new();
-            pos = (0, pos.1 + 1);
-            formatter.set_position(pos).write_str("> ");
-            pos = (2, pos.1);
+            formatter.write_str("> ");
             loop {
                 let c = KEYBOARD_QUEUE.fetch_blocking();
                 match c {
                     '\x08' => {
                         formatter
-                            .set_position(pos)
-                            .write_str(&" ".repeat(string.len()));
+                            .back_up(string.len())
+                            .write_str(&" ".repeat(string.len())).back_up(string.len());
                         string.pop();
                     }
                     '\n' => {
                         let mut segments: Vec<_> = string.split(' ').collect();
 
-                        fm.run(&segments);
+                        //fm.run(&segments);
 
                         if segments.len() == 5 {
                             loop {
@@ -166,13 +163,16 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                                 break;
                             }
                         }
+                        
+                        formatter.next_line();
                         break;
                     }
                     _ => {
+                        formatter.back_up(string.len());
                         string.push(c);
                     }
                 }
-                formatter.set_position(pos).write_str(&string);
+                formatter.write_str(&string);
             }
         }
     };
