@@ -3,9 +3,8 @@ use alloc::string::ToString;
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 use alloc::vec;
 
-use crate::apps::{LittleManApp, InstallableApp};
+use fs::{LittleManApp, InstallableApp, Path, AppConstructor, StartError, OsHandle};
 use crate::display::{STATIC_VGA_WRITER, BitmapVgaWriter, VgaPalette, VgaPaletteColor};
-use crate::fs::{Path, AppConstructor};
 
 impl InstallableApp for ForthCon {
     fn install() -> (Path, Box<dyn AppConstructor>) {
@@ -22,11 +21,11 @@ impl AppConstructor for ForthCon {
 pub struct ForthApp(Vec<String>);
 
 impl LittleManApp for ForthApp {
-    fn start(&mut self, args: &[&str]) -> Result<(), crate::apps::StartError> {
+    fn start(&mut self, args: &[&str]) -> Result<(), StartError> {
         self.0 = args.iter().map(|arg| arg.to_string()).collect();
         Ok(())
     }
-    fn update(&mut self, handle: &mut crate::apps::OsHandle) {
+    fn update(&mut self, handle: &mut OsHandle) {
         if let Ok(_) = handle.text_mode_formatter() {
             let mut fm = ForthMachine::default();
             let segments: Vec<&str> = self.0.iter().map(|s| s.as_str()).collect();

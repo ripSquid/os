@@ -1,12 +1,21 @@
-mod help;
-mod dir;
+
 use alloc::boxed::Box;
-pub use help::*;
-pub use dir::*;
-use crate::{display::{DefaultVgaWriter, BitmapVgaWriter}, fs::{Path, AppConstructor}};
+
+use base::display::{DefaultVgaWriter, BitmapVgaWriter};
+use crate::{Path, AppConstructor, RamFileSystem};
+
+
+pub trait DefaultInstall: AppConstructor {
+    fn path() -> Path;
+}
 pub trait InstallableApp: AppConstructor {
     fn install() -> (Path, Box<dyn AppConstructor>);
 }
+impl<T> InstallableApp for T where T: Default + DefaultInstall + AppConstructor {
+    fn install() -> (Path, Box<dyn AppConstructor>) {
+        (T::path(), Box::new(T::default()))
+    }
+} 
 pub trait LittleManApp: Send + Sync + 'static {
     fn start(&mut self, args: &[&str]) -> Result<(), StartError> {
         Ok(())
@@ -18,14 +27,14 @@ pub trait LittleManApp: Send + Sync + 'static {
 pub enum StartError {}
 pub struct OsHandle {
     control_flow: ControlFlow,
-    graphics: GraphicsHandleType
+    graphics: GraphicsHandleType,
 }
 impl OsHandle {
     pub fn running(&self) -> bool {
         self.control_flow == ControlFlow::Running
     }
     pub fn new(formatter: GraphicsHandleType) -> Self {
-        Self { control_flow: ControlFlow::Running, graphics: formatter }
+        Self { control_flow: ControlFlow::Running, graphics: formatter,}
     }
     pub fn call_exit(&mut self) {
         self.control_flow = ControlFlow::Quit;

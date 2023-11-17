@@ -1,8 +1,9 @@
 use alloc::boxed::Box;
+use fs::{apps::{LittleManApp, InstallableApp}, StartError, OsHandle};
 
-use crate::fs::{Path, AppConstructor};
+use super::{Path, AppConstructor};
 
-use super::{LittleManApp, InstallableApp};
+
 
 pub struct HelpApp(Language);
 pub struct Help;
@@ -21,7 +22,7 @@ impl InstallableApp for Help {
     }
 }
 impl LittleManApp for HelpApp {
-    fn start(&mut self, args: &[&str]) -> Result<(), super::StartError> {
+    fn start(&mut self, args: &[&str]) -> Result<(), StartError> {
         match args.get(0) {
             Some(&"eng") => self.0 = Language::English,
             Some(&"swe") => self.0 = Language::Swedish,
@@ -30,7 +31,7 @@ impl LittleManApp for HelpApp {
         }
         Ok(())
     }
-    fn update(&mut self, handle: &mut super::OsHandle) {
+    fn update(&mut self, handle: &mut OsHandle) {
         let text = match &self.0 {
             Language::Swedish => 
             "Välkommen till ett gymnasiearbete gjort av två elever på Lars Kagg Skolan.

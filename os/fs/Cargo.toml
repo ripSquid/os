@@ -1,0 +1,16 @@
+[package]
+name = "fs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+# A no_std Hashmap
+hashbrown = "0.14.2"
+
+# no_std RwLock built on spinning
+spin = {version = "0.9.8", features = ["rwlock"]}
+
+base = {path = "../base"}

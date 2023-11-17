@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! print_str {
     ($term: expr) => {{
         let mut writer = crate::display::DefaultVgaWriter::new(unsafe {
@@ -8,8 +9,9 @@ macro_rules! print_str {
     }};
 }
 
-pub(crate) use print_str;
+pub use print_str;
 
+#[macro_export]
 macro_rules! debug {
     ($($term: expr),+) => {
         {
@@ -24,4 +26,4 @@ macro_rules! debug {
         }
     };
 }
-pub(crate) use debug;
+pub use debug;

@@ -1,9 +1,15 @@
+#![no_std]
+#![feature(error_in_core)]
+
+extern crate alloc;
+pub mod apps;
+pub use apps::{LittleManApp, DefaultInstall, InstallableApp, OsHandle, StartError, GraphicsHandleType};
 use core::error::Error;
 
 use alloc::{boxed::Box, string::{String, ToString}, vec::Vec};
 use hashbrown::HashMap;
 
-use crate::apps::{LittleManApp, InstallableApp};
+
 
 use spin::{RwLock, RwLockReadGuard, RwLockUpgradableGuard};
 pub struct RamFileSystem(RwLock<Option<HashMap<String, RwLock<KaggFile>>>>);
@@ -110,6 +116,13 @@ impl<'a> LittleFileHandle<'a> {
             path: String::from("./"),
         }
     }
+    pub fn is_directory(&self) -> bool {
+        match self.read_guards.last().map(|lock| &**lock) {
+            Some(KaggFile::Directory(_)) => true,
+            None => true,
+            _ => false,
+        }
+    }
     fn create_file(&mut self, file: File) -> Result<(), FileSystemError> {
         if let Some(guard) = self.read_guards.pop() {
             match guard.try_upgrade() {
@@ -200,6 +213,23 @@ impl Path {
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
+    pub fn append<A: AppendsPath>(mut self, path: &A) -> Self {
+        self.0 += path.to_str();
+        self
+    }
+}
+pub trait AppendsPath {
+    fn to_str(&self) -> &str; 
+}
+impl<T: AsRef<str>> AppendsPath for T {
+    fn to_str(&self) -> &str {
+        self.as_ref()
+    }
+}
+impl AppendsPath for Path {
+    fn to_str(&self) -> &str {
+        self.as_ref().as_str()
+    }
 }
 impl From<String> for Path {
     fn from(value: String) -> Self {
@@ -268,4 +298,8 @@ pub fn active_directory() -> Path {
 }
 pub fn set_active_directory(p: Path) {
     unsafe {ACTIVE_DIRECTORY = Some(p)}; 
+}
+
+pub fn fs_ref() -> &'static RamFileSystem {
+    &FILE_SYSTEM
 }

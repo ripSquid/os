@@ -13,14 +13,13 @@ extern crate alloc;
 
 use core::arch::asm;
 
-use crate::apps::{LittleManApp, HelpApp, Help, OsHandle, GraphicsHandleType, Dir};
-use crate::display::{
-    macros::*, BitmapVgaWriter, DefaultVgaWriter, VgaChar, VgaColorCombo, VgaModeSwitch,
-    VgaPalette, VgaPaletteColor, STATIC_VGA_WRITER,
-};
+use base::display::{DefaultVgaWriter, VgaColorCombo};
+use fs::{LittleManApp, OsHandle, GraphicsHandleType};
+use builtins::{Help, ChangeDir, ClearScreen, Dir};
+use base::*;
 
 use crate::forth::{ForthApp, ForthCon};
-use crate::fs::Path;
+use fs::Path;
 use crate::input::KEYBOARD_QUEUE;
 use crate::interrupt::pitinit;
 use crate::interrupt::setup::global_os_time;
@@ -42,14 +41,13 @@ use x86_64::instructions::port::PortWriteOnly;
 use x86_64::registers::control::{Cr0, Cr0Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};
 
-pub mod apps;
 pub mod cpuid;
-pub mod display;
+
 mod easter_eggs;
 mod panic;
 use crate::multiboot_info::MultibootInfoHeader;
 mod forth;
-pub mod fs;
+
 mod input;
 mod interrupt;
 mod memory;
@@ -77,7 +75,6 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     unsafe { interrupt::setup::setup_interrupts() }
     x86_64::instructions::interrupts::int3();
     let cpu_info = cpuid::ProcessorIdentification::gather();
-    debug!(&cpu_info);
 
     unsafe {
         pitinit(2000);
@@ -118,12 +115,14 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     fs::install_app::<Help>();
     fs::install_app::<ForthCon>();
     fs::install_app::<Dir>();
+    fs::install_app::<ChangeDir>();
+    fs::install_app::<ClearScreen>();
     unsafe {
         let mut string;
         formatter.enable_cursor().set_position((0,8));
         loop {
             string = String::new();
-            formatter.write_str("> ");
+            formatter.write_str(fs::active_directory().as_str()).write_str(" > ");
             loop {
                 let c = KEYBOARD_QUEUE.fetch_blocking();
                 match c {
@@ -137,12 +136,13 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         formatter.next_line();
                         let mut segments: Vec<_> = string.split(' ').collect();
                         if segments.len() > 0 {
-                            let path = Path::from(segments[0]);
+                            let path = fs::active_directory().append(&segments[0]);
+
                             let app = fs::get_file(path).map(|file| file.launch_app()).flatten();
                             let mut app = match app {
                                 Ok(app) => app,
                                 Err(err) => {
-                                    formatter.write_str(&format!("OS ERROR: {err:?}"));
+                                    formatter.write_str(&format!("OS ERROR: {err:?}")).next_line();
                                     break; 
                                 },
                             };
@@ -192,7 +192,6 @@ fn disable_cursor() {
 
 #[no_mangle]
 pub extern "C" fn keyboard_handler() {
-    print_str!("Interrupt Keyboard");
     panic!();
 }
 
@@ -226,10 +225,10 @@ fn remap_everything(
                 continue;
             }
             assert!(section.sh_addr % 4096 == 0);
-            debug!(
-                "mapping section at addr:",
-                &section.sh_addr, ", size:", &section.sh_size
-            );
+            //debug!(
+            //    "mapping section at addr:",
+            //    &section.sh_addr, ", size:", &section.sh_size
+            //);
             let flags = EntryFlags::from_elf_flags(&section.sh_flags);
             let start_frame = MemoryFrame::inside_address(section.sh_addr);
             let end_frame = MemoryFrame::inside_address(section.sh_addr + section.sh_size - 1);
@@ -249,13 +248,13 @@ fn remap_everything(
     });
 
     let _old_table = active_table.switch(new_table);
-    debug!(
-        "available memory frames after remap:",
-        &allocator.available_frames_left()
-    );
+    //debug!(
+    //    "available memory frames after remap:",
+    //    &allocator.available_frames_left()
+    //);
     //let old_p4_page = MemoryPage::inside_address(old_table.as_address());
     //active_table.unmap(old_p4_page, &mut allocator);
-    print_str!("PAGE TABLE SWITCH SUCCESFUL!");
+    //print_str!("PAGE TABLE SWITCH SUCCESFUL!");
     allocator
 }
 

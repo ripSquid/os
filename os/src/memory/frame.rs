@@ -33,17 +33,7 @@ impl<'a> KernelDebug<'a> for MemoryFrame {
             .finish()
     }
 }
-impl<'a, T: KernelDebug<'a>> KernelDebug<'a> for Option<T> {
-    fn debug(
-        &self,
-        formatter: crate::display::KernelFormatter<'a>,
-    ) -> crate::display::KernelFormatter<'a> {
-        match self {
-            Some(value) => value.debug(formatter.debug_str("Some(")).debug_str(")"),
-            None => formatter.debug_str("None"),
-        }
-    }
-}
+
 
 impl Iterator for FrameIter {
     type Item = MemoryFrame;

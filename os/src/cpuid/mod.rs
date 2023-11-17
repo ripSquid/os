@@ -20,14 +20,7 @@ impl<'a> KernelDebug<'a> for ProcessorIdentification {
             .finish()
     }
 }
-impl<'a> KernelDebug<'a> for &str {
-    fn debug(
-        &self,
-        formatter: crate::display::KernelFormatter<'a>,
-    ) -> crate::display::KernelFormatter<'a> {
-        formatter.debug_str(self)
-    }
-}
+
 impl ProcessorIdentification {
     pub fn gather() -> Self {
         let vendor_registers = unsafe { cpuid(0) };

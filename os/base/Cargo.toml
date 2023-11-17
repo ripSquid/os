@@ -1,0 +1,11 @@
+[package]
+name = "base"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+# Access to various x86 instructions that would otherwise need assembly code
+x86_64 = "0.14.10"

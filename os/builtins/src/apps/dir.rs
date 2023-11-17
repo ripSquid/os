@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, format};
 
-use crate::fs::{AppConstructor, Path};
+use fs::{AppConstructor, Path, OsHandle};
 
 use super::{LittleManApp, InstallableApp};
 
@@ -20,11 +20,11 @@ impl AppConstructor for Dir {
     }
 }
 impl LittleManApp for DirApp {
-    fn update(&mut self, handle: &mut super::OsHandle) {
+    fn update(&mut self, handle: &mut OsHandle) {
         if let Ok(formatter) = handle.text_mode_formatter() {
-            let path = crate::fs::active_directory();
+            let path = fs::active_directory();
             formatter.next_line().write_str(&format!("Listing Items inside \"{}\"", path.as_str())).next_line();
-            match crate::fs::read_dir(path) {
+            match fs::read_dir(path) {
                 Ok(dirs) => {
                     for item in dirs.items() {
                         formatter.write_str(item.as_str()).next_line();

@@ -49,6 +49,26 @@ pub trait KernelDebug<'a> {
 pub struct KernelFormatter<'a> {
     writer: &'a mut DefaultVgaWriter,
 }
+impl<'a, T: KernelDebug<'a>> KernelDebug<'a> for Option<T> {
+    fn debug(
+        &self,
+        formatter: crate::display::KernelFormatter<'a>,
+    ) -> crate::display::KernelFormatter<'a> {
+        match self {
+            Some(value) => value.debug(formatter.debug_str("Some(")).debug_str(")"),
+            None => formatter.debug_str("None"),
+        }
+    }
+}
+impl<'a> KernelDebug<'a> for &str {
+    fn debug(
+        &self,
+        formatter: crate::display::KernelFormatter<'a>,
+    ) -> crate::display::KernelFormatter<'a> {
+        formatter.debug_str(self)
+    }
+}
+
 impl<'a> KernelFormatter<'a> {
     pub fn debug_str(self, str: &str) -> Self {
         self.writer.write_str(str);

@@ -12,7 +12,12 @@ crate-type = ["staticlib"]
 test = false
 
 
-
+[workspace]
+members = [
+    "base",
+    "fs",
+    "builtins",
+]
 
 [dependencies]
 
@@ -30,8 +35,7 @@ ps2 = "0.2.0"
 
 heapless = "0.8.0"
 
-# A no_std Hashmap
-hashbrown = "0.14.2"
+base = {path = "./base"}
+fs = {path = "./fs"}
+builtins = {path = "./builtins"}
 
-# no_std RwLock built on spinning
-spin = {version = "0.9.8", features = ["rwlock"]}
