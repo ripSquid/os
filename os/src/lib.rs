@@ -115,6 +115,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     unsafe {
         let mut string = String::new();
         let mut pos = (0, 5);
+        let mut fm = forth::ForthMachine::default();
         formatter.enable_cursor();
         loop {
             string = String::new();
@@ -131,7 +132,10 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         string.pop();
                     }
                     '\n' => {
-                        let segments: Vec<_> = string.split(' ').collect();
+                        let mut segments: Vec<_> = string.split(' ').collect();
+
+                        fm.run(&segments);
+
                         if segments.len() == 5 {
                             loop {
                                 match segments[0] {
