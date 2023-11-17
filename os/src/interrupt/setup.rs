@@ -3,9 +3,11 @@ use core::arch::asm;
 use super::gatedescriptor::TypeAttribute;
 use super::table::IDTable;
 use super::timer;
+use crate::display::STATIC_VGA_WRITER;
 use crate::display::macros::debug;
 use crate::input::{keyboard_handler, keyboard_initialize, setup_keymap};
 use crate::interrupt::gatedescriptor::SegmentSelector;
+use alloc::format;
 use pic8259::ChainedPics;
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
 use x86_64::registers::segmentation::Segment;
@@ -59,7 +61,17 @@ pub unsafe fn setup_interrupts() {
     x86_64::instructions::tables::lidt(&idtdescriptor);
 
     // ps2 setup (structuring no.)
-    unsafe { _ = keyboard_initialize() };
+    unsafe {
+        let rs = keyboard_initialize();
+        if let Err(e) = rs {
+            STATIC_VGA_WRITER.write_str(&format!("{:?}", e));
+            loop {}
+        }
+
+        
+    };
+
+
 
     // Enable interrupts
     asm!("sti");

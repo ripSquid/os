@@ -8,7 +8,7 @@ use heapless::spsc::Queue;
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
 use x86_64::structures::idt::InterruptStackFrame;
 
-static mut controller: Controller = unsafe { Controller::new() };
+static mut controller: Controller = unsafe { Controller::with_timeout(1_000_000) };
 
 static mut keymap: [char; 4096] = ['\x00'; 4096];
 
@@ -291,19 +291,18 @@ pub unsafe fn keyboard_initialize() -> Result<(), ControllerError> {
     controller.test_controller()?;
     // Write config again in case of controller reset
     controller.write_config(config)?;
-
     // Disable mouse. If there's no mouse, this is ignored
-    controller.disable_mouse()?;
+    //controller.disable_mouse()?;
 
     // Step 8: Interface tests
     let keyboard_works = controller.test_keyboard().is_ok();
-
     // Step 9 - 10: Enable and reset devices
     config = controller.read_config()?;
     if keyboard_works {
         controller.enable_keyboard()?;
         config.set(ControllerConfigFlags::DISABLE_KEYBOARD, false);
         config.set(ControllerConfigFlags::ENABLE_KEYBOARD_INTERRUPT, true);
+        config.set(ControllerConfigFlags::ENABLE_TRANSLATE, true);
         controller.keyboard().reset_and_self_test().unwrap();
     }
 
