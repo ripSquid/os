@@ -11,7 +11,7 @@ use hashbrown::HashMap;
 
 
 
-use spin::{RwLock, RwLockReadGuard, RwLockUpgradableGuard};
+use spin::{RwLock, RwLockUpgradableGuard};
 pub struct RamFileSystem(RwLock<Option<HashMap<String, RwLock<KaggFile>>>>);
 
 pub trait AppConstructor: Send + Sync + 'static {
@@ -36,13 +36,14 @@ impl KaggFile {
 #[derive(Debug)]
 pub enum FileSystemError {
     FileSystemNotInitialized,
-    IncorrectFileType,
+    IncorrectFileType(&'static str),
     FileNotFound,
     DirectoryNotFound,
     InvalidParentDirectory,
     Busy,
     EmptyPath,
-    CritikalUnknown,
+    CriticalUnknown,
+    NameAlreadyExists,
 }
 
 static FILE_SYSTEM: RamFileSystem = RamFileSystem(RwLock::new(None));
@@ -81,25 +82,27 @@ impl<'a> LittleFileHandle<'a> {
                 if let KaggFile::Directory(dir) = &**handle {
                     Ok(DirRead(dir.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
                 } else {
-                    Err(FileSystemError::IncorrectFileType)
+                    Err(FileSystemError::IncorrectFileType("Trying to open file as directory"))
                 }
             },
             None => {
-                Ok(DirRead(self.filesystem.as_ref().ok_or(FileSystemError::CritikalUnknown)?.as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
+                Ok(DirRead(self.filesystem.as_ref().ok_or(FileSystemError::CriticalUnknown)?.as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
             },
         }
     }
     pub fn launch_app(&self) -> Result<Box<dyn LittleManApp>, FileSystemError> {
         match self.read_guards.last() {
             Some(handle) => {
-                if let KaggFile::App(constructor) = &**handle {
-                    Ok(constructor.instantiate())
-                } else {
-                    Err(FileSystemError::IncorrectFileType)
+                match &**handle {
+                    KaggFile::App(constructor) => Ok(constructor.instantiate()),
+                    KaggFile::Directory(_) => Err(FileSystemError::IncorrectFileType("Trying to launch directory as an app")),
+                    KaggFile::Data(_) => Err(FileSystemError::IncorrectFileType("Trying to data file as an app")),
+                    KaggFile::Deleted => Err(FileSystemError::IncorrectFileType("Trying to launch deleted file as an app")),
+                    
                 }
             },
             None => {
-                Err(FileSystemError::CritikalUnknown)
+                Err(FileSystemError::CriticalUnknown)
             },
         }
     }
@@ -117,11 +120,11 @@ impl<'a> LittleFileHandle<'a> {
         }
     }
     pub fn is_directory(&self) -> bool {
-        match self.read_guards.last().map(|lock| &**lock) {
+        self.read_guards.is_empty() || match self.read_guards.last().map(|lock| &**lock) {
             Some(KaggFile::Directory(_)) => true,
             None => true,
             _ => false,
-        }
+        } 
     }
     fn create_file(&mut self, file: File) -> Result<(), FileSystemError> {
         if let Some(guard) = self.read_guards.pop() {
@@ -159,40 +162,46 @@ impl<'a> LittleFileHandle<'a> {
                     };
                     result
                 },
-                None => return Err(FileSystemError::CritikalUnknown),
+                None => return Err(FileSystemError::CriticalUnknown),
             };
             final_result
         }
     }
     fn add(mut self, component: &str) -> Result<Self, FileSystemError> {
-        if component == "" {
-            return Ok(self)
+        match component {
+            "" => {
+                return Ok(self)
+            },
+            ".." => {
+                self.read_guards.pop();
+                return Ok(self)
+            },
+            _ => (),
         }
-        if self.read_guards.len() == 0 {
-            self.path += component;
+        self.path += component;
 
-            let guard = if let Some(other_guard) = self.read_guards.last() {
-                match &**other_guard {
-                    KaggFile::Directory(dir) => {
-                        dir.get(component).ok_or(FileSystemError::FileNotFound)?
-                    }
-                    _ => return Err(FileSystemError::FileNotFound),
+        let guard = if let Some(other_guard) = self.read_guards.last() {
+            match &**other_guard {
+                KaggFile::Directory(dir) => {
+                    dir.get(component).ok_or(FileSystemError::FileNotFound)?
                 }
-            } else {
-                self.filesystem.as_ref().ok_or(FileSystemError::CritikalUnknown)?
-                    .as_ref()
-                    .ok_or(FileSystemError::FileSystemNotInitialized)?
-                    .get(component)
-                    .ok_or(FileSystemError::FileNotFound)?
-            };
-            let unsafe_guard = unsafe {
-                (guard as *const RwLock<KaggFile>)
-                    .as_ref()
-                    .unwrap()
-                    .upgradeable_read()
-            };
-            self.read_guards.push(unsafe_guard);
-        }
+                _ => return Err(FileSystemError::FileNotFound),
+            }
+        } else {
+            self.filesystem.as_ref().ok_or(FileSystemError::CriticalUnknown)?
+                .as_ref()
+                .ok_or(FileSystemError::FileSystemNotInitialized)?
+                .get(component)
+                .ok_or(FileSystemError::FileNotFound)?
+        };
+        let unsafe_guard = unsafe {
+            (guard as *const RwLock<KaggFile>)
+                .as_ref()
+                .unwrap()
+                .upgradeable_read()
+        };
+        self.read_guards.push(unsafe_guard);
+
         Ok(self)
     }
 }
@@ -203,6 +212,7 @@ impl AsRef<Path> for Path {
         self
     }
 }
+
 impl Path {
     pub fn components(&self) -> impl Iterator<Item = &str> {
         self.0.split("/")
@@ -214,7 +224,8 @@ impl Path {
         self.0.as_str()
     }
     pub fn append<A: AppendsPath>(mut self, path: &A) -> Self {
-        self.0 += path.to_str();
+        self.0.push_str("/");
+        self.0.push_str(path.to_str());
         self
     }
 }
@@ -257,14 +268,26 @@ fn create_file<P: AsRef<Path>>(path: P, file: KaggFile) -> Result<LittleFileHand
 pub fn get_file<P: AsRef<Path>>(path: P) -> Result<LittleFileHandle<'static>, FileSystemError> {
     FILE_SYSTEM.get_file(path)
 }
+pub fn get_file_relative<P: AsRef<Path>>(path: P) -> Result<LittleFileHandle<'static>, FileSystemError> {
+    FILE_SYSTEM.get_file(active_directory().append(path.as_ref()))
+}
 pub fn create_data_file<P: AsRef<Path>>(path: P) -> Result<LittleFileHandle<'static>, FileSystemError> {
     create_file(path, KaggFile::Data(Vec::new()))
 }
 pub fn create_dir<P: AsRef<Path>>(path: P) -> Result<LittleFileHandle<'static>, FileSystemError> {
-    create_file(path, KaggFile::Directory(HashMap::new()))
+    match get_file(path.as_ref()) {
+        Ok(exists) => {
+            match exists.is_directory() {
+                true => Ok(exists),
+                false => Err(FileSystemError::NameAlreadyExists),
+            }
+        },
+        Err(_) => create_file(path, KaggFile::Directory(HashMap::new())),
+    }
 }
 pub fn install_app<A: InstallableApp>() -> Result<LittleFileHandle<'static>, FileSystemError> {
     let (path, app) = A::install();
+    let path = active_directory().append(&path);
     create_file(path, KaggFile::App(app))
 }
 
@@ -274,7 +297,6 @@ pub fn read_dir<P: AsRef<Path>>(path: P) -> Result<DirRead, FileSystemError> {
             file_handle.children()
         },
         Err(err) => {
-            //Err(FileSystemError::Busy)
             Ok(DirRead(FILE_SYSTEM.0.read().as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
         },
     }

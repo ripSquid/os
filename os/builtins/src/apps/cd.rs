@@ -25,7 +25,7 @@ impl LittleManApp for ChangeDirApp {
             self.0 = Some(Err("Please specify a directory."));
         } else {
             let path = Path::from(args[0]);
-            let valid = match fs::get_file(&path) {
+            let valid = match fs::get_file_relative(&path) {
                 Ok(w) => {
                     let yeah = w.is_directory();
                     if !yeah {

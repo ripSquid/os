@@ -15,7 +15,7 @@ extern crate alloc;
 
 use base::display::{DefaultVgaWriter, VgaColorCombo};
 use forth::ForthCon;
-use fs::{ OsHandle, GraphicsHandleType};
+use fs::{ OsHandle, GraphicsHandleType, Path};
 use builtins::{Help, ChangeDir, ClearScreen, Dir};
 use base::*;
 
@@ -112,11 +112,14 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .next_line();
 
     fs::start();
-    fs::install_app::<Help>();
+    
+    fs::create_dir(Path::from("bin"));
+    fs::set_active_directory(Path::from("bin"));
     fs::install_app::<ForthCon>();
-    fs::install_app::<Dir>();
-    fs::install_app::<ChangeDir>();
-    fs::install_app::<ClearScreen>();
+    fs::set_active_directory(Path::from(""));
+
+    builtins::install_all();
+    
     unsafe {
         let mut string;
         formatter.enable_cursor().set_position((0,8));
@@ -138,7 +141,16 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         if segments.len() > 0 {
                             let path = fs::active_directory().append(&segments[0]);
 
-                            let app = fs::get_file(path).map(|file| file.launch_app()).flatten();
+                            let app = {
+                                let file = match fs::get_file(&path) {
+                                    Ok(app) => Ok(app),
+                                    Err(_) => {
+                                        let path = Path::from("bin").append(&segments[0]);
+                                        fs::get_file(path)
+                                    },
+                                };
+                                file.map(|file| file.launch_app()).flatten()
+                            };
                             let mut app = match app {
                                 Ok(app) => app,
                                 Err(err) => {
