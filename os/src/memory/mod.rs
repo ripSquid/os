@@ -6,14 +6,15 @@
 
 use self::{
     allocator::GlobalAllocator,
-    frame::{FrameRangeInclusive, MemoryFrame},
-    paging::PageTableMaster,
+    frame::{FrameRangeInclusive, MemoryFrame, FrameAllocator},
+    paging::{PageTableMaster, TemporaryPage, MemoryPage, InactivePageTable},
 };
 use crate::{
     display::STATIC_VGA_WRITER,
-    multiboot_info::memory_map::{MemoryMapEntry, MemoryType},
+    multiboot_info::{memory_map::{MemoryMapEntry, MemoryType}, MultibootInfoUnparsed, MultiBootTag, TagType, elf::ElfSectionFlags}, memory::paging::EntryFlags,
 };
 use alloc::{boxed::Box, format, string::String, vec::Vec};
+use x86_64::registers::{model_specific::{EferFlags, Efer}, control::{Cr0, Cr0Flags}};
 use core::{
     alloc::{GlobalAlloc, Layout},
     iter::Filter,
@@ -141,5 +142,83 @@ impl Iterator for MemoryAreaIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.itera.next()
+    }
+}
+
+
+pub(crate) fn remap_everything(
+    info: MultibootInfoUnparsed,
+    active_table: &mut PageTableMaster,
+) -> ElfTrustAllocator {
+    let MultiBootTag::MemoryMap(memory_tag) = info.find_tag(TagType::MemoryMap).unwrap() else {
+        panic!()
+    };
+    let MultiBootTag::ElfSymbols(elf_tag) = info.find_tag(TagType::ElfSymbol).unwrap() else {
+        panic!()
+    };
+    let multiboot = unsafe { info.frame_range() };
+    let kernel = unsafe { elf_tag.frame_range() };
+    let multiboot2 = unsafe { info.frame_range() };
+
+    let mut allocator = ElfTrustAllocator::new(kernel, multiboot, memory_tag.area_iter());
+    let mut temp_page = TemporaryPage::new(MemoryPage::inside_address(0xefaceea7), &mut allocator);
+
+    let mut new_table = {
+        let frame = allocator.allocate_frame().unwrap();
+        InactivePageTable::new(frame, active_table, &mut temp_page)
+    };
+    switch_no_ex();
+    switch_write_bit();
+    active_table.with(&mut new_table, &mut temp_page, |mapper| {
+        //map elf sections
+        for section in elf_tag.entries.parsed.iter() {
+            if !section.sh_flags.contains(ElfSectionFlags::ALLOCATED) {
+                continue;
+            }
+            assert!(section.sh_addr % 4096 == 0);
+            //debug!(
+            //    "mapping section at addr:",
+            //    &section.sh_addr, ", size:", &section.sh_size
+            //);
+            let flags = EntryFlags::from_elf_flags(&section.sh_flags);
+            let start_frame = MemoryFrame::inside_address(section.sh_addr);
+            let end_frame = MemoryFrame::inside_address(section.sh_addr + section.sh_size - 1);
+            for frame in FrameRangeInclusive::new(start_frame, end_frame) {
+                mapper.identity_map(frame, flags, &mut allocator);
+            }
+        }
+        //map multiboot info
+        for frame in multiboot2 {
+            mapper.identity_map(frame, EntryFlags::PRESENT, &mut allocator);
+        }
+        //map vga buffer
+        for i in 0xA0..0xBF {
+            let vga_buffer_frame = MemoryFrame::inside_address(i * 0x1000);
+            mapper.identity_map(vga_buffer_frame, EntryFlags::WRITABLE, &mut allocator);
+        }
+    });
+
+    let _old_table = active_table.switch(new_table);
+    //debug!(
+    //    "available memory frames after remap:",
+    //    &allocator.available_frames_left()
+    //);
+    //let old_p4_page = MemoryPage::inside_address(old_table.as_address());
+    //active_table.unmap(old_p4_page, &mut allocator);
+    //print_str!("PAGE TABLE SWITCH SUCCESFUL!");
+    allocator
+}
+
+fn switch_no_ex() {
+    unsafe {
+        let efer = Efer::read();
+        Efer::write(efer | EferFlags::NO_EXECUTE_ENABLE);
+    }
+}
+
+fn switch_write_bit() {
+    unsafe {
+        let cr0 = Cr0::read();
+        Cr0::write(cr0 | Cr0Flags::WRITE_PROTECT);
     }
 }

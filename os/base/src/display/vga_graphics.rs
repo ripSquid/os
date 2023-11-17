@@ -5,7 +5,7 @@ const VGA_256COLORX_BUFFER_WIDTH: usize = 320;
 const VGA_256COLORX_BUFFER_HEIGHT: usize = 200;
 
 #[derive(Clone, Copy)]
-pub struct VgaPaletteColor([u8; 3]);
+pub struct VgaPaletteColor(pub(crate) [u8; 3]);
 
 impl VgaPaletteColor {
     pub const BLACK: Self = Self::from_rgb(0, 0, 0);
@@ -45,7 +45,7 @@ impl VgaPaletteColor {
 }
 
 #[derive(Clone)]
-pub struct VgaPalette<const N: usize>([VgaPaletteColor; N], u8);
+pub struct VgaPalette<const N: usize>(pub(crate) [VgaPaletteColor; N], pub(crate) u8);
 
 impl VgaPalette<256> {
     pub const ALL_BLACK: Self = Self([VgaPaletteColor::BLACK; 256], 0);
@@ -55,11 +55,12 @@ impl VgaPalette<256> {
     pub fn from_array(array: [VgaPaletteColor; 256]) -> Self {
         Self(array, 0)
     }
+
+}
+impl<const N: usize> VgaPalette<N> {
     pub fn fade_factor(&self, factor: u8) -> Self {
         Self(core::array::from_fn(|i| self.0[i].fade(factor)), 0)
     }
-}
-impl<const N: usize> VgaPalette<N> {
     pub fn from_array_offset(array: [VgaPaletteColor; N], offset: u8) -> Self {
         Self(array, offset)
     }
@@ -149,20 +150,7 @@ impl BitmapVgaWriter {
         self
     }
     pub fn set_palette<const N: usize>(&mut self, palette: VgaPalette<N>) {
-        let mut dac_write = x86_64::instructions::port::Port::<u8>::new(0x3C8u16);
-        let mut dac_data = x86_64::instructions::port::Port::<u8>::new(0x3C9u16);
-        assert!(palette.1 as usize + palette.0.len() <= 256);
-        unsafe {
-            //Prepare DAC for palette write starting at the color index of the offset
-
-            //Write palette
-            dac_write.write(palette.1);
-            for color in palette.0.into_iter().map(|c| c.0) {
-                for byte in color {
-                    dac_data.write(byte);
-                }
-            }
-        }
+       crate::switch_vga_palette(palette)
     }
 
     pub const unsafe fn new_unsafe() -> Self {

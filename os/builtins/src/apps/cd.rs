@@ -19,6 +19,7 @@ impl AppConstructor for ChangeDir {
         Box::new(ChangeDirApp(None))
     }
 }
+
 impl LittleManApp for ChangeDirApp {
     fn start(&mut self, args: &[&str]) -> Result<(), StartError> {
         if args.is_empty() {

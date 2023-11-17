@@ -35,12 +35,15 @@ impl LittleManApp for HelpApp {
         let text = match &self.0 {
             Language::Swedish => 
             "Välkommen till ett gymnasiearbete gjort av två elever på Lars Kagg Skolan.
-            Detta operativsystem kommer med olika demon och verktyg som visar vad det är kapabelt av.
+            Detta operativsystem kommer med olika demon 
+            och verktyg som visar vad det är kapabelt av.
             För att lista alla program och filer, skriv 'dir' 
             
             For english help, write 'help eng'",
-            Language::English => "Welcome to a Thesis work created by two students at the school of Lars Kagg.
-            This operating system comes with demos and tools which displays its full capabilities.
+            Language::English => 
+            "Welcome to a Thesis work created by two students at the school of Lars Kagg.
+            This operating system comes with demos and 
+            tools which displays its full capabilities.
             To list all programs and files, write 'dir'",
         };
         if let Ok(formatter) = handle.text_mode_formatter() {

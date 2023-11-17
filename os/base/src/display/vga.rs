@@ -3,7 +3,7 @@ use core::ops::{Deref, DerefMut};
 use x86_64::instructions::port::{Port, PortWriteOnly};
 
 
-use super::{KernelDebug, KernelFormatter, ScreenBuffer};
+use super::{KernelDebug, KernelFormatter, ScreenBuffer, VgaPalette};
 
 const DEFAULT_VGA_BUFFER_WIDTH: usize = 80;
 const DEFAULT_VGA_BUFFER_HEIGHT: usize = 25;
@@ -108,6 +108,9 @@ impl DefaultVgaWriter {
             cursor: false,
         }
     }
+    pub fn set_palette<const N: usize>(&mut self, palette: VgaPalette<N>) {
+        crate::switch_vga_palette(palette)
+    }
     pub fn write_horizontally_centerd(&mut self, text: &str, line: usize) -> &mut Self {
         self.position.1 = line;
         self.position.0 = (self.buffer.width() - text.len().min(self.buffer.width())) / 2;
@@ -154,15 +157,16 @@ impl DefaultVgaWriter {
     }
     pub fn write_bytes(&mut self, bytes: &[u8]) -> &mut Self {
         for byte in bytes {
-            self.write_raw_char(*byte)
+            self.write_raw_char(*byte);
         }
         self
     }
-    pub fn write_raw_char(&mut self, byte: u8) {
+    pub fn write_raw_char(&mut self, byte: u8) -> &mut Self {
         self.write_char(VgaChar {
             char: byte,
             color: self.fallback_color,
         });
+        self
     }
     pub fn write_byte(&mut self, byte: u8) {
         self.write_debugable(byte);

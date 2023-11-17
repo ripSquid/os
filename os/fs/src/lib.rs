@@ -31,6 +31,14 @@ impl KaggFile {
             _ => false,
         }
     }
+    pub fn file_type(&self) -> Option<FileType> {
+        match self {
+            KaggFile::Directory(_) => Some(FileType::Directory),
+            KaggFile::Data(_) => Some(FileType::Data),
+            KaggFile::App(_) => Some(FileType::App),
+            KaggFile::Deleted => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -80,13 +88,13 @@ impl<'a> LittleFileHandle<'a> {
         match self.read_guards.last() {
             Some(handle) => {
                 if let KaggFile::Directory(dir) = &**handle {
-                    Ok(DirRead(dir.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
+                    Ok(DirRead(dir.iter().filter_map(|(k,v)| Some(FileMetadata { path: Path::from(k.as_str()), filetype: v.read().file_type()? })).collect()))
                 } else {
                     Err(FileSystemError::IncorrectFileType("Trying to open file as directory"))
                 }
             },
             None => {
-                Ok(DirRead(self.filesystem.as_ref().ok_or(FileSystemError::CriticalUnknown)?.as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
+                Ok(DirRead(self.filesystem.as_ref().ok_or(FileSystemError::CriticalUnknown)?.as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().filter_map(|(k,v)| Some(FileMetadata { path: Path::from(k.as_str()), filetype: v.read().file_type()? })).collect()))
             },
         }
     }
@@ -167,6 +175,18 @@ impl<'a> LittleFileHandle<'a> {
             final_result
         }
     }
+    fn path(&self) -> Path {
+        Path::from(self.path.as_str()).clean()
+    }
+    fn file_type(&self) -> Option<FileType> {
+        match self.read_guards.last().map(|s| &**s) {
+            Some(KaggFile::App(_)) => Some(FileType::App),
+            Some(KaggFile::Data(_)) => Some(FileType::Data),
+            Some(KaggFile::Directory(_)) => Some(FileType::Directory),
+            Some(KaggFile::Deleted) => None,
+            None => Some(FileType::Directory),
+        }
+    }
     fn add(mut self, component: &str) -> Result<Self, FileSystemError> {
         match component {
             "" => {
@@ -227,6 +247,25 @@ impl Path {
         self.0.push_str("/");
         self.0.push_str(path.to_str());
         self
+    }
+    pub fn clean(mut self) -> Self {
+        let mut new = Vec::new();
+        let sections = self.0.split('/');
+        for section in sections {
+            match section {
+                "" => continue,
+                "." => continue,
+                ".." => {new.pop(); continue}
+                _ => (),
+            }
+            new.push(section);
+        }
+        let mut finale = String::new();
+        for part in new.into_iter() {
+            finale.push('/');
+            finale.push_str(part);
+        }
+        Self(finale)
     }
 }
 pub trait AppendsPath {
@@ -297,16 +336,27 @@ pub fn read_dir<P: AsRef<Path>>(path: P) -> Result<DirRead, FileSystemError> {
             file_handle.children()
         },
         Err(err) => {
-            Ok(DirRead(FILE_SYSTEM.0.read().as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
+            Err(err)
+            //Ok(DirRead(FILE_SYSTEM.0.read().as_ref().ok_or(FileSystemError::FileSystemNotInitialized)?.iter().map(|(k,_)| Path::from(k.as_str())).collect()))
         },
     }
 }
-pub struct DirRead(Vec<Path>);
+pub struct DirRead(Vec<FileMetadata>);
 impl DirRead {
-    pub fn items(self) -> impl Iterator<Item = Path> {
+    pub fn items(self) -> impl Iterator<Item = FileMetadata> {
         self.0.into_iter()
     }
 }
+pub struct FileMetadata {
+    pub path: Path,
+    pub filetype: FileType,
+}
+pub enum FileType {
+    Directory,
+    Data,
+    App,
+}
+
 impl File {
     pub fn empty<S: ToString>(name: S) -> Self {
         Self { data: KaggFile::Data(Vec::new()), name: name.to_string() }
@@ -319,7 +369,7 @@ pub fn active_directory() -> Path {
     unsafe {ACTIVE_DIRECTORY.as_ref().unwrap_or(&Path(String::from(""))).clone()}
 }
 pub fn set_active_directory(p: Path) {
-    unsafe {ACTIVE_DIRECTORY = Some(p)}; 
+    unsafe {ACTIVE_DIRECTORY = Some(p.clean())}; 
 }
 
 pub fn fs_ref() -> &'static RamFileSystem {

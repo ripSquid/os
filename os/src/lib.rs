@@ -13,33 +13,26 @@ extern crate alloc;
 
 
 
-use base::display::{DefaultVgaWriter, VgaColorCombo};
+use base::display::{DefaultVgaWriter, VgaColorCombo, VgaPalette};
 use forth::ForthCon;
 use fs::{ OsHandle, GraphicsHandleType, Path};
-use builtins::{Help, ChangeDir, ClearScreen, Dir};
 use base::*;
+use interrupt::setup::global_os_time;
 
 
 use crate::input::KEYBOARD_QUEUE;
 use crate::interrupt::pitinit;
 
-use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
-use crate::memory::paging::EntryFlags;
 use crate::memory::populate_global_allocator;
 
 
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use memory::frame::FrameAllocator;
-use memory::paging::{InactivePageTable, MemoryPage, PageTableMaster, TemporaryPage};
 
-use memory::ElfTrustAllocator;
-use multiboot_info::elf::ElfSectionFlags;
-use multiboot_info::{MultiBootTag, MultibootInfoUnparsed, TagType};
+use memory::paging::PageTableMaster;
 use x86_64::instructions::port::PortWriteOnly;
-use x86_64::registers::control::{Cr0, Cr0Flags};
-use x86_64::registers::model_specific::{Efer, EferFlags};
+
 
 pub mod cpuid;
 
@@ -67,27 +60,21 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     }
     .unwrap();
     let mut active_table = unsafe { PageTableMaster::new() };
-    let mut allocator = remap_everything(multiboot_info, &mut active_table);
+    let mut allocator = memory::remap_everything(multiboot_info, &mut active_table);
     unsafe {
         populate_global_allocator(&mut active_table, &mut allocator);
     }
-
     unsafe { interrupt::setup::setup_interrupts() }
-    x86_64::instructions::interrupts::int3();
     let cpu_info = cpuid::ProcessorIdentification::gather();
 
     unsafe {
-        pitinit(2000);
+        pitinit(2400);
     }
     // Start forth application
     easter_eggs::show_lars();
 
     let author_text: String = authors.replace(":", " and ");
     let mut formatter = unsafe { DefaultVgaWriter::new_unsafe() };
-    formatter.clear_screen(display::VgaColor::Black);
-    for i in 0..255 {
-        formatter.write_raw_char(i);
-    }
 
     formatter
         .clear_screen(display::VgaColor::Black)
@@ -120,6 +107,22 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
     builtins::install_all();
     
+    {
+        let timestamp = unsafe{ global_os_time};
+        let duration = 500;
+
+        let mut fade = 0;
+        while(unsafe {global_os_time} < timestamp+duration) {
+            let time = unsafe {global_os_time} - timestamp;
+            let old_fade = fade;
+            fade = ((time * u8::MAX as u64) / duration) as u8;
+            if fade != old_fade {
+                formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE.fade_factor(fade));
+            }
+            unsafe { DefaultVgaWriter::new_unsafe().set_position((4,4)) };
+        }
+        formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE); 
+    }
     unsafe {
         let mut string;
         formatter.enable_cursor().set_position((0,8));
@@ -154,7 +157,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                             let mut app = match app {
                                 Ok(app) => app,
                                 Err(err) => {
-                                    formatter.write_str(&format!("OS ERROR: {err:?}")).next_line();
+                                    formatter.write_str(&format!("ERROR: {err:?}")).next_line();
                                     break; 
                                 },
                             };
@@ -168,7 +171,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                                     app.shutdown();
                                 },
                                 Err(error) => {
-                                    formatter.write_str(&format!("OS ERROR: {error:?}"));
+                                    formatter.write_str(&format!("APP START ERROR: {error:?}"));
                                 },
                             }
                             formatter.next_line();
@@ -205,81 +208,4 @@ fn disable_cursor() {
 #[no_mangle]
 pub extern "C" fn keyboard_handler() {
     panic!();
-}
-
-fn remap_everything(
-    info: MultibootInfoUnparsed,
-    active_table: &mut PageTableMaster,
-) -> ElfTrustAllocator {
-    let MultiBootTag::MemoryMap(memory_tag) = info.find_tag(TagType::MemoryMap).unwrap() else {
-        panic!()
-    };
-    let MultiBootTag::ElfSymbols(elf_tag) = info.find_tag(TagType::ElfSymbol).unwrap() else {
-        panic!()
-    };
-    let multiboot = unsafe { info.frame_range() };
-    let kernel = unsafe { elf_tag.frame_range() };
-    let multiboot2 = unsafe { info.frame_range() };
-
-    let mut allocator = ElfTrustAllocator::new(kernel, multiboot, memory_tag.area_iter());
-    let mut temp_page = TemporaryPage::new(MemoryPage::inside_address(0xefaceea7), &mut allocator);
-
-    let mut new_table = {
-        let frame = allocator.allocate_frame().unwrap();
-        InactivePageTable::new(frame, active_table, &mut temp_page)
-    };
-    switch_no_ex();
-    switch_write_bit();
-    active_table.with(&mut new_table, &mut temp_page, |mapper| {
-        //map elf sections
-        for section in elf_tag.entries.parsed.iter() {
-            if !section.sh_flags.contains(ElfSectionFlags::ALLOCATED) {
-                continue;
-            }
-            assert!(section.sh_addr % 4096 == 0);
-            //debug!(
-            //    "mapping section at addr:",
-            //    &section.sh_addr, ", size:", &section.sh_size
-            //);
-            let flags = EntryFlags::from_elf_flags(&section.sh_flags);
-            let start_frame = MemoryFrame::inside_address(section.sh_addr);
-            let end_frame = MemoryFrame::inside_address(section.sh_addr + section.sh_size - 1);
-            for frame in FrameRangeInclusive::new(start_frame, end_frame) {
-                mapper.identity_map(frame, flags, &mut allocator);
-            }
-        }
-        //map multiboot info
-        for frame in multiboot2 {
-            mapper.identity_map(frame, EntryFlags::PRESENT, &mut allocator);
-        }
-        //map vga buffer
-        for i in 0xA0..0xBF {
-            let vga_buffer_frame = MemoryFrame::inside_address(i * 0x1000);
-            mapper.identity_map(vga_buffer_frame, EntryFlags::WRITABLE, &mut allocator);
-        }
-    });
-
-    let _old_table = active_table.switch(new_table);
-    //debug!(
-    //    "available memory frames after remap:",
-    //    &allocator.available_frames_left()
-    //);
-    //let old_p4_page = MemoryPage::inside_address(old_table.as_address());
-    //active_table.unmap(old_p4_page, &mut allocator);
-    //print_str!("PAGE TABLE SWITCH SUCCESFUL!");
-    allocator
-}
-
-fn switch_no_ex() {
-    unsafe {
-        let efer = Efer::read();
-        Efer::write(efer | EferFlags::NO_EXECUTE_ENABLE);
-    }
-}
-
-fn switch_write_bit() {
-    unsafe {
-        let cr0 = Cr0::read();
-        Cr0::write(cr0 | Cr0Flags::WRITE_PROTECT);
-    }
 }

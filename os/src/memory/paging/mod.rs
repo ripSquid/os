@@ -7,3 +7,4 @@ pub use master::{InactivePageTable, PageTableMaster};
 pub use page::{MemoryPage, MemoryPageRange};
 pub use table::{EntryFlags, PageTableEntry};
 pub use temporary::TemporaryPage;
+

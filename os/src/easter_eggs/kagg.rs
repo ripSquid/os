@@ -63,7 +63,6 @@ pub fn show_lars() {
             g_formatter.set_palette(palette.fade_factor(fade))
         }
     }
-    g_formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE);
     switch_graphics_mode(VgaModeSwitch::VGA_80X25_TEXT);
     disable_cursor();
     unsafe {
