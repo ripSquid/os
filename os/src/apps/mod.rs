@@ -7,20 +7,20 @@ use crate::{display::{DefaultVgaWriter, BitmapVgaWriter}, fs::{Path, AppConstruc
 pub trait InstallableApp: AppConstructor {
     fn install() -> (Path, Box<dyn AppConstructor>);
 }
-pub trait KaggApp: Send + Sync + 'static {
+pub trait LittleManApp: Send + Sync + 'static {
     fn start(&mut self, args: &[&str]) -> Result<(), StartError> {
         Ok(())
     }
-    fn update(&mut self, handle: &mut KaggHandle);
+    fn update(&mut self, handle: &mut OsHandle);
     fn shutdown(&mut self) {}
 }
 #[derive(Debug)]
 pub enum StartError {}
-pub struct KaggHandle {
+pub struct OsHandle {
     control_flow: ControlFlow,
     graphics: GraphicsHandleType
 }
-impl KaggHandle {
+impl OsHandle {
     pub fn running(&self) -> bool {
         self.control_flow == ControlFlow::Running
     }

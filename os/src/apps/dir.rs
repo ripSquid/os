@@ -2,7 +2,7 @@ use alloc::{boxed::Box, format};
 
 use crate::fs::{AppConstructor, Path};
 
-use super::{KaggApp, InstallableApp};
+use super::{LittleManApp, InstallableApp};
 
 
 
@@ -15,12 +15,12 @@ impl InstallableApp for Dir {
     }
 }
 impl AppConstructor for Dir {
-    fn instantiate(&self) -> Box<dyn super::KaggApp> {
+    fn instantiate(&self) -> Box<dyn super::LittleManApp> {
         Box::new(DirApp)
     }
 }
-impl KaggApp for DirApp {
-    fn update(&mut self, handle: &mut super::KaggHandle) {
+impl LittleManApp for DirApp {
+    fn update(&mut self, handle: &mut super::OsHandle) {
         if let Ok(formatter) = handle.text_mode_formatter() {
             let path = crate::fs::active_directory();
             formatter.next_line().write_str(&format!("Listing Items inside \"{}\"", path.as_str())).next_line();

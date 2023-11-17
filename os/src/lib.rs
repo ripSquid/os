@@ -13,7 +13,7 @@ extern crate alloc;
 
 use core::arch::asm;
 
-use crate::apps::{KaggApp, HelpApp, Help, KaggHandle, GraphicsHandleType, Dir};
+use crate::apps::{LittleManApp, HelpApp, Help, OsHandle, GraphicsHandleType, Dir};
 use crate::display::{
     macros::*, BitmapVgaWriter, DefaultVgaWriter, VgaChar, VgaColorCombo, VgaModeSwitch,
     VgaPalette, VgaPaletteColor, STATIC_VGA_WRITER,
@@ -149,7 +149,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                             match app.start(&segments[1..]) {
                                 Ok(_) => {
                                     let graphics = GraphicsHandleType::TextMode(&mut formatter as *mut _);
-                                    let mut handle = KaggHandle::new(graphics);
+                                    let mut handle = OsHandle::new(graphics);
                                     while handle.running() {
                                         app.update(&mut handle);
                                     }

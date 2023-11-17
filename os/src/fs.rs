@@ -3,13 +3,13 @@ use core::error::Error;
 use alloc::{boxed::Box, string::{String, ToString}, vec::Vec};
 use hashbrown::HashMap;
 
-use crate::apps::{KaggApp, InstallableApp};
+use crate::apps::{LittleManApp, InstallableApp};
 
 use spin::{RwLock, RwLockReadGuard, RwLockUpgradableGuard};
 pub struct RamFileSystem(RwLock<Option<HashMap<String, RwLock<KaggFile>>>>);
 
 pub trait AppConstructor: Send + Sync + 'static {
-    fn instantiate(&self) -> Box<dyn KaggApp>;
+    fn instantiate(&self) -> Box<dyn LittleManApp>;
 }
 
 pub enum KaggFile {
@@ -50,9 +50,9 @@ impl RamFileSystem {
     fn get_file<'b, P: AsRef<Path>>(
         &'b self,
         path: P,
-    ) -> Result<KaggFileHandle<'b>, FileSystemError> {
+    ) -> Result<LittleFileHandle<'b>, FileSystemError> {
         let components = path.as_ref().components();
-        let mut handle = KaggFileHandle::new(self.0.upgradeable_read());
+        let mut handle = LittleFileHandle::new(self.0.upgradeable_read());
         for component in components {
             handle = handle.add(component)?;
         }
@@ -63,12 +63,12 @@ pub struct File {
     data: KaggFile,
     name: String,
 }
-pub struct KaggFileHandle<'a> {
+pub struct LittleFileHandle<'a> {
     filesystem: Option<RwLockUpgradableGuard<'a, Option<HashMap<String, RwLock<KaggFile>>>>>,
     read_guards: Vec<RwLockUpgradableGuard<'a, KaggFile>>,
     path: String,
 }
-impl<'a> KaggFileHandle<'a> {
+impl<'a> LittleFileHandle<'a> {
     fn children(&self) -> Result<DirRead, FileSystemError> {
         match self.read_guards.last() {
             Some(handle) => {
@@ -83,7 +83,7 @@ impl<'a> KaggFileHandle<'a> {
             },
         }
     }
-    pub fn launch_app(&self) -> Result<Box<dyn KaggApp>, FileSystemError> {
+    pub fn launch_app(&self) -> Result<Box<dyn LittleManApp>, FileSystemError> {
         match self.read_guards.last() {
             Some(handle) => {
                 if let KaggFile::App(constructor) = &**handle {
@@ -214,8 +214,8 @@ impl From<&str> for Path {
 pub fn start() {
     FILE_SYSTEM.init()
 }
-fn create_file<P: AsRef<Path>>(path: P, file: KaggFile) -> Result<KaggFileHandle<'static>, FileSystemError> {
-    let mut base_handle = KaggFileHandle::new_unchecked();
+fn create_file<P: AsRef<Path>>(path: P, file: KaggFile) -> Result<LittleFileHandle<'static>, FileSystemError> {
+    let mut base_handle = LittleFileHandle::new_unchecked();
     let components: Vec<_> = path.as_ref().components().collect();
     for component in &components[0..components.len()-1] {
         base_handle = base_handle.add(component)?;
@@ -224,16 +224,16 @@ fn create_file<P: AsRef<Path>>(path: P, file: KaggFile) -> Result<KaggFileHandle
     base_handle.create_file(File { data: file, name: file_name.to_string() })?;
     Ok(base_handle.add(file_name)?)
 } 
-pub fn get_file<P: AsRef<Path>>(path: P) -> Result<KaggFileHandle<'static>, FileSystemError> {
+pub fn get_file<P: AsRef<Path>>(path: P) -> Result<LittleFileHandle<'static>, FileSystemError> {
     FILE_SYSTEM.get_file(path)
 }
-pub fn create_data_file<P: AsRef<Path>>(path: P) -> Result<KaggFileHandle<'static>, FileSystemError> {
+pub fn create_data_file<P: AsRef<Path>>(path: P) -> Result<LittleFileHandle<'static>, FileSystemError> {
     create_file(path, KaggFile::Data(Vec::new()))
 }
-pub fn create_dir<P: AsRef<Path>>(path: P) -> Result<KaggFileHandle<'static>, FileSystemError> {
+pub fn create_dir<P: AsRef<Path>>(path: P) -> Result<LittleFileHandle<'static>, FileSystemError> {
     create_file(path, KaggFile::Directory(HashMap::new()))
 }
-pub fn install_app<A: InstallableApp>() -> Result<KaggFileHandle<'static>, FileSystemError> {
+pub fn install_app<A: InstallableApp>() -> Result<LittleFileHandle<'static>, FileSystemError> {
     let (path, app) = A::install();
     create_file(path, KaggFile::App(app))
 }
