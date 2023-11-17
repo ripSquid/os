@@ -34,6 +34,7 @@ pic8259 = "0.10.4"
 ps2 = "0.2.0"
 
 heapless = "0.8.0"
+spin = "0.9.8"
 
 base = {path = "./base"}
 fs = {path = "./fs"}

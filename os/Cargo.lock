@@ -136,6 +136,7 @@ dependencies = [
  "heapless",
  "pic8259",
  "ps2",
+ "spin",
  "x86_64",
 ]
 
