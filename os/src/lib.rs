@@ -11,18 +11,21 @@ extern crate alloc;
 
 use core::arch::asm;
 
+use crate::apps::KaggApp;
 use crate::display::{
     macros::*, BitmapVgaWriter, DefaultVgaWriter, VgaChar, VgaColorCombo, VgaModeSwitch,
     VgaPalette, VgaPaletteColor, STATIC_VGA_WRITER,
 };
 
+use crate::fs::Path;
+use crate::input::KEYBOARD_QUEUE;
 use crate::interrupt::pitinit;
 use crate::interrupt::setup::global_os_time;
-use crate::keyboard::KEYBOARD_QUEUE;
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
 use crate::memory::paging::EntryFlags;
 use crate::memory::populate_global_allocator;
 
+use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -36,14 +39,16 @@ use x86_64::instructions::port::PortWriteOnly;
 use x86_64::registers::control::{Cr0, Cr0Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};
 
+pub mod apps;
 pub mod cpuid;
 pub mod display;
 mod easter_eggs;
 mod panic;
 use crate::multiboot_info::MultibootInfoHeader;
 mod forth;
+pub mod fs;
+mod input;
 mod interrupt;
-mod keyboard;
 mod memory;
 mod multiboot_info;
 
@@ -72,7 +77,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     debug!(&cpu_info);
 
     unsafe {
-        pitinit(600);
+        pitinit(2000);
     }
     // Start forth application
     easter_eggs::show_lars();
@@ -101,8 +106,12 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .next_line()
         .write_str("CPU vendor: ")
         .write_str(cpu_info.vendor())
+        .next_line()
+        .write_str("Skriv \"help\" för en introduktion till OperativSystemet")
         .next_line();
 
+    fs::start();
+    
     unsafe {
         let mut string = String::new();
         let mut pos = (0, 5);

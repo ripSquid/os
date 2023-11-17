@@ -4,8 +4,8 @@ use crate::{
         restore_text_mode_font, switch_graphics_mode, BitmapVgaWriter, VgaModeSwitch, VgaPalette,
         VgaPaletteColor, STATIC_VGA_WRITER,
     },
+    input::KEYBOARD_QUEUE,
     interrupt::setup::global_os_time,
-    keyboard::KEYBOARD_QUEUE,
 };
 
 pub fn show_lars() {

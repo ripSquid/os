@@ -48,6 +48,19 @@ impl DefaultVgaWriter {
     pub fn get_position(&mut self) -> (usize, usize) {
         self.position
     }
+    pub fn back_up(&mut self, mut steps: usize) {
+        if steps >= self.position.0 {
+            steps -= self.position.0;
+            self.position.0 = 0;
+            self.position.1 -= 1;
+        }
+        while steps >= self.buffer.width() {
+            steps -= self.buffer.width();
+            self.position.1 -= 1;
+        }
+        self.position.0 -= steps;
+
+    }
 
     pub fn get_size(&mut self) -> (usize, usize) {
         (self.buffer.width(), self.buffer.height())
