@@ -1,8 +1,5 @@
-use core::ops::{Deref, DerefMut};
 
-use x86_64::instructions::port::{Port, PortWriteOnly};
-
-use super::{KernelDebug, KernelFormatter, ScreenBuffer};
+use super::ScreenBuffer;
 
 const VGA_256COLORX_BUFFER_WIDTH: usize = 320;
 const VGA_256COLORX_BUFFER_HEIGHT: usize = 200;
@@ -152,17 +149,17 @@ impl BitmapVgaWriter {
         self
     }
     pub fn set_palette<const N: usize>(&mut self, palette: VgaPalette<N>) {
-        let mut DAC_WRITE = x86_64::instructions::port::Port::<u8>::new(0x3C8u16);
-        let mut DAC_DATA = x86_64::instructions::port::Port::<u8>::new(0x3C9u16);
+        let mut dac_write = x86_64::instructions::port::Port::<u8>::new(0x3C8u16);
+        let mut dac_data = x86_64::instructions::port::Port::<u8>::new(0x3C9u16);
         assert!(palette.1 as usize + palette.0.len() <= 256);
         unsafe {
             //Prepare DAC for palette write starting at the color index of the offset
 
             //Write palette
-            DAC_WRITE.write(palette.1);
+            dac_write.write(palette.1);
             for color in palette.0.into_iter().map(|c| c.0) {
                 for byte in color {
-                    DAC_DATA.write(byte);
+                    dac_data.write(byte);
                 }
             }
         }

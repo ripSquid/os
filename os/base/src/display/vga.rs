@@ -2,7 +2,6 @@ use core::ops::{Deref, DerefMut};
 
 use x86_64::instructions::port::{Port, PortWriteOnly};
 
-use crate::disable_cursor;
 
 use super::{KernelDebug, KernelFormatter, ScreenBuffer};
 
@@ -260,4 +259,11 @@ pub enum VgaColor {
     Pink = 13,
     Yellow = 14,
     White = 15,
+}
+
+fn disable_cursor() {
+    unsafe {
+        PortWriteOnly::new(0x03D4_u16).write(0x0A_u8);
+        PortWriteOnly::new(0x03D5_u16).write(0x20_u8);
+    }
 }

@@ -11,25 +11,25 @@
 extern crate bitflags;
 extern crate alloc;
 
-use core::arch::asm;
+
 
 use base::display::{DefaultVgaWriter, VgaColorCombo};
-use fs::{LittleManApp, OsHandle, GraphicsHandleType};
+use forth::ForthCon;
+use fs::{ OsHandle, GraphicsHandleType};
 use builtins::{Help, ChangeDir, ClearScreen, Dir};
 use base::*;
 
-use crate::forth::{ForthApp, ForthCon};
-use fs::Path;
+
 use crate::input::KEYBOARD_QUEUE;
 use crate::interrupt::pitinit;
-use crate::interrupt::setup::global_os_time;
+
 use crate::memory::frame::{FrameRangeInclusive, MemoryFrame};
 use crate::memory::paging::EntryFlags;
 use crate::memory::populate_global_allocator;
 
-use alloc::boxed::Box;
+
 use alloc::format;
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use alloc::vec::Vec;
 use memory::frame::FrameAllocator;
 use memory::paging::{InactivePageTable, MemoryPage, PageTableMaster, TemporaryPage};
@@ -134,7 +134,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                     }
                     '\n' => {
                         formatter.next_line();
-                        let mut segments: Vec<_> = string.split(' ').collect();
+                        let segments: Vec<_> = string.split(' ').collect();
                         if segments.len() > 0 {
                             let path = fs::active_directory().append(&segments[0]);
 
@@ -176,7 +176,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
 unsafe fn tmp_write(s: String) {
     for char in s.chars() {
-        while ((x86_64::instructions::port::PortReadOnly::<u8>::new(0x3F8 + 5).read() & 0x20) == 0)
+        while (x86_64::instructions::port::PortReadOnly::<u8>::new(0x3F8 + 5).read() & 0x20) == 0
         {
         }
         PortWriteOnly::new(0x3f8).write(char as u8);

@@ -1,9 +1,8 @@
 use crate::{
-    display::{macros::debug, KernelDebug, KernelFormatter, STATIC_VGA_WRITER},
-    interrupt::setup::{self, pics},
+    interrupt::setup::{pics},
 };
-use alloc::format;
-use alloc::{fmt::format, string::ToString};
+
+
 use heapless::spsc::Queue;
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
 use x86_64::structures::idt::InterruptStackFrame;

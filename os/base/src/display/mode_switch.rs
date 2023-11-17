@@ -2,14 +2,14 @@ use x86_64::instructions::port::Port;
 
 const VGA_AC_INDEX: Port<u8> = Port::<u8>::new(0x3C0);
 const VGA_AC_WRITE: Port<u8> = Port::<u8>::new(0x3C0);
-const VGA_AC_READ: Port<u8> = Port::<u8>::new(0x3C1);
+const _VGA_AC_READ: Port<u8> = Port::<u8>::new(0x3C1);
 const VGA_MISC_WRITE: Port<u8> = Port::<u8>::new(0x3C2);
 const VGA_SEQ_INDEX: Port<u8> = Port::<u8>::new(0x3C4);
 const VGA_SEQ_DATA: Port<u8> = Port::<u8>::new(0x3C5);
-const VGA_DAC_READ_INDEX: Port<u8> = Port::<u8>::new(0x3C7);
-const VGA_DAC_WRITE_INDEX: Port<u8> = Port::<u8>::new(0x3C8);
-const VGA_DAC_DATA: Port<u8> = Port::<u8>::new(0x3C9);
-const VGA_MISC_READ: Port<u8> = Port::<u8>::new(0x3CC);
+const _VGA_DAC_READ_INDEX: Port<u8> = Port::<u8>::new(0x3C7);
+const _VGA_DAC_WRITE_INDEX: Port<u8> = Port::<u8>::new(0x3C8);
+const _VGA_DAC_DATA: Port<u8> = Port::<u8>::new(0x3C9);
+const _VGA_MISC_READ: Port<u8> = Port::<u8>::new(0x3CC);
 const VGA_GC_INDEX: Port<u8> = Port::<u8>::new(0x3CE);
 const VGA_GC_DATA: Port<u8> = Port::<u8>::new(0x3CF);
 const VGA_CRTC_INDEX: Port<u8> = Port::<u8>::new(0x3D4); /* 0x3B4 */
