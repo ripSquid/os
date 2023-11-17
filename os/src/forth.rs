@@ -1,7 +1,7 @@
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 use alloc::vec;
 
-use crate::display::STATIC_VGA_WRITER;
+use crate::display::{STATIC_VGA_WRITER, BitmapVgaWriter, VgaPalette, VgaPaletteColor};
 
 
 type ForthFunction = &'static dyn Fn(&mut ForthMachine);
@@ -39,6 +39,20 @@ fn print(sm: &mut ForthMachine) {
     }
 }
 
+fn wp(sm: &mut ForthMachine) {
+    if sm.stack.len() >= 4 {
+        let tmp = (sm.stack.pop().unwrap(), sm.stack.pop().unwrap(), sm.stack.pop().unwrap(), sm.stack.pop().unwrap());
+        if let (StackItem::Int(b), StackItem::Int(g), StackItem::Int(r), StackItem::Int(x)) = tmp {
+            let mut g_formatter =  unsafe { BitmapVgaWriter::new_unsafe() };
+                                        let palette = VgaPalette::from_array_offset(
+                                            [VgaPaletteColor::from_rgb(r.try_into().unwrap(), g.try_into().unwrap(), b.try_into().unwrap())],
+                                            x.try_into().unwrap(),
+                                        );
+                                        g_formatter.set_palette(palette);
+        }
+    }
+}
+
 impl ForthMachine {
     pub fn print(&self, s: StackItem) {
         match s {
@@ -57,8 +71,9 @@ impl ForthMachine {
             implemented_words: BTreeMap::new(),
             stack: vec![],
         };
-        tmp.implemented_words.insert("+".into(), &add);
-        tmp.implemented_words.insert(",".into(), &print);
+        tmp.implemented_words.insert("+", &add);
+        tmp.implemented_words.insert(",", &print);
+        tmp.implemented_words.insert("WP", &wp);
         tmp
     }
 
