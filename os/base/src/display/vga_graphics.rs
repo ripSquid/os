@@ -145,6 +145,9 @@ pub struct BitmapVgaWriter {
 }
 
 impl BitmapVgaWriter {
+    pub fn read_palette(&mut self) -> VgaPalette<256> {
+        crate::read_vga_palette()
+    }
     pub fn set_position(&mut self, position: (usize, usize)) -> &mut Self {
         self.position = position;
         self

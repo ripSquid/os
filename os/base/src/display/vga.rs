@@ -83,6 +83,9 @@ impl DefaultVgaWriter {
         }
         self
     }
+    pub fn read_palette(&mut self) -> VgaPalette<256> {
+        crate::read_vga_palette()
+    }
     pub fn enable_cursor(&mut self) -> &mut Self {
         unsafe {
             PortWriteOnly::new(0x03D4_u16).write(0x0A_u8);

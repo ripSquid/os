@@ -1,11 +1,12 @@
 use alloc::boxed::Box;
-use fs::{apps::{LittleManApp, InstallableApp}, StartError, OsHandle};
+use base::{forth::{Stack, StackItem}, LittleManApp, StartError, OsHandle};
+use fs::{AppConstructor, DefaultInstall, Path};
 
-use super::{Path, AppConstructor};
 
 
 
 pub struct HelpApp(Language);
+#[derive(Default)]
 pub struct Help;
 enum Language {
     Swedish,
@@ -16,18 +17,21 @@ impl AppConstructor for Help {
         Box::new(HelpApp(Language::Swedish))
     }
 }
-impl InstallableApp for Help {
-    fn install() -> (Path, Box<dyn AppConstructor>) {
-        (Path::from("help"), Box::new(Self))
+impl DefaultInstall for Help {
+    fn path() -> Path {
+        Path::from("help.run")
     }
 }
 impl LittleManApp for HelpApp {
-    fn start(&mut self, args: &[&str]) -> Result<(), StartError> {
-        match args.get(0) {
-            Some(&"eng") => self.0 = Language::English,
-            Some(&"swe") => self.0 = Language::Swedish,
-            Some(_) |
-            None => (),
+    fn start(&mut self, args: &mut Stack) -> Result<(), StartError> {
+        match args.pop() {
+            Some(StackItem::String(string)) => {match string.as_str() {
+                "eng" => self.0 = Language::English,
+                "swe" => self.0 = Language::Swedish,
+                _ => {args.push(string)}
+            }},
+            Some(item) => {args.push(item);}
+            _ => (),
         }
         Ok(())
     }

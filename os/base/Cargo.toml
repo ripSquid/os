@@ -9,3 +9,8 @@ edition = "2021"
 
 # Access to various x86 instructions that would otherwise need assembly code
 x86_64 = "0.14.10"
+
+# Access to the pic8259 controller, responsible for handling interrupts.
+pic8259 = "0.10.4"
+
+heapless = "0.8.0"

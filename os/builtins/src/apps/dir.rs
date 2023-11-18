@@ -1,21 +1,21 @@
 use alloc::{boxed::Box, format, vec::Vec};
-
-use fs::{AppConstructor, Path, OsHandle, FileMetadata};
-
-use super::{LittleManApp, InstallableApp};
+use base::{LittleManApp, OsHandle};
+use fs::{DefaultInstall, Path, AppConstructor, FileMetadata};
 
 
 
+
+#[derive(Default)]
 pub struct Dir;
 pub struct DirApp;
 
-impl InstallableApp for Dir {
-    fn install() -> (Path, Box<dyn AppConstructor>) {
-       (Path::from("dir"), Box::new(Dir))
+impl DefaultInstall for Dir {
+    fn path() -> Path {
+        Path::from("dir.run")
     }
 }
 impl AppConstructor for Dir {
-    fn instantiate(&self) -> Box<dyn super::LittleManApp> {
+    fn instantiate(&self) -> Box<dyn LittleManApp> {
         Box::new(DirApp)
     }
 }

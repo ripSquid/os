@@ -5,11 +5,11 @@ use super::table::IDTable;
 
 use crate::display::STATIC_VGA_WRITER;
 use crate::display::macros::debug;
-use crate::input::{keyboard_handler, keyboard_initialize, setup_keymap};
+use crate::input::{keyboard_handler, keyboard_initialize};
 use crate::interrupt::gatedescriptor::SegmentSelector;
 use alloc::format;
-use pic8259::ChainedPics;
-
+use base::input::setup_keymap;
+use base::pic::pics;
 
 use x86_64::structures::idt::InterruptStackFrame;
 use x86_64::structures::DescriptorTablePointer;
@@ -29,7 +29,7 @@ static mut idtdescriptor: DescriptorTablePointer = DescriptorTablePointer {
     base: VirtAddr::zero(),
 };
 
-pub static mut pics: ChainedPics = unsafe { ChainedPics::new(0x20, 0x28) };
+
 
 pub unsafe fn setup_interrupts() {
     setup_keymap();

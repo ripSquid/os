@@ -13,14 +13,16 @@ extern crate alloc;
 
 
 
+use alloc::boxed::Box;
 use base::display::{DefaultVgaWriter, VgaColorCombo, VgaPalette};
-use forth::ForthCon;
-use fs::{ OsHandle, GraphicsHandleType, Path};
+use base::forth::{ForthMachine, StackItem};
+use base::input::KEYBOARD_QUEUE;
+use forth::Stack;
+
 use base::*;
+use fs::Path;
 use interrupt::setup::global_os_time;
 
-
-use crate::input::KEYBOARD_QUEUE;
 use crate::interrupt::pitinit;
 
 use crate::memory::populate_global_allocator;
@@ -39,7 +41,6 @@ pub mod cpuid;
 mod easter_eggs;
 mod panic;
 use crate::multiboot_info::MultibootInfoHeader;
-mod forth;
 
 mod input;
 mod interrupt;
@@ -67,14 +68,22 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     unsafe { interrupt::setup::setup_interrupts() }
     let cpu_info = cpuid::ProcessorIdentification::gather();
 
+    fs::start();
+    
+    builtins::install_all();
+
+    let mut forth_machine = ForthMachine::default();
+
     unsafe {
         pitinit(2400);
     }
     // Start forth application
-    easter_eggs::show_lars();
+    let skip = easter_eggs::show_lars();
 
     let author_text: String = authors.replace(":", " and ");
     let mut formatter = unsafe { DefaultVgaWriter::new_unsafe() };
+
+    
 
     formatter
         .clear_screen(display::VgaColor::Black)
@@ -98,16 +107,10 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .write_str("Skriv \"help\" för en introduktion till OperativSystemet")
         .next_line();
 
-    fs::start();
+    forth_machine.insert_word(&run, "run");
     
-    fs::create_dir(Path::from("bin"));
-    fs::set_active_directory(Path::from("bin"));
-    fs::install_app::<ForthCon>();
-    fs::set_active_directory(Path::from(""));
-
-    builtins::install_all();
     
-    {
+    if !skip {
         let timestamp = unsafe{ global_os_time};
         let duration = 500;
 
@@ -121,16 +124,18 @@ pub extern "C" fn rust_start(info: u64) -> ! {
             }
             unsafe { DefaultVgaWriter::new_unsafe().set_position((4,4)) };
         }
-        formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE); 
     }
+    formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE); 
+    
+
+
     unsafe {
-        let mut string;
+        let mut string = String::new();
         formatter.enable_cursor().set_position((0,8));
         loop {
-            string = String::new();
             formatter.write_str(fs::active_directory().as_str()).write_str(" > ");
             loop {
-                let c = KEYBOARD_QUEUE.fetch_blocking();
+                let c = KEYBOARD_QUEUE.getch_blocking();
                 match c {
                     '\x08' => {
                         formatter
@@ -140,42 +145,11 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                     }
                     '\n' => {
                         formatter.next_line();
-                        let segments: Vec<_> = string.split(' ').collect();
-                        if segments.len() > 0 {
-                            let path = fs::active_directory().append(&segments[0]);
-
-                            let app = {
-                                let file = match fs::get_file(&path) {
-                                    Ok(app) => Ok(app),
-                                    Err(_) => {
-                                        let path = Path::from("bin").append(&segments[0]);
-                                        fs::get_file(path)
-                                    },
-                                };
-                                file.map(|file| file.launch_app()).flatten()
-                            };
-                            let mut app = match app {
-                                Ok(app) => app,
-                                Err(err) => {
-                                    formatter.write_str(&format!("ERROR: {err:?}")).next_line();
-                                    break; 
-                                },
-                            };
-                            match app.start(&segments[1..]) {
-                                Ok(_) => {
-                                    let graphics = GraphicsHandleType::TextMode(&mut formatter as *mut _);
-                                    let mut handle = OsHandle::new(graphics);
-                                    while handle.running() {
-                                        app.update(&mut handle);
-                                    }
-                                    app.shutdown();
-                                },
-                                Err(error) => {
-                                    formatter.write_str(&format!("APP START ERROR: {error:?}"));
-                                },
-                            }
-                            formatter.next_line();
-                        }       
+                        let mut new_string = String::new();
+                        core::mem::swap(&mut new_string, &mut string);
+                        forth_machine.run(new_string, &mut formatter);
+                        formatter.next_line();
+                              
                         break;
                     }
                     _ => {
@@ -208,4 +182,45 @@ fn disable_cursor() {
 #[no_mangle]
 pub extern "C" fn keyboard_handler() {
     panic!();
+}
+
+fn run(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter) {
+    let path = match sm.stack_mut().pop() {
+        Some(StackItem::String(str)) => Ok(Path::from(str)),
+        Some(other) => {sm.stack_mut().push(other); Err("argument was not a path")}
+        None => Err("No argument passed"),
+    };
+    match path {
+        Ok(path) => {
+           let Some(app) = get_app(path, formatter) else {formatter.next_line(); return};
+           run_inner(app, formatter, sm);
+        },
+        Err(msg) => {formatter.write_str("RUN: ").write_str(msg);},
+    }
+    formatter.next_line();
+}
+fn get_app(path: Path, formatter: &mut DefaultVgaWriter) -> Option<Box<dyn LittleManApp>> {
+    let path = path.add_extension("run");
+    let file = fs::get_file_relative(&path).or(fs::get_file(Path::from("bin").append(&path)));
+    match file {
+        Ok(file_handle) => {
+            file_handle.launch_app().map_err(|e| {formatter.write_str(&format!("FILESYSTEM: {e:?}, wrong file type")); ()}).ok()
+        },
+        Err(error) => {formatter.write_str(&format!("FILESYSTEM: {error:?}")); None},
+    }
+}
+fn run_inner(mut app: Box<dyn LittleManApp>, formatter: &mut DefaultVgaWriter, fm: &mut ForthMachine) {
+    match app.start(fm.stack_mut()) {
+        Ok(_) => {
+            let graphics = GraphicsHandleType::TextMode(formatter as *mut _);
+            let mut handle = unsafe {OsHandle::new_complicated(graphics, fm)};
+            while handle.running() {
+                app.update(&mut handle);
+            }
+            app.shutdown();
+        },
+        Err(error) => {
+            formatter.write_str(&format!("APP START ERROR: {error:?}"));
+        },
+    }
 }

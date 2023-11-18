@@ -2,7 +2,7 @@
 extern crate alloc;
 mod apps;
 pub use apps::*;
-use fs::FileSystemError;
+use fs::{FileSystemError, Path};
 
 pub fn install_all() -> Result<(), FileSystemError> {
     let active_path = fs::active_directory();

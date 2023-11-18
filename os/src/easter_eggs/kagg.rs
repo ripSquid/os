@@ -1,14 +1,16 @@
+use base::input::KEYBOARD_QUEUE;
+
 use crate::{
     disable_cursor,
     display::{
         restore_text_mode_font, switch_graphics_mode, BitmapVgaWriter, VgaModeSwitch, VgaPalette,
         VgaPaletteColor, STATIC_VGA_WRITER,
     },
-    input::KEYBOARD_QUEUE,
     interrupt::setup::global_os_time,
 };
 
-pub fn show_lars() {
+pub fn show_lars() -> bool {
+    let mut skipped = false;
     let timestamp = unsafe { global_os_time };
     let mut g_formatter = unsafe {
         switch_graphics_mode(VgaModeSwitch::VGA_320X200_BITMAP_N);
@@ -34,7 +36,8 @@ pub fn show_lars() {
     let total_range = 0..duration;
     let visible_range = 1000..2000;
     while unsafe { global_os_time } < timestamp + duration {
-        if let Some('w') = unsafe { KEYBOARD_QUEUE.try_fetch() } {
+        if let Some('w') = unsafe { KEYBOARD_QUEUE.try_getch() } {
+            skipped = true;
             break;
         }
         let time = unsafe { global_os_time / 10 } as u8;
@@ -69,4 +72,5 @@ pub fn show_lars() {
         restore_text_mode_font();
         STATIC_VGA_WRITER.clear_screen(crate::display::VgaColor::Black);
     }
+    skipped
 }
