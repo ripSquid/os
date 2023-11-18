@@ -70,7 +70,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
     fs::start();
     
-    builtins::install_all();
+    builtins::install_all().unwrap();
 
     let mut forth_machine = ForthMachine::default();
 
@@ -184,7 +184,7 @@ pub extern "C" fn keyboard_handler() {
     panic!();
 }
 
-fn run(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter) {
+fn run(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter, _: &mut usize) {
     let path = match sm.stack_mut().pop() {
         Some(StackItem::String(str)) => Ok(Path::from(str)),
         Some(other) => {sm.stack_mut().push(other); Err("argument was not a path")}

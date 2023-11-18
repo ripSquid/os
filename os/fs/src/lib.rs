@@ -3,7 +3,8 @@
 
 extern crate alloc;
 pub mod apps;
-pub use apps::{LittleManApp, DefaultInstall, InstallableApp, OsHandle, StartError, GraphicsHandleType};
+pub use apps::{DefaultInstall, InstallableApp};
+use base::LittleManApp;
 use core::error::Error;
 
 use alloc::{boxed::Box, string::{String, ToString}, vec::Vec};
@@ -266,6 +267,11 @@ impl Path {
             finale.push_str(part);
         }
         Self(finale)
+    }
+    pub fn add_extension(mut self, extension: &str) -> Self {
+        self.0.push('.');
+        self.0.push_str(extension);
+        self
     }
 }
 pub trait AppendsPath {

@@ -4,7 +4,7 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, string::String, format, vec::Vec};
 use crate::display::{DefaultVgaWriter, VgaPalette, VgaPaletteColor, BitmapVgaWriter};
 
-pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine, &mut DefaultVgaWriter) + Sync + Send + 'static);
+pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine, &mut DefaultVgaWriter, &mut usize) + Sync + Send + 'static);
 
 pub struct Stack(Vec<StackItem>);
 
@@ -45,6 +45,20 @@ impl Stack {
             self.0.push(item.into())
         }
     }
+
+    pub fn pop_ints<const N: usize>(&mut self) -> Option<[isize; N]> {
+        if let Some(items) = self.pop_series::<4>() {
+            if items.iter().find(|x| !matches!(**x, StackItem::Int(_))).is_some() {
+                self.push_series(items);
+                None
+            } else {
+                let mut processed = items.iter().map(|x| if let StackItem::Int(y) = *x {return y} else {panic!("What!? StackItem not int")});
+                Some(core::array::from_fn(|_| processed.next().unwrap()))
+            }
+        } else {
+            None
+        }
+    }
 }
 impl Into<StackItem> for String {
     fn into(self) -> StackItem {
@@ -63,6 +77,7 @@ impl Into<StackItem> for i64 {
 }
 
 
+#[derive(PartialEq)]
 pub enum StackItem {
     String(String),
     Int(isize),
@@ -74,68 +89,42 @@ pub struct ForthMachine {
     stack: Stack,
 }
 
-fn add(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter) {
-    if sm.stack.len() < 2 {
-        return;
-    }
-    let x = sm.stack.pop().unwrap();
-    let y = sm.stack.pop().unwrap();
-    if let (StackItem::Int(x), StackItem::Int(y)) = (x, y) {
+fn add(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, _: &mut usize) {
+    if let Some([x, y]) = sm.stack.pop_ints() {
         sm.stack.push(StackItem::Int(x+y));
     } 
 }
 
 
-fn sub(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter) {
-    if sm.stack.len() < 2 {
-        return;
-    }
-    let x = sm.stack.pop().unwrap();
-    let y = sm.stack.pop().unwrap();
-    if let (StackItem::Int(y), StackItem::Int(x)) = (x, y) {
+fn sub(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, _: &mut usize) {
+    if let Some([y, x]) = sm.stack.pop_ints() {
         sm.stack.push(StackItem::Int(x-y));
     }
 }
 
-fn div(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter) {
-    if sm.stack.len() < 2 {
-        return;
-    }
-    let x = sm.stack.pop().unwrap();
-    let y = sm.stack.pop().unwrap();
-    if let (StackItem::Int(y), StackItem::Int(x)) = (x, y) {
+fn div(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter, _: &mut usize) {
+    if let Some([y, x]) = sm.stack.pop_ints() {
         if y == 0 {
             formatter.write_str("Tried dividing by zero");
             return;
         }
-        sm.stack.push(StackItem::Int(x/y));
+        sm.stack_mut().push(x/y);
     }
 }
 
-fn mul(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter) {
-    if sm.stack.len() < 2 {
-        return;
-    }
-    let x = sm.stack.pop().unwrap();
-    let y = sm.stack.pop().unwrap();
-    if let (StackItem::Int(y), StackItem::Int(x)) = (x, y) {
+fn mul(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, _: &mut usize) {
+    if let Some([x, y]) = sm.stack.pop_ints() {
         sm.stack.push(StackItem::Int(x*y));
     }
 }
 
-
-
-fn print(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter) {
-    if sm.stack.len() < 1 {
-        return;
-    }
-
+fn print(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter, _: &mut usize) {
     if let Some(s) = sm.stack.pop() {
         sm.print(s, formatter);
     }
 }
 
-fn wp(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter) {
+fn wp(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, _: &mut usize) {
     if sm.stack.len() >= 4 {
         let tmp = (sm.stack.pop().unwrap(), sm.stack.pop().unwrap(), sm.stack.pop().unwrap(), sm.stack.pop().unwrap());
         if let (StackItem::Int(b), StackItem::Int(g), StackItem::Int(r), StackItem::Int(x)) = tmp {
@@ -146,6 +135,12 @@ fn wp(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter) {
             );
             g_formatter.set_palette(palette);
         }
+    }
+}
+
+fn hlt(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, instruction_counter: &mut usize) {
+    if let Some(x) = instruction_counter.checked_sub(1) {
+        *instruction_counter = x;
     }
 }
 
@@ -162,7 +157,7 @@ impl Default for ForthMachine {
         tmp.implemented_words.insert("*", &mul);
         tmp.implemented_words.insert(",", &print);
         tmp.implemented_words.insert("WP", &wp);
-
+        tmp.implemented_words.insert("HALT", &hlt);
         tmp
     }
 }
@@ -229,7 +224,7 @@ impl ForthMachine {
                 // Run it
 
                 let f = *self.implemented_words.get(str).unwrap();
-                f(self, formatter);
+                f(self, formatter, &mut new_i);
             } else if let Ok(x) = isize::from_str_radix(str, 10) {
                 self.stack.push(StackItem::Int(x));
             } else if kind == WordType::String { 
