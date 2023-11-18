@@ -34,7 +34,6 @@ impl<'a> KernelDebug<'a> for MemoryFrame {
     }
 }
 
-
 impl Iterator for FrameIter {
     type Item = MemoryFrame;
 

@@ -1,5 +1,5 @@
-use alloc::{string::String, boxed::Box, sync::Arc};
-use base::{forth::Stack, LittleManApp, StartError, OsHandle};
+use alloc::{boxed::Box, string::String, sync::Arc};
+use base::{forth::Stack, LittleManApp, OsHandle, StartError};
 use fs::{AppConstructor, Path};
 use hashbrown::HashMap;
 use spin::RwLock;

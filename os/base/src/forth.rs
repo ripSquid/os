@@ -1,10 +1,10 @@
-
 extern crate alloc;
 
-use alloc::{collections::BTreeMap, string::String, format, vec::Vec};
-use crate::display::{DefaultVgaWriter, VgaPalette, VgaPaletteColor, BitmapVgaWriter};
+use crate::display::{BitmapVgaWriter, DefaultVgaWriter, VgaPalette, VgaPaletteColor};
+use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
-pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine, &mut DefaultVgaWriter, &mut usize) + Sync + Send + 'static);
+pub type ForthFunction =
+    &'static (dyn Fn(&mut ForthMachine, &mut DefaultVgaWriter, &mut usize) + Sync + Send + 'static);
 
 pub struct Stack(Vec<StackItem>);
 
@@ -12,28 +12,28 @@ impl Stack {
     pub fn new() -> Self {
         Self(Vec::new())
     }
-    
+
     /// a count of how many items are on the stack
     pub fn len(&self) -> usize {
         self.0.len()
     }
-    
+
     /// pop an item onto the stack
     pub fn pop(&mut self) -> Option<StackItem> {
         self.0.pop()
     }
-    
+
     /// pop a series of items off the stack
-    /// 
+    ///
     /// This method returns `None` when (len < N)
     pub fn pop_series<const N: usize>(&mut self) -> Option<[StackItem; N]> {
         if self.0.len() >= N {
-            Some(core::array::from_fn(|_|self.pop().unwrap()))
+            Some(core::array::from_fn(|_| self.pop().unwrap()))
         } else {
             None
         }
     }
-    
+
     /// Push a value onto the stack.
     pub fn push<T: Into<StackItem>>(&mut self, item: T) {
         self.0.push(item.into())
@@ -48,11 +48,21 @@ impl Stack {
 
     pub fn pop_ints<const N: usize>(&mut self) -> Option<[isize; N]> {
         if let Some(items) = self.pop_series::<4>() {
-            if items.iter().find(|x| !matches!(**x, StackItem::Int(_))).is_some() {
+            if items
+                .iter()
+                .find(|x| !matches!(**x, StackItem::Int(_)))
+                .is_some()
+            {
                 self.push_series(items);
                 None
             } else {
-                let mut processed = items.iter().map(|x| if let StackItem::Int(y) = *x {return y} else {panic!("What!? StackItem not int")});
+                let mut processed = items.iter().map(|x| {
+                    if let StackItem::Int(y) = *x {
+                        return y;
+                    } else {
+                        panic!("What!? StackItem not int")
+                    }
+                });
                 Some(core::array::from_fn(|_| processed.next().unwrap()))
             }
         } else {
@@ -76,7 +86,6 @@ impl Into<StackItem> for i64 {
     }
 }
 
-
 #[derive(PartialEq)]
 pub enum StackItem {
     String(String),
@@ -91,14 +100,13 @@ pub struct ForthMachine {
 
 fn add(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, _: &mut usize) {
     if let Some([x, y]) = sm.stack.pop_ints() {
-        sm.stack.push(StackItem::Int(x+y));
-    } 
+        sm.stack.push(StackItem::Int(x + y));
+    }
 }
-
 
 fn sub(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, _: &mut usize) {
     if let Some([y, x]) = sm.stack.pop_ints() {
-        sm.stack.push(StackItem::Int(x-y));
+        sm.stack.push(StackItem::Int(x - y));
     }
 }
 
@@ -108,13 +116,13 @@ fn div(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter, _: &mut usize) {
             formatter.write_str("Tried dividing by zero");
             return;
         }
-        sm.stack_mut().push(x/y);
+        sm.stack_mut().push(x / y);
     }
 }
 
 fn mul(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, _: &mut usize) {
     if let Some([x, y]) = sm.stack.pop_ints() {
-        sm.stack.push(StackItem::Int(x*y));
+        sm.stack.push(StackItem::Int(x * y));
     }
 }
 
@@ -126,11 +134,20 @@ fn print(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter, _: &mut usize)
 
 fn wp(sm: &mut ForthMachine, _formatter: &mut DefaultVgaWriter, _: &mut usize) {
     if sm.stack.len() >= 4 {
-        let tmp = (sm.stack.pop().unwrap(), sm.stack.pop().unwrap(), sm.stack.pop().unwrap(), sm.stack.pop().unwrap());
+        let tmp = (
+            sm.stack.pop().unwrap(),
+            sm.stack.pop().unwrap(),
+            sm.stack.pop().unwrap(),
+            sm.stack.pop().unwrap(),
+        );
         if let (StackItem::Int(b), StackItem::Int(g), StackItem::Int(r), StackItem::Int(x)) = tmp {
-            let mut g_formatter =  unsafe { BitmapVgaWriter::new_unsafe() };
+            let mut g_formatter = unsafe { BitmapVgaWriter::new_unsafe() };
             let palette = VgaPalette::from_array_offset(
-                [VgaPaletteColor::from_rgb(r.try_into().unwrap(), g.try_into().unwrap(), b.try_into().unwrap())],
+                [VgaPaletteColor::from_rgb(
+                    r.try_into().unwrap(),
+                    g.try_into().unwrap(),
+                    b.try_into().unwrap(),
+                )],
                 x.try_into().unwrap(),
             );
             g_formatter.set_palette(palette);
@@ -178,8 +195,6 @@ impl<'a> ForthWord<'a> {
     }
 }
 
-
-
 impl ForthMachine {
     pub fn insert_word(&mut self, op: ForthFunction, name: &'static str) {
         self.implemented_words.insert(name, op);
@@ -190,22 +205,27 @@ impl ForthMachine {
     pub fn print(&self, s: StackItem, formatter: &mut DefaultVgaWriter) {
         match s {
             StackItem::String(s) => {
-                formatter.write_str(&s);},
-            StackItem::Int(i) => 
-                {formatter.write_str(&format!("{}", i));},
+                formatter.write_str(&s);
+            }
+            StackItem::Int(i) => {
+                formatter.write_str(&format!("{}", i));
+            }
         }
     }
 
     pub fn run(&mut self, s: String, formatter: &mut DefaultVgaWriter) {
         let s = {
-            s.split('\"').enumerate().flat_map(|(i, e)| {
-                let (ty, split) = if i % 2 == 0 {
-                    (WordType::Word, e.split(' '))
-                } else {
-                    (WordType::String, e.split('\"') )
-                };
-                split.map(move |e| ForthWord::with_kind(e, ty))
-            }).collect::<Vec<_>>()
+            s.split('\"')
+                .enumerate()
+                .flat_map(|(i, e)| {
+                    let (ty, split) = if i % 2 == 0 {
+                        (WordType::Word, e.split(' '))
+                    } else {
+                        (WordType::String, e.split('\"'))
+                    };
+                    split.map(move |e| ForthWord::with_kind(e, ty))
+                })
+                .collect::<Vec<_>>()
         };
         let mut i = 0;
         let mut new_i = 0;
@@ -219,7 +239,7 @@ impl ForthMachine {
             if !(str.len() > 0) {
                 continue;
             }
-            
+
             if self.implemented_words.contains_key(str) {
                 // Run it
 
@@ -227,16 +247,15 @@ impl ForthMachine {
                 f(self, formatter, &mut new_i);
             } else if let Ok(x) = isize::from_str_radix(str, 10) {
                 self.stack.push(StackItem::Int(x));
-            } else if kind == WordType::String { 
+            } else if kind == WordType::String {
                 self.stack.push(StackItem::String(String::from(str)));
             }
         }
     }
 }
 
-
 //kolla om en &str har fnuttar runt sig
 fn is_quotated_str(word: &str) -> bool {
     let mut chars = word.chars();
-    chars.nth(0) == Some('\"') && chars.nth(word.len()-2) == Some('\"')
+    chars.nth(0) == Some('\"') && chars.nth(word.len() - 2) == Some('\"')
 }

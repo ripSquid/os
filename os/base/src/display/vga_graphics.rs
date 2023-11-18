@@ -1,4 +1,3 @@
-
 use super::ScreenBuffer;
 
 const VGA_256COLORX_BUFFER_WIDTH: usize = 320;
@@ -55,7 +54,6 @@ impl VgaPalette<256> {
     pub fn from_array(array: [VgaPaletteColor; 256]) -> Self {
         Self(array, 0)
     }
-
 }
 impl<const N: usize> VgaPalette<N> {
     pub fn fade_factor(&self, factor: u8) -> Self {
@@ -153,7 +151,7 @@ impl BitmapVgaWriter {
         self
     }
     pub fn set_palette<const N: usize>(&mut self, palette: VgaPalette<N>) {
-       crate::switch_vga_palette(palette)
+        crate::switch_vga_palette(palette)
     }
 
     pub const unsafe fn new_unsafe() -> Self {

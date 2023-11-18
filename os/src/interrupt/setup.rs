@@ -3,8 +3,8 @@ use core::arch::asm;
 use super::gatedescriptor::TypeAttribute;
 use super::table::IDTable;
 
-use crate::display::STATIC_VGA_WRITER;
 use crate::display::macros::debug;
+use crate::display::STATIC_VGA_WRITER;
 use crate::input::{keyboard_handler, keyboard_initialize};
 use crate::interrupt::gatedescriptor::SegmentSelector;
 use alloc::format;
@@ -28,8 +28,6 @@ static mut idtdescriptor: DescriptorTablePointer = DescriptorTablePointer {
     limit: 0,
     base: VirtAddr::zero(),
 };
-
-
 
 pub unsafe fn setup_interrupts() {
     setup_keymap();
@@ -67,11 +65,7 @@ pub unsafe fn setup_interrupts() {
             STATIC_VGA_WRITER.write_str(&format!("{:?}", e));
             loop {}
         }
-
-        
     };
-
-
 
     // Enable interrupts
     asm!("sti");

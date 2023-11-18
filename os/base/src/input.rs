@@ -1,4 +1,3 @@
-
 use heapless::spsc::Queue;
 
 pub const SHIFT_MODIFIER: usize = 0b0100_0000_0000;
@@ -163,4 +162,3 @@ pub unsafe fn setup_keymap() {
     // 0x1D 0x9D CTRL
     // 0x38 0xB8 ALT
 }
-

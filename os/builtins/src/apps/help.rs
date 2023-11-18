@@ -1,9 +1,9 @@
 use alloc::boxed::Box;
-use base::{forth::{Stack, StackItem}, LittleManApp, StartError, OsHandle};
+use base::{
+    forth::{Stack, StackItem},
+    LittleManApp, OsHandle, StartError,
+};
 use fs::{AppConstructor, DefaultInstall, Path};
-
-
-
 
 pub struct HelpApp(Language);
 #[derive(Default)]
@@ -25,30 +25,34 @@ impl DefaultInstall for Help {
 impl LittleManApp for HelpApp {
     fn start(&mut self, args: &mut Stack) -> Result<(), StartError> {
         match args.pop() {
-            Some(StackItem::String(string)) => {match string.as_str() {
+            Some(StackItem::String(string)) => match string.as_str() {
                 "eng" => self.0 = Language::English,
                 "swe" => self.0 = Language::Swedish,
-                _ => {args.push(string)}
-            }},
-            Some(item) => {args.push(item);}
+                _ => args.push(string),
+            },
+            Some(item) => {
+                args.push(item);
+            }
             _ => (),
         }
         Ok(())
     }
     fn update(&mut self, handle: &mut OsHandle) {
         let text = match &self.0 {
-            Language::Swedish => 
-            "Välkommen till ett gymnasiearbete gjort av två elever på Lars Kagg Skolan.
+            Language::Swedish => {
+                "Välkommen till ett gymnasiearbete gjort av två elever på Lars Kagg Skolan.
             Detta operativsystem kommer med olika demon 
             och verktyg som visar vad det är kapabelt av.
             För att lista alla program och filer, skriv 'dir' 
             
-            For english help, write 'help eng'",
-            Language::English => 
-            "Welcome to a Thesis work created by two students at the school of Lars Kagg.
+            For english help, write 'help eng'"
+            }
+            Language::English => {
+                "Welcome to a Thesis work created by two students at the school of Lars Kagg.
             This operating system comes with demos and 
             tools which displays its full capabilities.
-            To list all programs and files, write 'dir'",
+            To list all programs and files, write 'dir'"
+            }
         };
         if let Ok(formatter) = handle.text_mode_formatter() {
             formatter.next_line().write_str(text);

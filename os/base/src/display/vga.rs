@@ -2,7 +2,6 @@ use core::ops::{Deref, DerefMut};
 
 use x86_64::instructions::port::{Port, PortWriteOnly};
 
-
 use super::{KernelDebug, KernelFormatter, ScreenBuffer, VgaPalette};
 
 const DEFAULT_VGA_BUFFER_WIDTH: usize = 80;
@@ -29,7 +28,6 @@ impl DerefMut for StaticVgaWriter {
     }
 }
 
-
 pub struct UniversalVgaFormatter {
     default: DefaultVgaWriter,
 }
@@ -51,7 +49,6 @@ impl DerefMut for UniversalVgaFormatter {
         &mut self.default
     }
 }
-
 
 pub type DefaultVgaBuffer =
     ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
@@ -291,4 +288,3 @@ pub enum VgaColor {
     Yellow = 14,
     White = 15,
 }
-

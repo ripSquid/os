@@ -11,8 +11,6 @@
 extern crate bitflags;
 extern crate alloc;
 
-
-
 use alloc::boxed::Box;
 use base::display::{DefaultVgaWriter, VgaColorCombo, VgaPalette};
 use base::forth::{ForthMachine, StackItem};
@@ -27,14 +25,12 @@ use crate::interrupt::pitinit;
 
 use crate::memory::populate_global_allocator;
 
-
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
 
 use memory::paging::PageTableMaster;
 use x86_64::instructions::port::PortWriteOnly;
-
 
 pub mod cpuid;
 
@@ -69,7 +65,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     let cpu_info = cpuid::ProcessorIdentification::gather();
 
     fs::start();
-    
+
     builtins::install_all().unwrap();
 
     let mut forth_machine = ForthMachine::default();
@@ -82,8 +78,6 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
     let author_text: String = authors.replace(":", " and ");
     let mut formatter = unsafe { DefaultVgaWriter::new_unsafe() };
-
-    
 
     formatter
         .clear_screen(display::VgaColor::Black)
@@ -108,39 +102,39 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .next_line();
 
     forth_machine.insert_word(&run, "run");
-    
-    
+
     if !skip {
-        let timestamp = unsafe{ global_os_time};
+        let timestamp = unsafe { global_os_time };
         let duration = 500;
 
         let mut fade = 0;
-        while(unsafe {global_os_time} < timestamp+duration) {
-            let time = unsafe {global_os_time} - timestamp;
+        while (unsafe { global_os_time } < timestamp + duration) {
+            let time = unsafe { global_os_time } - timestamp;
             let old_fade = fade;
             fade = ((time * u8::MAX as u64) / duration) as u8;
             if fade != old_fade {
                 formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE.fade_factor(fade));
             }
-            unsafe { DefaultVgaWriter::new_unsafe().set_position((4,4)) };
+            unsafe { DefaultVgaWriter::new_unsafe().set_position((4, 4)) };
         }
     }
-    formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE); 
-    
-
+    formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE);
 
     unsafe {
         let mut string = String::new();
-        formatter.enable_cursor().set_position((0,8));
+        formatter.enable_cursor().set_position((0, 8));
         loop {
-            formatter.write_str(fs::active_directory().as_str()).write_str(" > ");
+            formatter
+                .write_str(fs::active_directory().as_str())
+                .write_str(" > ");
             loop {
                 let c = KEYBOARD_QUEUE.getch_blocking();
                 match c {
                     '\x08' => {
                         formatter
                             .back_up(string.len())
-                            .write_str(&" ".repeat(string.len())).back_up(string.len());
+                            .write_str(&" ".repeat(string.len()))
+                            .back_up(string.len());
                         string.pop();
                     }
                     '\n' => {
@@ -149,7 +143,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         core::mem::swap(&mut new_string, &mut string);
                         forth_machine.run(new_string, &mut formatter);
                         formatter.next_line();
-                              
+
                         break;
                     }
                     _ => {
@@ -165,9 +159,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
 unsafe fn tmp_write(s: String) {
     for char in s.chars() {
-        while (x86_64::instructions::port::PortReadOnly::<u8>::new(0x3F8 + 5).read() & 0x20) == 0
-        {
-        }
+        while (x86_64::instructions::port::PortReadOnly::<u8>::new(0x3F8 + 5).read() & 0x20) == 0 {}
         PortWriteOnly::new(0x3f8).write(char as u8);
     }
 }
@@ -187,15 +179,23 @@ pub extern "C" fn keyboard_handler() {
 fn run(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter, _: &mut usize) {
     let path = match sm.stack_mut().pop() {
         Some(StackItem::String(str)) => Ok(Path::from(str)),
-        Some(other) => {sm.stack_mut().push(other); Err("argument was not a path")}
+        Some(other) => {
+            sm.stack_mut().push(other);
+            Err("argument was not a path")
+        }
         None => Err("No argument passed"),
     };
     match path {
         Ok(path) => {
-           let Some(app) = get_app(path, formatter) else {formatter.next_line(); return};
-           run_inner(app, formatter, sm);
-        },
-        Err(msg) => {formatter.write_str("RUN: ").write_str(msg);},
+            let Some(app) = get_app(path, formatter) else {
+                formatter.next_line();
+                return;
+            };
+            run_inner(app, formatter, sm);
+        }
+        Err(msg) => {
+            formatter.write_str("RUN: ").write_str(msg);
+        }
     }
     formatter.next_line();
 }
@@ -203,24 +203,35 @@ fn get_app(path: Path, formatter: &mut DefaultVgaWriter) -> Option<Box<dyn Littl
     let path = path.add_extension("run");
     let file = fs::get_file_relative(&path).or(fs::get_file(Path::from("bin").append(&path)));
     match file {
-        Ok(file_handle) => {
-            file_handle.launch_app().map_err(|e| {formatter.write_str(&format!("FILESYSTEM: {e:?}, wrong file type")); ()}).ok()
-        },
-        Err(error) => {formatter.write_str(&format!("FILESYSTEM: {error:?}")); None},
+        Ok(file_handle) => file_handle
+            .launch_app()
+            .map_err(|e| {
+                formatter.write_str(&format!("FILESYSTEM: {e:?}, wrong file type"));
+                ()
+            })
+            .ok(),
+        Err(error) => {
+            formatter.write_str(&format!("FILESYSTEM: {error:?}"));
+            None
+        }
     }
 }
-fn run_inner(mut app: Box<dyn LittleManApp>, formatter: &mut DefaultVgaWriter, fm: &mut ForthMachine) {
+fn run_inner(
+    mut app: Box<dyn LittleManApp>,
+    formatter: &mut DefaultVgaWriter,
+    fm: &mut ForthMachine,
+) {
     match app.start(fm.stack_mut()) {
         Ok(_) => {
             let graphics = GraphicsHandleType::TextMode(formatter as *mut _);
-            let mut handle = unsafe {OsHandle::new_complicated(graphics, fm)};
+            let mut handle = unsafe { OsHandle::new_complicated(graphics, fm) };
             while handle.running() {
                 app.update(&mut handle);
             }
             app.shutdown();
-        },
+        }
         Err(error) => {
             formatter.write_str(&format!("APP START ERROR: {error:?}"));
-        },
+        }
     }
 }
