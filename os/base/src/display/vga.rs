@@ -29,6 +29,16 @@ impl DerefMut for StaticVgaWriter {
     }
 }
 
+
+pub struct UniversalVgaFormatter {
+    default: DefaultVgaWriter,
+}
+impl UniversalVgaFormatter {
+    pub fn new(default: DefaultVgaWriter) -> Self {
+        Self { default }
+    }
+}
+
 pub type DefaultVgaBuffer =
     ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
 pub struct DefaultVgaWriter {
