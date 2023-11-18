@@ -39,6 +39,20 @@ impl UniversalVgaFormatter {
     }
 }
 
+impl Deref for UniversalVgaFormatter {
+    type Target = DefaultVgaWriter;
+
+    fn deref(&self) -> &Self::Target {
+        &self.default
+    }
+}
+impl DerefMut for UniversalVgaFormatter {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.default
+    }
+}
+
+
 pub type DefaultVgaBuffer =
     ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
 pub struct DefaultVgaWriter {
