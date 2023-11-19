@@ -12,7 +12,7 @@ extern crate bitflags;
 extern crate alloc;
 
 use alloc::boxed::Box;
-use base::display::{DefaultVgaWriter, VgaColorCombo, VgaPalette};
+use base::display::{DefaultVgaWriter, VgaColorCombo, VgaPalette, UniversalVgaFormatter};
 use base::forth::{ForthMachine, StackItem};
 use base::input::KEYBOARD_QUEUE;
 use forth::Stack;
@@ -101,7 +101,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .write_str("Skriv [ \"help\" run ] för en introduktion till OperativSystemet")
         .next_line();
 
-    forth_machine.insert_word(&run, "run");
+    //forth_machine.insert_word(&run, "run");
 
     if !skip {
         let timestamp = unsafe { global_os_time };
@@ -176,6 +176,7 @@ pub extern "C" fn keyboard_handler() {
     panic!();
 }
 
+/* 
 fn run(sm: &mut ForthMachine, formatter: &mut DefaultVgaWriter, _: &mut usize) {
     let path = match sm.stack_mut().pop() {
         Some(StackItem::String(str)) => Ok(Path::from(str)),
@@ -223,7 +224,7 @@ fn run_inner(
 ) {
     match app.start(fm.stack_mut()) {
         Ok(_) => {
-            let graphics = GraphicsHandleType::TextMode(formatter as *mut _);
+            let graphics = GraphicsHandle::from_universal(UniversalVgaFormatter::new(default));
             let mut handle = unsafe { OsHandle::new_complicated(graphics, fm) };
             while handle.running() {
                 app.update(&mut handle);
@@ -235,3 +236,4 @@ fn run_inner(
         }
     }
 }
+*/
