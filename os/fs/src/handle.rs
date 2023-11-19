@@ -8,7 +8,7 @@ use spin::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::{DirRead, Directory, File, FileSystemError, KaggFile, Path, FILE_SYSTEM};
 
 
-
+/// Definitions for the different FileHandle priviliges
 pub enum WritePriviliges {}
 pub enum ReadPriviliges {}
 pub trait FileHandlePriviliges {}
@@ -19,7 +19,9 @@ impl FileHandlePriviliges for ReadPriviliges {}
 
 /// A file handle to a file on the operating system 
 /// 
-/// this uses recursive locking in order to ensure safety in case of multiple handles coexisting
+/// This uses recursive locking in order to ensure safety in case of multiple handles coexisting
+/// 
+/// Depending on the handles priviliges you will be given access to appropriate methods
 pub struct LittleFileHandle<'a, T: FileHandlePriviliges> {
     _filesystem: RwLockReadGuard<'a, Option<RwLock<Directory>>>,
     locks: FileHandleLocks<'a>,
@@ -91,9 +93,9 @@ impl<'a> LittleFileHandle<'a, WritePriviliges> {
         let path = path.clean();
         let filesystem = FILE_SYSTEM.0.read();
         let locks = if path.components().count() == 1 {
-            unsafe { FileHandleLocks::write_root(filesystem.as_ref().ok_or(FileSystemError::CUPE)? as *const _)? }
+            unsafe { FileHandleLocks::write_root(filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _)? }
         } else {
-            unsafe { FileHandleLocks::write(filesystem.as_ref().ok_or(FileSystemError::CUPE)? as *const _, &path)? }
+            unsafe { FileHandleLocks::write(filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _, &path)? }
         };
         Ok(Self {
             _filesystem: filesystem,
@@ -118,7 +120,7 @@ impl<'a> LittleFileHandle<'a, WritePriviliges> {
             })
             .map_err(|_err| ())
             .flatten()
-            .map_err(|_err| FileSystemError::CUPE)
+            .map_err(|_err| FileSystemError::PointerError)
     }
 
     /// Add a new file inside this one if it's a directory 
@@ -135,7 +137,7 @@ impl<'a> LittleFileHandle<'a, ReadPriviliges> {
         let path = path.clean();
         let filesystem = FILE_SYSTEM.0.read();
         let locks =
-            unsafe { FileHandleLocks::read(filesystem.as_ref().ok_or(FileSystemError::CUPE)? as *const _, &path)? };
+            unsafe { FileHandleLocks::read(filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _, &path)? };
         Ok(Self {
             _filesystem: filesystem,
             locks,
@@ -236,7 +238,7 @@ impl<'a> FileHandleLocks<'a> {
                 let guard = match &**lock {
                     KaggFile::Directory(directory) => (directory as *const Directory)
                         .as_ref()
-                        .ok_or(FileSystemError::CUPE)?
+                        .ok_or(FileSystemError::PointerError)?
                         .fetch(section),
                     _ => None,
                 };
@@ -244,7 +246,7 @@ impl<'a> FileHandleLocks<'a> {
             } else {
                 (&*root_directory as *const Directory)
                     .as_ref()
-                    .ok_or(FileSystemError::CUPE)?
+                    .ok_or(FileSystemError::PointerError)?
                     .fetch(section)
             };
             further_locks.push(new_lock.ok_or(FileSystemError::FileNotFound)?);
@@ -256,7 +258,7 @@ impl<'a> FileHandleLocks<'a> {
     }
     unsafe fn write_root(filesystem: *const RwLock<Directory>) -> Result<Self, FileSystemError> {
         Ok(Self::WritingRoot {
-            root_directory: filesystem.as_ref().ok_or(FileSystemError::CUPE)?.write(),
+            root_directory: filesystem.as_ref().ok_or(FileSystemError::PointerError)?.write(),
         })
     }
     unsafe fn write(
@@ -264,7 +266,7 @@ impl<'a> FileHandleLocks<'a> {
         path: &Path,
     ) -> Result<Self, FileSystemError> {
         let segments: Vec<_> = path.components().collect();
-        let root_directory = filesystem.as_ref().ok_or(FileSystemError::CUPE)?.read();
+        let root_directory = filesystem.as_ref().ok_or(FileSystemError::PointerError)?.read();
         let mut further_locks: Vec<RwLockReadGuard<'_, KaggFile>> = Vec::new();
         for section in &segments[0..segments.len() - 1] {
             if section == &"" {
@@ -274,7 +276,7 @@ impl<'a> FileHandleLocks<'a> {
                 let guard = match &**lock {
                     KaggFile::Directory(directory) => (directory as *const Directory)
                         .as_ref()
-                        .ok_or(FileSystemError::CUPE)?
+                        .ok_or(FileSystemError::PointerError)?
                         .fetch(section),
                     _ => None,
                 };
@@ -282,7 +284,7 @@ impl<'a> FileHandleLocks<'a> {
             } else {
                 (&*root_directory as *const Directory)
                     .as_ref()
-                    .ok_or(FileSystemError::CUPE)?
+                    .ok_or(FileSystemError::PointerError)?
                     .fetch(section)
             };
             further_locks.push(new_lock.ok_or(FileSystemError::FileNotFound)?);
@@ -292,7 +294,7 @@ impl<'a> FileHandleLocks<'a> {
             let guard = match &**lock {
                 KaggFile::Directory(directory) => (directory as *const Directory)
                     .as_ref()
-                    .ok_or(FileSystemError::CUPE)?
+                    .ok_or(FileSystemError::PointerError)?
                     .fetch_write(file_name),
                 _ => None,
             };
@@ -300,7 +302,7 @@ impl<'a> FileHandleLocks<'a> {
         } else {
             (&*root_directory as *const Directory)
                 .as_ref()
-                .ok_or(FileSystemError::CUPE)?
+                .ok_or(FileSystemError::PointerError)?
                 .fetch_write(file_name)
         }
         .ok_or(FileSystemError::FileNotFound)?;

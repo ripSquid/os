@@ -16,6 +16,11 @@ pub struct UniversalVgaFormatter {
     palette_storage: Option<VgaPalette<256>>,
 }
 impl UniversalVgaFormatter {
+    pub fn new_unsafe() -> Self {
+        Self::new(unsafe {
+            DefaultVgaWriter::new_unsafe()
+        })
+    }
     pub fn new(default: DefaultVgaWriter) -> Self {
         let graphics = unsafe { BitmapVgaWriter::new_unsafe() };
         let current = CurrentBufferType::TextMode80x25;

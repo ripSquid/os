@@ -6,7 +6,7 @@ use crate::display::UniversalVgaFormatter;
 
 pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine) + Sync + Send + 'static);
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(PartialEq, PartialOrd, Debug, Clone)]
 pub enum StackItem {
     String(String),
     Int(isize),
@@ -67,13 +67,13 @@ impl ForthInstructions {
         self.0.append(&mut parsed_instructions.0);
     }
 
-    fn len(self) -> usize {
+    fn len(&self) -> usize {
         self.0.len()
     }
 
-    fn get(self, u: usize) -> Option<ForthInstruction> {
+    fn get(&self, u: usize) -> Option<&ForthInstruction> {
         if self.len() > u {
-            return Some(self.0[u]);
+            return Some(&self.0[u]);
         }
         None
     }
@@ -95,25 +95,25 @@ impl From<String> for ForthInstruction {
     }
 }
 
-struct Stack(Vec<StackItem>);
+pub struct Stack(Vec<StackItem>);
 
 impl Stack {
-    fn pop(&mut self) -> Option<StackItem> {
+    pub fn pop(&mut self) -> Option<StackItem> {
         self.0.pop()
     }
 
-    fn push(&mut self, s: StackItem) {
+    pub fn push(&mut self, s: StackItem) {
         self.0.push(s);
     }
 }
 
 pub struct ForthMachine {
-    instruction_counter: usize,
-    instructions: ForthInstructions,
-    stack: Stack,
+    pub instruction_counter: usize,
+    pub instructions: ForthInstructions,
+    pub stack: Stack,
     words: BTreeMap<String, Vec<String>>,
     default_words: BTreeMap<&'static str, ForthFunction>,
-    formatter: UniversalVgaFormatter
+    pub formatter: UniversalVgaFormatter
 }
 
 impl ForthMachine {
@@ -126,7 +126,7 @@ impl ForthMachine {
         let instruction_to_run = self.instructions.get(self.instruction_counter).unwrap();
         match instruction_to_run {
             ForthInstruction::Data(si) => {
-                self.stack.push(si);
+                self.stack.push(si.clone());
             },
             ForthInstruction::Word(word) => {
                 // Find word in default_words

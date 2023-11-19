@@ -102,7 +102,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .next_line();
 
     //forth_machine.insert_word(&run, "run");
-
+    
     if !skip {
         let timestamp = unsafe { global_os_time };
         let duration = 500;

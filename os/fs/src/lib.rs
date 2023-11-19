@@ -34,7 +34,7 @@ pub enum FileSystemError {
     InvalidParentDirectory,
     Busy,
     EmptyPath,
-    CUPE,
+    PointerError,
     NameAlreadyExists,
 }
 

@@ -37,10 +37,12 @@ impl OsHandle {
     pub fn execute(&mut self, forth_command: impl ToString) -> bool {
         match self.fm.map(|s| unsafe { s.as_mut() }).flatten() {
             Some(accessible) => {
+                /* 
                 accessible.run(
                     forth_command.to_string(),
                     self.text_mode_formatter().unwrap(),
                 );
+                */
                 true
             }
             None => {

@@ -1,3 +1,5 @@
+use core::{borrow::Borrow, ops::Deref};
+
 use alloc::{
     string::{String, ToString},
     vec::Vec,
@@ -11,9 +13,51 @@ impl AsRef<Path> for Path {
     }
 }
 
-impl Path {
+
+pub struct PathStr(str);
+
+impl PathStr {
+    /// This is taken almost word for word of the standard library
+    pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> &PathStr {
+        unsafe { &*(s.as_ref() as *const str as *const PathStr) }
+    }
+}
+
+impl AsRef<PathStr> for Path {
+    fn as_ref(&self) -> &PathStr {
+        PathStr::new(self.0.as_str())
+    }
+}
+
+impl PathStr {
     pub fn components(&self) -> impl Iterator<Item = &str> {
         self.0.split("/")
+    }
+    pub fn file_extension(&self) -> Option<&str> {
+        self.components().last().map(|i| i.split('.').last()).flatten()
+    }
+    pub fn file_name(&self) -> Option<&Self> {
+        self.components().last().map(|i| Self::new(i))
+    }
+}
+
+impl Borrow<PathStr> for Path {
+    fn borrow(&self) -> &PathStr {
+        self.as_path_str()
+    }
+}
+impl Deref for Path {
+    type Target = PathStr;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_path_str()
+    }
+    
+}
+
+impl Path {
+    pub fn as_path_str(&self) -> &PathStr {
+        self.as_ref()
     }
     pub fn parent(&self) -> Option<Self> {
         let clean = self.clone().clean();
@@ -50,9 +94,7 @@ impl Path {
         self.0.push_str(path.to_str());
         self
     }
-    pub fn file_extension(&self) -> Option<&str> {
-        self.components().last().map(|i| i.split('.').last()).flatten()
-    }
+
     pub fn clean(self) -> Self {
         let mut new = Vec::new();
         let sections = self.0.split('/');
@@ -91,7 +133,7 @@ impl<T: AsRef<str>> AppendsPath for T {
 }
 impl AppendsPath for Path {
     fn to_str(&self) -> &str {
-        self.as_ref().as_str()
+        self.0.as_str()
     }
 }
 impl From<String> for Path {

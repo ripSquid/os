@@ -28,7 +28,7 @@ impl LittleManApp for HelpApp {
             Some(StackItem::String(string)) => match string.as_str() {
                 "eng" => self.0 = Language::English,
                 "swe" => self.0 = Language::Swedish,
-                _ => args.push(string),
+                _ => args.push(StackItem::String(string)),
             },
             Some(item) => {
                 args.push(item);

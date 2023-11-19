@@ -1,12 +1,10 @@
 mod cd;
 mod cls;
 mod dir;
-mod forth;
 mod help;
 mod run;
 pub use cd::*;
 pub use cls::*;
 pub use dir::*;
-pub use forth::*;
 pub use help::*;
 pub use run::*;
