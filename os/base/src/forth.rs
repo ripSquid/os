@@ -1,4 +1,4 @@
-use core::ops::Index;
+use core::{ops::Index, fmt::{Display, Write}};
 
 use alloc::{string::String, vec::Vec, collections::BTreeMap, format};
 
@@ -8,7 +8,7 @@ pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine) + Sync + Send + 'st
 
 fn forth_print(fm: &mut ForthMachine) {
     if let Some(x) = fm.stack.pop() {
-        fm.formatter.write_str(&format!("{:?}", x));
+        fm.formatter.write_str(&format!("{}", x));
     }
    
 }
@@ -17,6 +17,15 @@ fn forth_print(fm: &mut ForthMachine) {
 pub enum StackItem {
     String(String),
     Int(isize),
+}
+
+impl Display for StackItem {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::String(x) => {x.fmt(f)},
+            Self::Int(i) => {i.fmt(f)}
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -61,6 +70,9 @@ impl ForthInstructions {
                         parsed_instructions.0.push(ForthInstruction::Data(StackItem::String(word)));
                         word = String::new();
                     }
+                } else if c == '"' && prev_char == '\\' {
+                    word.pop();
+                    word.push(c);
                 } else {
                     word.push(c);
                 }
