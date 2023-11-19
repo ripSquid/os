@@ -7,10 +7,10 @@ use base::{
 use fs::{AppConstructor, DefaultInstall, Path};
 
 use crate::{
-    cpuid, disable_cursor,
+    cpuid, 
     display::{
-        restore_text_mode_font, switch_graphics_mode, BitmapVgaWriter, VgaModeSwitch, VgaPalette,
-        VgaPaletteColor, STATIC_VGA_WRITER,
+        restore_text_mode_font,  VgaPalette,
+        VgaPaletteColor, 
     },
     interrupt::setup::global_os_time,
 };
@@ -90,7 +90,7 @@ impl LittleManApp for SplashScreen {
                 g_formatter.set_palette(palette.fade_factor(fade))
             }
         }
-        
+
         let text_fm = args.formatter.switch_to_text_mode().disable_cursor();
         
         let cpu_info = cpuid::ProcessorIdentification::gather();
@@ -122,9 +122,7 @@ impl LittleManApp for SplashScreen {
             .next_line()
             .next_line()
             .write_str("Skriv [ \"help\" run ] för en introduktion till OperativSystemet")
-            .next_line();
-
-        //forth_machine.insert_word(&run, "run");
+            .set_position((0,7));
 
         if !skipped {
             let timestamp = unsafe { global_os_time };
@@ -138,7 +136,6 @@ impl LittleManApp for SplashScreen {
                 if fade != old_fade {
                     text_fm.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE.fade_factor(fade));
                 }
-                text_fm.set_position((4, 4));
             }
         }
         text_fm.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE);

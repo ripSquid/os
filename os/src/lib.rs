@@ -74,7 +74,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
 
     unsafe {
         let mut string = String::new();
-        forth_machine.formatter.enable_cursor().set_position((0, 8));
+        forth_machine.formatter.enable_cursor().set_position((0, 7));
         loop {
             forth_machine
                 .formatter
@@ -118,7 +118,7 @@ fn run(machine: &mut ForthMachine) {
     let mut app = match get_app(machine) {
         Ok(app) => app,
         Err(err) => {
-            machine.formatter.write_str(&format!("Run: {err:?}"));
+            machine.formatter.write_str(&format!("Run: {err:?} "));
             return;
         }
     };
@@ -127,7 +127,7 @@ fn run(machine: &mut ForthMachine) {
         Err(err) => {
             machine
                 .formatter
-                .write_str(&format!("Run: critical error in app, {err:?}"));
+                .write_str(&format!("App: {err:?} "));
         }
     }
 }
