@@ -27,9 +27,10 @@ pub fn show_lars() -> bool {
     g_formatter.set_palette(VgaPalette::ALL_BLACK);
     let x_pos = (320 - width) / 2;
     for i in 0..height {
-        g_formatter.set_position((x_pos as usize, height as usize - i as usize - 1));
         for j in 0..width {
-            g_formatter.write_char(lars[0x436 + (j as usize + (i as usize * width as usize))]);
+            let (x, y) = (x_pos as usize + j as usize, height as usize - i as usize - 1);
+            let char = lars[0x436 + (j as usize + (i as usize * width as usize))];
+            g_formatter.plot_pixel(x, y, char);
         }
     }
     let duration = 3000;

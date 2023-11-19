@@ -11,12 +11,11 @@ pub fn install_all() -> Result<(), FileSystemError> {
     result
 }
 fn try_install() -> Result<(), FileSystemError> {
-    fs::create_dir(Path::from("bin"))?;
+    fs::create_dir(Path::from("bin")).unwrap();
     fs::set_active_directory(Path::from("bin"));
     fs::install_app::<Help>()?;
     fs::install_app::<Dir>()?;
     fs::install_app::<ChangeDir>()?;
     fs::install_app::<ClearScreen>()?;
     Ok(())
-
 }

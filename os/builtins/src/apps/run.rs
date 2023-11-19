@@ -1,20 +1,21 @@
-use alloc::{string::String, boxed::Box, sync::Arc};
-use base::{forth::Stack, LittleManApp, StartError, OsHandle};
+use alloc::{boxed::Box, string::String, sync::Arc};
+use base::{forth::Stack, LittleManApp, OsHandle, StartError};
 use fs::{AppConstructor, Path};
 use hashbrown::HashMap;
 use spin::RwLock;
 
 type RunningTable = Arc<RwLock<HashMap<String, Path>>>;
-pub struct Run(RunningTable);
+pub struct View(RunningTable);
 
-pub struct RunInstance(RunningTable, Option<Path>);
+pub struct ViewInstance(RunningTable, Option<Path>);
 
-impl AppConstructor for Run {
+impl AppConstructor for View {
     fn instantiate(&self) -> Box<dyn LittleManApp> {
-        Box::new(RunInstance(self.0.clone(), None))
+        Box::new(ViewInstance(self.0.clone(), None))
     }
 }
-impl LittleManApp for RunInstance {
+
+impl LittleManApp for ViewInstance {
     fn start(&mut self, _args: &mut Stack) -> Result<(), StartError> {
         Ok(())
     }

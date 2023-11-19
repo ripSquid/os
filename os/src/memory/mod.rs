@@ -6,20 +6,28 @@
 
 use self::{
     allocator::GlobalAllocator,
-    frame::{FrameRangeInclusive, MemoryFrame, FrameAllocator},
-    paging::{PageTableMaster, TemporaryPage, MemoryPage, InactivePageTable},
+    frame::{FrameAllocator, FrameRangeInclusive, MemoryFrame},
+    paging::{InactivePageTable, MemoryPage, PageTableMaster, TemporaryPage},
 };
 use crate::{
     display::STATIC_VGA_WRITER,
-    multiboot_info::{memory_map::{MemoryMapEntry, MemoryType}, MultibootInfoUnparsed, MultiBootTag, TagType, elf::ElfSectionFlags}, memory::paging::EntryFlags,
+    memory::paging::EntryFlags,
+    multiboot_info::{
+        elf::ElfSectionFlags,
+        memory_map::{MemoryMapEntry, MemoryType},
+        MultiBootTag, MultibootInfoUnparsed, TagType,
+    },
 };
 use alloc::{boxed::Box, format, string::String, vec::Vec};
-use x86_64::registers::{model_specific::{EferFlags, Efer}, control::{Cr0, Cr0Flags}};
 use core::{
     alloc::{GlobalAlloc, Layout},
     iter::Filter,
     slice::Iter,
     sync::atomic::AtomicUsize,
+};
+use x86_64::registers::{
+    control::{Cr0, Cr0Flags},
+    model_specific::{Efer, EferFlags},
 };
 
 pub mod allocator;
@@ -144,7 +152,6 @@ impl Iterator for MemoryAreaIter {
         self.itera.next()
     }
 }
-
 
 pub(crate) fn remap_everything(
     info: MultibootInfoUnparsed,

@@ -1,7 +1,9 @@
-use base::{input::{CTRL_MODIFIER, SHIFT_MODIFIER, ALT_MODIFIER, KEYBOARD_QUEUE, keymap}, pic::pics};
-use ps2::{flags::ControllerConfigFlags, Controller, error::ControllerError};
+use base::{
+    input::{keymap, ALT_MODIFIER, CTRL_MODIFIER, KEYBOARD_QUEUE, SHIFT_MODIFIER},
+    pic::pics,
+};
+use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
 use x86_64::structures::idt::InterruptStackFrame;
-
 
 static mut controller: Controller = unsafe { Controller::with_timeout(1_000_000) };
 
@@ -40,7 +42,6 @@ static mut keyboard_state: KeyboardState = KeyboardState {
     alt_pressed: false,
     altgr_pressed: false,
 };
-
 
 pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     // Implement keyboard 2

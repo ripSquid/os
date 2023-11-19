@@ -2,6 +2,8 @@ mod buffer;
 mod formatter;
 pub mod macros;
 pub mod primitives;
+mod universal;
+pub use universal::*;
 mod vga;
 mod vga_graphics;
 pub use buffer::*;
