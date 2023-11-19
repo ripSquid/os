@@ -1,4 +1,3 @@
-use core::ops::{Deref, DerefMut};
 
 use alloc::{
     string::{String, ToString},
@@ -6,7 +5,7 @@ use alloc::{
 };
 
 use crate::{
-    display::{BitmapVgaWriter, DefaultVgaWriter, VgaModeSwitch},
+    display::{BitmapVgaWriter, DefaultVgaWriter, VgaModeSwitch, UniversalVgaFormatter},
     forth::{ForthMachine, Stack},
     input::{Keyboard, KEYBOARD_QUEUE},
 };
@@ -83,11 +82,7 @@ impl OsHandle {
         self.control_flow = ControlFlow::Quit;
     }
     pub fn text_mode_formatter(&mut self) -> Result<&mut DefaultVgaWriter, VideoModeError> {
-        if let GraphicsHandleType::TextMode(formatter) = &mut *self.graphics {
-            Ok(unsafe { &mut **formatter })
-        } else {
-            Err(VideoModeError::IsInGraphicsMode)
-        }
+        Ok(&mut self.graphics.formatter)
     }
 }
 #[derive(Debug)]
@@ -95,26 +90,14 @@ pub enum VideoModeError {
     IsInGraphicsMode,
 }
 pub struct GraphicsHandle {
-    formatter: GraphicsHandleType,
+    formatter: UniversalVgaFormatter,
 }
-impl Into<GraphicsHandle> for GraphicsHandleType {
-    fn into(self) -> GraphicsHandle {
-        GraphicsHandle { formatter: self }
+impl GraphicsHandle {
+    pub fn from_universal(formatter: UniversalVgaFormatter) -> Self {
+        Self { formatter }
     }
 }
 
-impl Deref for GraphicsHandle {
-    type Target = GraphicsHandleType;
-
-    fn deref(&self) -> &Self::Target {
-        &self.formatter
-    }
-}
-impl DerefMut for GraphicsHandle {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.formatter
-    }
-}
 pub enum GraphicsHandleType {
     TextMode(*mut DefaultVgaWriter),
     GraphicsMode(BitmapVgaWriter),

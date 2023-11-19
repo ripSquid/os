@@ -163,6 +163,10 @@ impl BitmapVgaWriter {
             position: (0, 0),
         }
     }
+    pub fn plot_pixel(&mut self, x: usize, y: usize, byte: u8) -> &mut Self {
+        self.buffer.chars[y][x] = byte;
+        self
+    }
     pub fn next_line(&mut self) -> &mut Self {
         let (col, row) = &mut self.position;
         *col = 0;

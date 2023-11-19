@@ -98,7 +98,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         .write_str(cpu_info.vendor())
         .next_line()
         .next_line()
-        .write_str("Skriv \"help\" för en introduktion till OperativSystemet")
+        .write_str("Skriv [ \"help\" run ] för en introduktion till OperativSystemet")
         .next_line();
 
     forth_machine.insert_word(&run, "run");

@@ -43,15 +43,15 @@ impl LittleManApp for HelpApp {
                 "Välkommen till ett gymnasiearbete gjort av två elever på Lars Kagg Skolan.
             Detta operativsystem kommer med olika demon 
             och verktyg som visar vad det är kapabelt av.
-            För att lista alla program och filer, skriv 'dir' 
+            För att lista alla program och filer, skriv [\"dir\" run]
             
-            For english help, write 'help eng'"
+            For english help, write [\"eng\" \"help\" run]"
             }
             Language::English => {
                 "Welcome to a Thesis work created by two students at the school of Lars Kagg.
             This operating system comes with demos and 
             tools which displays its full capabilities.
-            To list all programs and files, write 'dir'"
+            To list all programs and files, write [\"dir\" run]"
             }
         };
         if let Ok(formatter) = handle.text_mode_formatter() {

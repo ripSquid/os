@@ -50,6 +50,9 @@ impl Path {
         self.0.push_str(path.to_str());
         self
     }
+    pub fn file_extension(&self) -> Option<&str> {
+        self.components().last().map(|i| i.split('.').last()).flatten()
+    }
     pub fn clean(self) -> Self {
         let mut new = Vec::new();
         let sections = self.0.split('/');
