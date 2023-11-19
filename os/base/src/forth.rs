@@ -1,10 +1,17 @@
 use core::ops::Index;
 
-use alloc::{string::String, vec::Vec, collections::BTreeMap};
+use alloc::{string::String, vec::Vec, collections::BTreeMap, format};
 
-use crate::display::UniversalVgaFormatter;
+use crate::display::{UniversalVgaFormatter, DefaultVgaWriter};
 
 pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine) + Sync + Send + 'static);
+
+fn forth_print(fm: &mut ForthMachine) {
+    if let Some(x) = fm.stack.pop() {
+        fm.formatter.write_str(&format!("{:?}", x));
+    }
+   
+}
 
 #[derive(PartialEq, PartialOrd, Debug, Clone)]
 pub enum StackItem {
@@ -12,6 +19,7 @@ pub enum StackItem {
     Int(isize),
 }
 
+#[derive(Clone)]
 pub struct ForthInstructions(Vec<ForthInstruction>);
 
 impl Default for ForthInstructions {
@@ -77,9 +85,13 @@ impl ForthInstructions {
         }
         None
     }
+
+    fn iter(&self) -> core::slice::Iter<'_, ForthInstruction> {
+        self.0.iter()
+    }
 }
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(PartialEq, PartialOrd, Debug, Clone)]
 pub enum ForthInstruction {
     Data(StackItem),
     Word(String),
@@ -95,6 +107,7 @@ impl From<String> for ForthInstruction {
     }
 }
 
+#[derive(Default)]
 pub struct Stack(Vec<StackItem>);
 
 impl Stack {
@@ -111,9 +124,24 @@ pub struct ForthMachine {
     pub instruction_counter: usize,
     pub instructions: ForthInstructions,
     pub stack: Stack,
-    words: BTreeMap<String, Vec<String>>,
+    words: BTreeMap<String, ForthInstructions>,
     default_words: BTreeMap<&'static str, ForthFunction>,
     pub formatter: UniversalVgaFormatter
+}
+
+impl Default for ForthMachine {
+    fn default() -> Self {
+        let mut tmp = Self {
+            formatter: unsafe {UniversalVgaFormatter::new(DefaultVgaWriter::new_unsafe())},
+            instruction_counter: 0,
+            instructions: ForthInstructions::default(),
+            stack: Stack::default(),
+            words: BTreeMap::default(),
+            default_words: BTreeMap::default(),
+        };
+        tmp.default_words.insert(",", &forth_print);
+        tmp
+    }
 }
 
 impl ForthMachine {
@@ -131,6 +159,38 @@ impl ForthMachine {
             ForthInstruction::Word(word) => {
                 // Find word in default_words
                 // Then in new words i guess
+                if let Some(f) = self.default_words.get(word.as_str()) {
+                    (*f)(self);
+                } else if let Some(instructions) = self.words.get(word.as_str()) {
+                    self.run_instructions_locally(instructions.clone());
+                }
+            }
+        }
+
+        self.instruction_counter += 1;
+    }
+
+    pub fn run_to_end(&mut self) {
+        while self.instruction_counter < self.instructions.len() {
+            self.run();
+        }
+    }
+
+    fn run_instructions_locally(&mut self, fi: ForthInstructions) {
+        for fi in fi.iter() {
+            match fi {
+                ForthInstruction::Data(si) => {
+                    self.stack.push(si.clone());
+                },
+                ForthInstruction::Word(word) => {
+                    // Find word in default_words
+                    // Then in new words i guess
+                    if let Some(f) = self.default_words.get(word.as_str()) {
+                        (*f)(self);
+                    } else if let Some(instructions) = self.words.get(word.as_str()) {
+                        self.run_instructions_locally((*instructions).clone());
+                    }
+                }
             }
         }
     }
