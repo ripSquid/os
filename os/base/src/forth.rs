@@ -1,4 +1,4 @@
-use core::{ops::Index, fmt::{Display, Write}};
+use core::fmt::Display;
 
 use alloc::{string::String, vec::Vec, collections::BTreeMap, format};
 
