@@ -12,9 +12,15 @@ pub fn install_all() -> Result<(), FileSystemError> {
 }
 fn try_install() -> Result<(), FileSystemError> {
     fs::create_dir(Path::from("bin")).unwrap();
+    fs::create_data_file(
+        Path::from("bin/startup.for"),
+        "\"splash\" run".as_bytes().to_vec(),
+    )?;
     fs::set_active_directory(Path::from("bin"));
     fs::install_app::<Help>()?;
     fs::install_app::<Dir>()?;
+    fs::install_app::<View>()?;
+    fs::install_app::<ForRunner>()?;
     fs::install_app::<ChangeDir>()?;
     fs::install_app::<ClearScreen>()?;
     Ok(())

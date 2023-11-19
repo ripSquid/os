@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use base::{display::VgaColor, LittleManApp, OsHandle};
+use base::{display::VgaColor, forth::ForthMachine, LittleManApp, OsHandle, ProgramError};
 use fs::{AppConstructor, DefaultInstall, Path};
 
 #[derive(Default)]
@@ -18,10 +18,8 @@ impl AppConstructor for ClearScreen {
     }
 }
 impl LittleManApp for ClearScreenApp {
-    fn update(&mut self, handle: &mut OsHandle) {
-        if let Ok(formatter) = handle.text_mode_formatter() {
-            formatter.clear_screen(VgaColor::Black);
-        }
-        handle.call_exit();
+    fn run(&mut self, handle: &mut ForthMachine) -> Result<(), ProgramError> {
+        handle.formatter.clear_screen(VgaColor::Black);
+        Ok(())
     }
 }

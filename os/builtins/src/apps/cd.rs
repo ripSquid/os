@@ -1,6 +1,9 @@
 use alloc::{boxed::Box, format};
 
-use base::{forth, LittleManApp, OsHandle, StartError};
+use base::{
+    forth::{self, ForthMachine},
+    LittleManApp, OsHandle, ProgramError,
+};
 
 use forth::{Stack, StackItem};
 
@@ -22,14 +25,14 @@ impl AppConstructor for ChangeDir {
 }
 
 impl LittleManApp for ChangeDirApp {
-    fn start(&mut self, stack: &mut Stack) -> Result<(), StartError> {
+    fn run(&mut self, machine: &mut ForthMachine) -> Result<(), ProgramError> {
         let path = {
-            match stack.pop() {
+            match machine.stack.pop() {
                 Some(StackItem::String(string)) => {
                     Ok(fs::active_directory().append(&string).clean())
                 }
                 Some(invalid) => {
-                    stack.push(invalid);
+                    machine.stack.push(invalid);
                     Err("invalid stack item")
                 }
                 None => Err("please specify a directory"),
@@ -57,20 +60,18 @@ impl LittleManApp for ChangeDirApp {
             Err(error) => self.0 = Some(Err(error)),
         }
 
-        Ok(())
-    }
-    fn update(&mut self, handle: &mut OsHandle) {
-        if let Ok(formatter) = handle.text_mode_formatter() {
-            match &self.0 {
-                Some(Ok(os_error)) => {
-                    formatter.write_str(&format!("Filesystem error response: {os_error:?}"));
-                }
-                Some(Err(other_error)) => {
-                    formatter.write_str(other_error);
-                }
-                None => (),
+        match &self.0 {
+            Some(Ok(os_error)) => {
+                machine
+                    .formatter
+                    .write_str(&format!("Filesystem error response: {os_error:?}"));
             }
+            Some(Err(other_error)) => {
+                machine.formatter.write_str(other_error);
+            }
+            None => (),
         }
-        handle.call_exit();
+
+        Ok(())
     }
 }

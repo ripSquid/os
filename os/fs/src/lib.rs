@@ -29,7 +29,7 @@ pub struct RamFileSystem(RwLock<Option<RwLock<Directory>>>);
 pub enum FileSystemError {
     FileSystemNotInitialized,
     IncorrectFileType(&'static str),
-    FileNotFound,
+    FileNotFound(&'static str),
     DirectoryNotFound,
     InvalidParentDirectory,
     Busy,
@@ -50,7 +50,7 @@ impl RamFileSystem {
         &'b self,
         path: P,
     ) -> Result<LittleFileHandle<'b, ReadPriviliges>, FileSystemError> {
-        LittleFileHandle::<ReadPriviliges>::new(path.as_ref().clone().clean())
+        LittleFileHandle::<ReadPriviliges>::new(path.as_ref().clone().clean(), FILE_SYSTEM.0.read())
     }
     fn get_file_write<'b, P: AsRef<Path>>(
         &'b self,
@@ -80,8 +80,9 @@ pub fn get_file_relative<P: AsRef<Path>>(
 }
 pub fn create_data_file<P: AsRef<Path>>(
     path: P,
+    data: Vec<u8>,
 ) -> Result<LittleFileHandle<'static, WritePriviliges>, FileSystemError> {
-    create_file(path, KaggFile::Data(Vec::new()))
+    create_file(path, KaggFile::Data(data))
 }
 pub fn create_dir<P: AsRef<Path>>(
     path: P,
@@ -144,7 +145,6 @@ pub(crate) fn create_file<P: AsRef<Path>>(
 ) -> Result<LittleFileHandle<'static, WritePriviliges>, FileSystemError> {
     let mut parent = path.as_ref().clone();
     let file_name = parent.pop().unwrap();
-    debug!(&(parent.0).as_str());
     match FILE_SYSTEM.get_file_write(parent) {
         Ok(mut exists) => {
             exists.add_child(File {

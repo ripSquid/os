@@ -12,13 +12,14 @@ extern crate bitflags;
 extern crate alloc;
 
 use alloc::boxed::Box;
-use base::display::{DefaultVgaWriter, VgaColorCombo, VgaPalette, UniversalVgaFormatter};
+use base::display::{DefaultVgaWriter, UniversalVgaFormatter, VgaColorCombo, VgaPalette};
 use base::forth::{ForthMachine, StackItem};
 use base::input::KEYBOARD_QUEUE;
+use easter_eggs::SplashScreen;
 use forth::Stack;
 
 use base::*;
-use fs::Path;
+use fs::{FileSystemError, Path};
 use interrupt::setup::global_os_time;
 
 use crate::interrupt::pitinit;
@@ -47,11 +48,6 @@ mod multiboot_info;
 //this is later used in long_mode.asm, at which point the cpu is prepared to run rust code
 #[no_mangle]
 pub extern "C" fn rust_start(info: u64) -> ! {
-    disable_cursor();
-
-    let version = env!("CARGO_PKG_VERSION");
-    let authors = env!("CARGO_PKG_AUTHORS");
-
     let multiboot_info = unsafe {
         multiboot_info::MultibootInfoUnparsed::from_pointer(info as *const MultibootInfoHeader)
     }
@@ -60,77 +56,36 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     let mut allocator = memory::remap_everything(multiboot_info, &mut active_table);
     unsafe {
         populate_global_allocator(&mut active_table, &mut allocator);
+        interrupt::setup::setup_interrupts();
+        pitinit(2400);
     }
-    unsafe { interrupt::setup::setup_interrupts() }
-    let cpu_info = cpuid::ProcessorIdentification::gather();
 
     fs::start();
-
     builtins::install_all().unwrap();
+    fs::install_app::<SplashScreen>().unwrap();
 
     let mut forth_machine = ForthMachine::default();
 
-    unsafe {
-        pitinit(2400);
-    }
-    // Start forth application
-    let skip = easter_eggs::show_lars();
-
-    let author_text: String = authors.replace(":", " and ");
-
-    forth_machine.formatter
-        .clear_screen(display::VgaColor::Black)
-        .set_default_colors(VgaColorCombo::on_black(display::VgaColor::Green))
-        .write_str("I've succesfully booted, hello world!")
-        .next_line();
-
-    forth_machine.formatter
-        .next_line()
-        .set_default_colors(VgaColorCombo::on_black(display::VgaColor::White))
-        .write_str("Version: ")
-        .write_str(version)
-        .next_line()
-        .write_str("Code by: ")
-        .write_str(&author_text.as_str())
-        .next_line()
-        .write_str("CPU vendor: ")
-        .write_str(cpu_info.vendor())
-        .next_line()
-        .next_line()
-        .write_str("Skriv [ \"help\" run ] för en introduktion till OperativSystemet")
-        .next_line();
-
-    //forth_machine.insert_word(&run, "run");
-    
-    if !skip {
-        let timestamp = unsafe { global_os_time };
-        let duration = 500;
-
-        let mut fade = 0;
-        while (unsafe { global_os_time } < timestamp + duration) {
-            let time = unsafe { global_os_time } - timestamp;
-            let old_fade = fade;
-            fade = ((time * u8::MAX as u64) / duration) as u8;
-            if fade != old_fade {
-                forth_machine.formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE.fade_factor(fade));
-            }
-            unsafe { DefaultVgaWriter::new_unsafe().set_position((4, 4)) };
-        }
-    }
-    forth_machine.formatter.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE);
+    forth_machine.insert_default_word("run", &run);
+    forth_machine
+        .instructions
+        .add_instructions_to_end(&"\"bin/startup.for\" \"forrunner\" run".chars().collect());
+    forth_machine.run_to_end();
 
     unsafe {
         let mut string = String::new();
         forth_machine.formatter.enable_cursor().set_position((0, 8));
         loop {
-            forth_machine.formatter
+            forth_machine
+                .formatter
                 .write_str(fs::active_directory().as_str())
                 .write_str(" > ");
             loop {
                 let c = KEYBOARD_QUEUE.getch_blocking();
                 match c {
                     '\x08' => {
-                        forth_machine.formatter
+                        forth_machine
+                            .formatter
                             .back_up(string.len())
                             .write_str(&" ".repeat(string.len()))
                             .back_up(string.len());
@@ -140,7 +95,9 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         forth_machine.formatter.next_line();
                         let mut new_string = String::new();
                         core::mem::swap(&mut new_string, &mut string);
-                        forth_machine.instructions.add_instructions_to_end(&new_string.chars().collect());
+                        forth_machine
+                            .instructions
+                            .add_instructions_to_end(&new_string.chars().collect());
                         forth_machine.run_to_end();
                         forth_machine.formatter.next_line();
 
@@ -155,6 +112,35 @@ pub extern "C" fn rust_start(info: u64) -> ! {
             }
         }
     };
+}
+
+fn run(machine: &mut ForthMachine) {
+    let mut app = match get_app(machine) {
+        Ok(app) => app,
+        Err(err) => {
+            machine.formatter.write_str(&format!("Run: {err:?}"));
+            return;
+        }
+    };
+    match app.run(machine) {
+        Ok(()) => (),
+        Err(err) => {
+            machine
+                .formatter
+                .write_str(&format!("Run: critical error in app, {err:?}"));
+        }
+    }
+}
+fn get_app(machine: &mut ForthMachine) -> Result<Box<dyn LittleManApp>, FileSystemError> {
+    let path = machine
+        .stack
+        .try_pop::<String>()
+        .ok_or(FileSystemError::EmptyPath)?;
+    let finalized_path = Path::from(path).add_extension("run");
+    let file = fs::get_file_relative(&finalized_path)
+        .or(fs::get_file(Path::from("bin").append(&finalized_path)))?;
+    let app = file.launch_app()?;
+    Ok(app)
 }
 
 unsafe fn tmp_write(s: String) {
@@ -175,65 +161,3 @@ fn disable_cursor() {
 pub extern "C" fn keyboard_handler() {
     panic!();
 }
-
-/* 
-fn run(sm: &mut ForthMachine, forth_machine.formatter: &mut DefaultVgaWriter, _: &mut usize) {
-    let path = match sm.stack_mut().pop() {
-        Some(StackItem::String(str)) => Ok(Path::from(str)),
-        Some(other) => {
-            sm.stack_mut().push(other);
-            Err("argument was not a path")
-        }
-        None => Err("No argument passed"),
-    };
-    match path {
-        Ok(path) => {
-            let Some(app) = get_app(path, forth_machine.formatter) else {
-                forth_machine.formatter.next_line();
-                return;
-            };
-            run_inner(app, forth_machine.formatter, sm);
-        }
-        Err(msg) => {
-            forth_machine.formatter.write_str("RUN: ").write_str(msg);
-        }
-    }
-    forth_machine.formatter.next_line();
-}
-fn get_app(path: Path, forth_machine.formatter: &mut DefaultVgaWriter) -> Option<Box<dyn LittleManApp>> {
-    let path = path.add_extension("run");
-    let file = fs::get_file_relative(&path).or(fs::get_file(Path::from("bin").append(&path)));
-    match file {
-        Ok(file_handle) => file_handle
-            .launch_app()
-            .map_err(|e| {
-                forth_machine.formatter.write_str(&format!("FILESYSTEM: {e:?}, wrong file type"));
-                ()
-            })
-            .ok(),
-        Err(error) => {
-            forth_machine.formatter.write_str(&format!("FILESYSTEM: {error:?}"));
-            None
-        }
-    }
-}
-fn run_inner(
-    mut app: Box<dyn LittleManApp>,
-    forth_machine.formatter: &mut DefaultVgaWriter,
-    fm: &mut ForthMachine,
-) {
-    match app.start(fm.stack_mut()) {
-        Ok(_) => {
-            let graphics = GraphicsHandle::from_universal(UniversalVgaFormatter::new(default));
-            let mut handle = unsafe { OsHandle::new_complicated(graphics, fm) };
-            while handle.running() {
-                app.update(&mut handle);
-            }
-            app.shutdown();
-        }
-        Err(error) => {
-            forth_machine.formatter.write_str(&format!("APP START ERROR: {error:?}"));
-        }
-    }
-}
-*/

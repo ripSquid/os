@@ -13,7 +13,6 @@ impl AsRef<Path> for Path {
     }
 }
 
-
 pub struct PathStr(str);
 
 impl PathStr {
@@ -34,7 +33,10 @@ impl PathStr {
         self.0.split("/")
     }
     pub fn file_extension(&self) -> Option<&str> {
-        self.components().last().map(|i| i.split('.').last()).flatten()
+        self.components()
+            .last()
+            .map(|i| i.split('.').last())
+            .flatten()
     }
     pub fn file_name(&self) -> Option<&Self> {
         self.components().last().map(|i| Self::new(i))
@@ -52,7 +54,6 @@ impl Deref for Path {
     fn deref(&self) -> &Self::Target {
         self.as_path_str()
     }
-    
 }
 
 impl Path {

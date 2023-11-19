@@ -7,7 +7,6 @@ use spin::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::{DirRead, Directory, File, FileSystemError, KaggFile, Path, FILE_SYSTEM};
 
-
 /// Definitions for the different FileHandle priviliges
 pub enum WritePriviliges {}
 pub enum ReadPriviliges {}
@@ -16,11 +15,10 @@ pub trait FileHandlePriviliges {}
 impl FileHandlePriviliges for WritePriviliges {}
 impl FileHandlePriviliges for ReadPriviliges {}
 
-
-/// A file handle to a file on the operating system 
-/// 
+/// A file handle to a file on the operating system
+///
 /// This uses recursive locking in order to ensure safety in case of multiple handles coexisting
-/// 
+///
 /// Depending on the handles priviliges you will be given access to appropriate methods
 pub struct LittleFileHandle<'a, T: FileHandlePriviliges> {
     _filesystem: RwLockReadGuard<'a, Option<RwLock<Directory>>>,
@@ -31,7 +29,6 @@ pub struct LittleFileHandle<'a, T: FileHandlePriviliges> {
 
 /// Methods which all file handles may use
 impl<'a, T: FileHandlePriviliges> LittleFileHandle<'a, T> {
-
     /// The absolute path to this file
     pub fn path(&self) -> &Path {
         &self.path
@@ -72,9 +69,7 @@ impl<'a, T: FileHandlePriviliges> LittleFileHandle<'a, T> {
         self.locks
             .attempt(|file| match file {
                 KaggFile::Data(data) => Ok(data.to_vec()),
-                KaggFile::App(_) => Err(FileSystemError::IncorrectFileType(
-                    "trying to app file",
-                )),
+                KaggFile::App(_) => Err(FileSystemError::IncorrectFileType("trying to app file")),
                 KaggFile::Directory(_) => Err(FileSystemError::IncorrectFileType(
                     "trying to open directory",
                 )),
@@ -93,9 +88,18 @@ impl<'a> LittleFileHandle<'a, WritePriviliges> {
         let path = path.clean();
         let filesystem = FILE_SYSTEM.0.read();
         let locks = if path.components().count() == 1 {
-            unsafe { FileHandleLocks::write_root(filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _)? }
+            unsafe {
+                FileHandleLocks::write_root(
+                    filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _,
+                )?
+            }
         } else {
-            unsafe { FileHandleLocks::write(filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _, &path)? }
+            unsafe {
+                FileHandleLocks::write(
+                    filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _,
+                    &path,
+                )?
+            }
         };
         Ok(Self {
             _filesystem: filesystem,
@@ -106,7 +110,7 @@ impl<'a> LittleFileHandle<'a, WritePriviliges> {
     }
 
     /// Attempt to write to this file
-    /// 
+    ///
     /// This may be unsuccessful if the file isn't a data file or is unavailable in some other way
     pub fn write_file(&mut self, insert: &[u8]) -> Result<(), FileSystemError> {
         self.locks
@@ -123,7 +127,7 @@ impl<'a> LittleFileHandle<'a, WritePriviliges> {
             .map_err(|_err| FileSystemError::PointerError)
     }
 
-    /// Add a new file inside this one if it's a directory 
+    /// Add a new file inside this one if it's a directory
     pub fn add_child(&mut self, file: File) -> Result<(), FileSystemError> {
         self.locks
             .attempt_dir_mut(|dir| dir.add_file(file))
@@ -133,11 +137,17 @@ impl<'a> LittleFileHandle<'a, WritePriviliges> {
 
 /// Methods which file handles with read priviliges might want to use
 impl<'a> LittleFileHandle<'a, ReadPriviliges> {
-    pub fn new(path: Path) -> Result<Self, FileSystemError> {
+    pub fn new(
+        path: Path,
+        filesystem: RwLockReadGuard<'a, Option<RwLock<Directory>>>,
+    ) -> Result<Self, FileSystemError> {
         let path = path.clean();
-        let filesystem = FILE_SYSTEM.0.read();
-        let locks =
-            unsafe { FileHandleLocks::read(filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _, &path)? };
+        let locks = unsafe {
+            FileHandleLocks::read(
+                filesystem.as_ref().ok_or(FileSystemError::PointerError)? as *const _,
+                &path,
+            )?
+        };
         Ok(Self {
             _filesystem: filesystem,
             locks,
@@ -147,10 +157,9 @@ impl<'a> LittleFileHandle<'a, ReadPriviliges> {
     }
 }
 
-
 /// The inner locks of a file handle
-/// 
-/// This is also where accesses and modifications of the handled file 
+///
+/// This is also where accesses and modifications of the handled file
 /// can be made in an abstracted fasion
 pub enum FileHandleLocks<'a> {
     Reading {
@@ -249,7 +258,7 @@ impl<'a> FileHandleLocks<'a> {
                     .ok_or(FileSystemError::PointerError)?
                     .fetch(section)
             };
-            further_locks.push(new_lock.ok_or(FileSystemError::FileNotFound)?);
+            further_locks.push(new_lock.ok_or(FileSystemError::FileNotFound("case 1"))?);
         }
         Ok(Self::Reading {
             root_directory,
@@ -258,7 +267,10 @@ impl<'a> FileHandleLocks<'a> {
     }
     unsafe fn write_root(filesystem: *const RwLock<Directory>) -> Result<Self, FileSystemError> {
         Ok(Self::WritingRoot {
-            root_directory: filesystem.as_ref().ok_or(FileSystemError::PointerError)?.write(),
+            root_directory: filesystem
+                .as_ref()
+                .ok_or(FileSystemError::PointerError)?
+                .write(),
         })
     }
     unsafe fn write(
@@ -266,7 +278,10 @@ impl<'a> FileHandleLocks<'a> {
         path: &Path,
     ) -> Result<Self, FileSystemError> {
         let segments: Vec<_> = path.components().collect();
-        let root_directory = filesystem.as_ref().ok_or(FileSystemError::PointerError)?.read();
+        let root_directory = filesystem
+            .as_ref()
+            .ok_or(FileSystemError::PointerError)?
+            .read();
         let mut further_locks: Vec<RwLockReadGuard<'_, KaggFile>> = Vec::new();
         for section in &segments[0..segments.len() - 1] {
             if section == &"" {
@@ -287,7 +302,7 @@ impl<'a> FileHandleLocks<'a> {
                     .ok_or(FileSystemError::PointerError)?
                     .fetch(section)
             };
-            further_locks.push(new_lock.ok_or(FileSystemError::FileNotFound)?);
+            further_locks.push(new_lock.ok_or(FileSystemError::FileNotFound("case 2"))?);
         }
         let file_name = segments.last().unwrap();
         let write_lock = if let Some(lock) = further_locks.last() {
@@ -305,7 +320,7 @@ impl<'a> FileHandleLocks<'a> {
                 .ok_or(FileSystemError::PointerError)?
                 .fetch_write(file_name)
         }
-        .ok_or(FileSystemError::FileNotFound)?;
+        .ok_or(FileSystemError::FileNotFound("case 3"))?;
         Ok(Self::Writing {
             root_directory,
             further_locks,

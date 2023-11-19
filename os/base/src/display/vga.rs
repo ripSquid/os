@@ -28,8 +28,6 @@ impl DerefMut for StaticVgaWriter {
     }
 }
 
-
-
 pub type DefaultVgaBuffer =
     ScreenBuffer<VgaChar, DEFAULT_VGA_BUFFER_WIDTH, DEFAULT_VGA_BUFFER_HEIGHT>;
 pub struct DefaultVgaWriter {

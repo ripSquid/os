@@ -1,25 +1,27 @@
-
 use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
 
 use crate::{
-    display::{BitmapVgaWriter, DefaultVgaWriter, VgaModeSwitch, UniversalVgaFormatter},
+    display::{BitmapVgaWriter, DefaultVgaWriter, UniversalVgaFormatter, VgaModeSwitch},
     forth::{ForthMachine, Stack},
     input::{Keyboard, KEYBOARD_QUEUE},
 };
 
 pub trait LittleManApp: Send + Sync + 'static {
-    fn start(&mut self, _args: &mut Stack) -> Result<(), StartError> {
-        Ok(())
-    }
-    fn update(&mut self, handle: &mut OsHandle);
-    fn shutdown(&mut self) {}
+    fn run(&mut self, _machine: &mut ForthMachine) -> Result<(), ProgramError>;
 }
 
 #[derive(Debug)]
-pub enum StartError {}
+pub enum ProgramError {
+    InvalidStartParameter,
+    InvalidParameter,
+    FileSystemError,
+    InternalError,
+    Custom(&'static str),
+    Crash,
+}
 pub struct OsHandle {
     fm: Option<*mut ForthMachine>,
     control_flow: ControlFlow,
@@ -37,7 +39,7 @@ impl OsHandle {
     pub fn execute(&mut self, forth_command: impl ToString) -> bool {
         match self.fm.map(|s| unsafe { s.as_mut() }).flatten() {
             Some(accessible) => {
-                /* 
+                /*
                 accessible.run(
                     forth_command.to_string(),
                     self.text_mode_formatter().unwrap(),

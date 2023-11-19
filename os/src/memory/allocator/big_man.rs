@@ -40,7 +40,7 @@ impl BigManAllocator {
             };
             (free_span, state_page)
         };
-        debug!("Available memory:", &free_page_count, "* 4KB");
+        //debug!("Available memory:", &free_page_count, "* 4KB");
 
         let tree = unsafe {
             MemoryStateTree::new(

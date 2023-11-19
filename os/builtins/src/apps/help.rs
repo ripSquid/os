@@ -1,11 +1,10 @@
 use alloc::boxed::Box;
 use base::{
-    forth::{Stack, StackItem},
-    LittleManApp, OsHandle, StartError,
+    forth::{ForthMachine, Stack, StackItem},
+    LittleManApp, OsHandle, ProgramError,
 };
 use fs::{AppConstructor, DefaultInstall, Path};
 
-pub struct HelpApp(Language);
 #[derive(Default)]
 pub struct Help;
 enum Language {
@@ -14,7 +13,7 @@ enum Language {
 }
 impl AppConstructor for Help {
     fn instantiate(&self) -> Box<dyn LittleManApp> {
-        Box::new(HelpApp(Language::Swedish))
+        Box::new(Help)
     }
 }
 impl DefaultInstall for Help {
@@ -22,23 +21,21 @@ impl DefaultInstall for Help {
         Path::from("help.run")
     }
 }
-impl LittleManApp for HelpApp {
-    fn start(&mut self, args: &mut Stack) -> Result<(), StartError> {
-        match args.pop() {
+impl LittleManApp for Help {
+    fn run(&mut self, args: &mut ForthMachine) -> Result<(), ProgramError> {
+        let mut language = Language::Swedish;
+        match args.stack.pop() {
             Some(StackItem::String(string)) => match string.as_str() {
-                "eng" => self.0 = Language::English,
-                "swe" => self.0 = Language::Swedish,
-                _ => args.push(StackItem::String(string)),
+                "eng" => language = Language::English,
+                "swe" => language = Language::Swedish,
+                _ => args.stack.push(StackItem::String(string)),
             },
             Some(item) => {
-                args.push(item);
+                args.stack.push(item);
             }
             _ => (),
         }
-        Ok(())
-    }
-    fn update(&mut self, handle: &mut OsHandle) {
-        let text = match &self.0 {
+        let text = match language {
             Language::Swedish => {
                 "Välkommen till ett gymnasiearbete gjort av två elever på Lars Kagg Skolan.
             Detta operativsystem kommer med olika demon 
@@ -54,9 +51,7 @@ impl LittleManApp for HelpApp {
             To list all programs and files, write [\"dir\" run]"
             }
         };
-        if let Ok(formatter) = handle.text_mode_formatter() {
-            formatter.next_line().write_str(text);
-        }
-        handle.call_exit();
+        args.formatter.next_line().write_str(text);
+        Ok(())
     }
 }

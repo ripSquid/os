@@ -1,7 +1,6 @@
 use core::ops::{Deref, DerefMut};
 
-use super::{DefaultVgaWriter, BitmapVgaWriter, VgaPalette, switch_graphics_mode, VgaModeSwitch};
-
+use super::{switch_graphics_mode, BitmapVgaWriter, DefaultVgaWriter, VgaModeSwitch, VgaPalette};
 
 #[derive(Clone, Copy)]
 enum CurrentBufferType {
@@ -17,14 +16,17 @@ pub struct UniversalVgaFormatter {
 }
 impl UniversalVgaFormatter {
     pub fn new_unsafe() -> Self {
-        Self::new(unsafe {
-            DefaultVgaWriter::new_unsafe()
-        })
+        Self::new(unsafe { DefaultVgaWriter::new_unsafe() })
     }
     pub fn new(default: DefaultVgaWriter) -> Self {
         let graphics = unsafe { BitmapVgaWriter::new_unsafe() };
         let current = CurrentBufferType::TextMode80x25;
-        Self { default, graphics, current, palette_storage: None }
+        Self {
+            default,
+            graphics,
+            current,
+            palette_storage: None,
+        }
     }
     pub fn switch_to_text_mode(&mut self) -> &mut DefaultVgaWriter {
         match self.current {
@@ -37,7 +39,7 @@ impl UniversalVgaFormatter {
                 }
                 self.current = CurrentBufferType::TextMode80x25;
                 &mut self.default
-            },
+            }
         }
     }
     pub fn switch_to_graphics_mode(&mut self) -> &mut BitmapVgaWriter {
@@ -49,9 +51,9 @@ impl UniversalVgaFormatter {
                 if let Some(palette) = old_paletter {
                     self.default.set_palette(palette);
                 }
-                self.current = CurrentBufferType::TextMode80x25;
-                &mut self.graphics 
-            },
+                self.current = CurrentBufferType::VideoMode320x200;
+                &mut self.graphics
+            }
         }
     }
 }
