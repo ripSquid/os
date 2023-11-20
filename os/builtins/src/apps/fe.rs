@@ -26,7 +26,7 @@ impl LittleManApp for ForRunner {
             let file = fs::get_file(PathString::from(path)).map_err(|_| ProgramError::FileSystemError)?.read_file().map_err(|_| ProgramError::FileSystemError)?;
             file
         };
-        machine.instructions.add_instructions_to_end(&from_utf8(&script).map_err(|_| ProgramError::FileSystemError)?.chars().collect());
+        machine.add_instructions_to_end(&from_utf8(&script).map_err(|_| ProgramError::FileSystemError)?);
         machine.run_to_end();
         Ok(())
     }

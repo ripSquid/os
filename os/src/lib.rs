@@ -67,11 +67,10 @@ pub extern "C" fn rust_start(info: u64) -> ! {
     let mut forth_machine = ForthMachine::default();
 
     forth_machine.insert_default_word("run", &run);
-    forth_machine
-        .instructions
-        .add_instructions_to_end(&"\"bin/startup.for\" \"forrunner\" run".chars().collect());
+    
+    forth_machine.add_instructions_to_end(&"\"bin/startup.for\" \"forrunner\" run");
     forth_machine.run_to_end();
-
+    
     unsafe {
         let mut string = String::new();
         forth_machine.formatter.enable_cursor().set_position((0, 7));
@@ -95,9 +94,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         forth_machine.formatter.next_line();
                         let mut new_string = String::new();
                         core::mem::swap(&mut new_string, &mut string);
-                        forth_machine
-                            .instructions
-                            .add_instructions_to_end(&new_string.chars().collect());
+                        forth_machine.add_instructions_to_end(&new_string);
                         forth_machine.run_to_end();
                         forth_machine.formatter.next_line();
 

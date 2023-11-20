@@ -32,7 +32,7 @@ impl DefaultInstall for SplashScreen {
 impl LittleManApp for SplashScreen {
     fn run(&mut self, args: &mut base::forth::ForthMachine) -> Result<(), base::ProgramError> {
         let mut skipped = false;
-        let timestamp = unsafe { global_os_time };
+        let mut timestamp = unsafe { global_os_time };
         let g_formatter = args.formatter.switch_to_graphics_mode();
         let mut fade = 0u8;
         let lars = include_bytes!("LarsKagg2.bmp");
@@ -124,13 +124,14 @@ impl LittleManApp for SplashScreen {
             .write_str("Skriv [ \"help\" run ] för en introduktion till OperativSystemet")
             .set_position((0,7));
 
+            /* 
         if !skipped {
-            let timestamp = unsafe { global_os_time };
+            let timestamp2 = unsafe {  global_os_time };
             let duration = 500;
 
             let mut fade = 0;
-            while (unsafe { global_os_time } < timestamp + duration) {
-                let time = unsafe { global_os_time } - timestamp;
+            while (unsafe { global_os_time } < timestamp2 + duration) {
+                let time = unsafe { global_os_time } - timestamp2;
                 let old_fade = fade;
                 fade = ((time * u8::MAX as u64) / duration) as u8;
                 if fade != old_fade {
@@ -138,6 +139,7 @@ impl LittleManApp for SplashScreen {
                 }
             }
         }
+        */
         text_fm.set_palette(VgaPalette::<32>::DEFAULT_TEXTMODE);
         Ok(())
     }

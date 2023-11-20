@@ -77,7 +77,7 @@ impl LittleManApp for ViewInstance {
             string += "run";
             string
         };
-        machine.instructions.add_instructions_to_end(&program.chars().collect());
+        machine.add_instructions_to_end(&program);
         machine.run_to_end();
         Ok(())
     }

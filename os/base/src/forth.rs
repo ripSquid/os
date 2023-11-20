@@ -1,9 +1,6 @@
 use core::fmt::Display;
-
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
-
 use crate::display::{DefaultVgaWriter, UniversalVgaFormatter};
-
 pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine) + Sync + Send + 'static);
 
 fn forth_print(fm: &mut ForthMachine) {
@@ -17,7 +14,6 @@ pub enum StackItem {
     String(String),
     Int(isize),
 }
-
 impl Display for StackItem {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -35,7 +31,6 @@ impl Default for ForthInstructions {
         Self(alloc::vec![])
     }
 }
-
 impl ForthInstructions {
     pub fn add_instructions_to_end(&mut self, new_data: &Vec<char>) {
         let mut parsed_instructions = ForthInstructions::default();
@@ -90,10 +85,7 @@ impl ForthInstructions {
     }
 
     fn get(&self, u: usize) -> Option<&ForthInstruction> {
-        if self.len() > u {
-            return Some(&self.0[u]);
-        }
-        None
+        self.0.get(u)
     }
 
     fn iter(&self) -> core::slice::Iter<'_, ForthInstruction> {
@@ -106,7 +98,6 @@ pub enum ForthInstruction {
     Data(StackItem),
     Word(String),
 }
-
 impl From<String> for ForthInstruction {
     fn from(word: String) -> Self {
         if let Ok(i) = isize::from_str_radix(&word, 10) {
@@ -116,7 +107,6 @@ impl From<String> for ForthInstruction {
         }
     }
 }
-
 impl TryFrom<StackItem> for String {
     type Error = StackItem;
 
@@ -137,10 +127,8 @@ impl TryFrom<StackItem> for isize {
         }
     }
 }
-
 #[derive(Default)]
 pub struct Stack(Vec<StackItem>);
-
 impl Stack {
     pub fn pop(&mut self) -> Option<StackItem> {
         self.0.pop()
@@ -159,7 +147,6 @@ impl Stack {
         }
     }
 }
-
 pub struct ForthMachine {
     pub instruction_counter: usize,
     pub instructions: ForthInstructions,
@@ -168,7 +155,6 @@ pub struct ForthMachine {
     default_words: BTreeMap<&'static str, ForthFunction>,
     pub formatter: UniversalVgaFormatter,
 }
-
 impl Default for ForthMachine {
     fn default() -> Self {
         let default_words = {
@@ -186,18 +172,22 @@ impl Default for ForthMachine {
         }
     }
 }
-
 impl ForthMachine {
     pub fn insert_default_word(&mut self, name: &'static str, f: ForthFunction) {
         self.default_words.insert(name, f);
+    }
+    pub fn add_instructions_to_end<S: AsRef<str>>(&mut self, data: &S) {
+        self.instructions.add_instructions_to_end(&data.as_ref().chars().collect())
     }
     pub fn run(&mut self) {
         if self.instruction_counter >= self.instructions.len() {
             // Dont run because there are no instructions to run
             return;
         }
-
         let instruction_to_run = self.instructions.get(self.instruction_counter).unwrap();
+        
+        self.instruction_counter += 1;
+
         match instruction_to_run {
             ForthInstruction::Data(si) => {
                 self.stack.push(si.clone());
@@ -210,11 +200,10 @@ impl ForthMachine {
                 } else if let Some(instructions) = self.words.get(word.as_str()) {
                     self.run_instructions_locally(instructions.clone());
                 }
+
             }
         }
-        if self.instruction_counter < self.instructions.len() {
-            self.instruction_counter += 1;
-        }
+        
         
     }
 
