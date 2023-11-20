@@ -212,8 +212,10 @@ impl ForthMachine {
                 }
             }
         }
-
-        self.instruction_counter += 1;
+        if self.instruction_counter < self.instructions.len() {
+            self.instruction_counter += 1;
+        }
+        
     }
 
     pub fn run_to_end(&mut self) {
