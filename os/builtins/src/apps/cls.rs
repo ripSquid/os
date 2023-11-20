@@ -1,15 +1,15 @@
 use alloc::boxed::Box;
 
 use base::{display::VgaColor, forth::ForthMachine, LittleManApp, OsHandle, ProgramError};
-use fs::{AppConstructor, DefaultInstall, Path};
+use fs::{AppConstructor, DefaultInstall, PathString};
 
 #[derive(Default)]
 pub struct ClearScreen;
 pub struct ClearScreenApp;
 
 impl DefaultInstall for ClearScreen {
-    fn path() -> Path {
-        Path::from("cls.run")
+    fn path() -> PathString {
+        PathString::from("cls.run")
     }
 }
 impl AppConstructor for ClearScreen {

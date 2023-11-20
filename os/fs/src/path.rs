@@ -6,29 +6,29 @@ use alloc::{
 };
 
 #[derive(Clone)]
-pub struct Path(pub(crate) String);
-impl AsRef<Path> for Path {
-    fn as_ref(&self) -> &Path {
+pub struct PathString(pub(crate) String);
+impl AsRef<PathString> for PathString {
+    fn as_ref(&self) -> &PathString {
         self
     }
 }
 
-pub struct PathStr(str);
+pub struct Path(str);
 
-impl PathStr {
+impl Path {
     /// This is taken almost word for word of the standard library
-    pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> &PathStr {
-        unsafe { &*(s.as_ref() as *const str as *const PathStr) }
+    pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> &Path {
+        unsafe { &*(s.as_ref() as *const str as *const Path) }
     }
 }
 
-impl AsRef<PathStr> for Path {
-    fn as_ref(&self) -> &PathStr {
-        PathStr::new(self.0.as_str())
+impl AsRef<Path> for PathString {
+    fn as_ref(&self) -> &Path {
+        Path::new(self.0.as_str())
     }
 }
 
-impl PathStr {
+impl Path {
     pub fn components(&self) -> impl Iterator<Item = &str> {
         self.0.split("/")
     }
@@ -43,21 +43,21 @@ impl PathStr {
     }
 }
 
-impl Borrow<PathStr> for Path {
-    fn borrow(&self) -> &PathStr {
-        self.as_path_str()
+impl Borrow<Path> for PathString {
+    fn borrow(&self) -> &Path {
+        self.as_path()
     }
 }
-impl Deref for Path {
-    type Target = PathStr;
+impl Deref for PathString {
+    type Target = Path;
 
     fn deref(&self) -> &Self::Target {
-        self.as_path_str()
+        self.as_path()
     }
 }
 
-impl Path {
-    pub fn as_path_str(&self) -> &PathStr {
+impl PathString {
+    pub fn as_path(&self) -> &Path {
         self.as_ref()
     }
     pub fn parent(&self) -> Option<Self> {
@@ -68,7 +68,7 @@ impl Path {
         }
         Some(Self::from_segments(&segments[..segments.len() - 1]))
     }
-    pub fn pop(&mut self) -> Option<Path> {
+    pub fn pop(&mut self) -> Option<PathString> {
         let clean = self.clone().clean();
         let segments: Vec<_> = clean.components().collect();
         if segments.len() < 1 {
@@ -132,17 +132,17 @@ impl<T: AsRef<str>> AppendsPath for T {
         self.as_ref()
     }
 }
-impl AppendsPath for Path {
+impl AppendsPath for PathString {
     fn to_str(&self) -> &str {
         self.0.as_str()
     }
 }
-impl From<String> for Path {
+impl From<String> for PathString {
     fn from(value: String) -> Self {
         Self(value)
     }
 }
-impl From<&str> for Path {
+impl From<&str> for PathString {
     fn from(value: &str) -> Self {
         Self(value.to_string())
     }

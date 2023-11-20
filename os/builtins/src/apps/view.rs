@@ -3,19 +3,19 @@ use base::{
     forth::{ForthMachine, Stack},
     LittleManApp, OsHandle, ProgramError,
 };
-use fs::{AppConstructor, Path, DefaultInstall};
+use fs::{AppConstructor, PathString, DefaultInstall};
 use hashbrown::HashMap;
 use spin::RwLock;
 
-type RunningTable = Arc<RwLock<HashMap<String, Path>>>;
+type RunningTable = Arc<RwLock<HashMap<String, PathString>>>;
 #[derive(Default)]
 pub struct View(RunningTable);
 
 pub struct ViewInstance(RunningTable);
 
 impl DefaultInstall for View {
-    fn path() -> Path {
-        Path::from("view.run")
+    fn path() -> PathString {
+        PathString::from("view.run")
     }
 }
 impl AppConstructor for View {
@@ -46,13 +46,13 @@ impl LittleManApp for ViewInstance {
                     self.0
                         .try_write()
                         .ok_or(ProgramError::InternalError)?
-                        .insert(extension, Path::from(path));
+                        .insert(extension, PathString::from(path));
                     machine.formatter.write_str(&message);
                     return Ok(());
                 }
                 _ => (),
             };
-            let file_path = Path::from(arg1);
+            let file_path = PathString::from(arg1);
 
             let lock = self
             .0

@@ -3,7 +3,7 @@ use base::{
     forth::{ForthMachine, Stack, StackItem},
     LittleManApp, OsHandle, ProgramError,
 };
-use fs::{AppConstructor, DefaultInstall, Path};
+use fs::{AppConstructor, DefaultInstall, PathString};
 
 #[derive(Default)]
 pub struct Help;
@@ -17,8 +17,8 @@ impl AppConstructor for Help {
     }
 }
 impl DefaultInstall for Help {
-    fn path() -> Path {
-        Path::from("help.run")
+    fn path() -> PathString {
+        PathString::from("help.run")
     }
 }
 impl LittleManApp for Help {

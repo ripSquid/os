@@ -4,7 +4,7 @@ use base::{
     input::KEYBOARD_QUEUE,
     LittleManApp,
 };
-use fs::{AppConstructor, DefaultInstall, Path};
+use fs::{AppConstructor, DefaultInstall, PathString};
 
 use crate::{
     cpuid, 
@@ -24,8 +24,8 @@ impl AppConstructor for SplashScreen {
     }
 }
 impl DefaultInstall for SplashScreen {
-    fn path() -> Path {
-        Path::from("/bin/splash.run")
+    fn path() -> PathString {
+        PathString::from("/bin/splash.run")
     }
 }
 

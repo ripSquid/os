@@ -2,7 +2,7 @@
 extern crate alloc;
 mod apps;
 pub use apps::*;
-use fs::{FileSystemError, Path};
+use fs::{FileSystemError, PathString};
 
 pub fn install_all() -> Result<(), FileSystemError> {
     let active_path = fs::active_directory();
@@ -11,12 +11,12 @@ pub fn install_all() -> Result<(), FileSystemError> {
     result
 }
 fn try_install() -> Result<(), FileSystemError> {
-    fs::create_dir(Path::from("bin")).unwrap();
+    fs::create_dir(PathString::from("bin")).unwrap();
     fs::create_data_file(
-        Path::from("bin/startup.for"),
+        PathString::from("bin/startup.for"),
         "\"splash\" run".as_bytes().to_vec(),
     )?;
-    fs::set_active_directory(Path::from("bin"));
+    fs::set_active_directory(PathString::from("bin"));
     fs::install_app::<Help>()?;
     fs::install_app::<Dir>()?;
     fs::install_app::<View>()?;

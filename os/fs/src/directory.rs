@@ -5,7 +5,7 @@ use alloc::{
 use hashbrown::HashMap;
 use spin::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::{File, FileMetadata, FileType, KaggFile, Path};
+use crate::{File, FileMetadata, FileType, KaggFile, PathString};
 
 #[derive(Default)]
 pub struct Directory(HashMap<String, RwLock<KaggFile>>);
@@ -24,15 +24,15 @@ impl Directory {
                     i.try_read()
                         .map(|succ| match &*succ {
                             KaggFile::Directory(_) => Some(FileMetadata {
-                                path: Path(str.to_string()),
+                                path: PathString(str.to_string()),
                                 filetype: FileType::Directory,
                             }),
                             KaggFile::Data(_) => Some(FileMetadata {
-                                path: Path(str.to_string()),
+                                path: PathString(str.to_string()),
                                 filetype: FileType::Data,
                             }),
                             KaggFile::App(_) => Some(FileMetadata {
-                                path: Path(str.to_string()),
+                                path: PathString(str.to_string()),
                                 filetype: FileType::App,
                             }),
                             _ => None,

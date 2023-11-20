@@ -7,15 +7,15 @@ use base::{
 
 use forth::{Stack, StackItem};
 
-use fs::{AppConstructor, DefaultInstall, FileSystemError, Path};
+use fs::{AppConstructor, DefaultInstall, FileSystemError, PathString};
 
 #[derive(Default)]
 pub struct ChangeDir;
 pub struct ChangeDirApp(Option<Result<FileSystemError, &'static str>>);
 
 impl DefaultInstall for ChangeDir {
-    fn path() -> Path {
-        Path::from("cd.run")
+    fn path() -> PathString {
+        PathString::from("cd.run")
     }
 }
 impl AppConstructor for ChangeDir {

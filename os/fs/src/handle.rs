@@ -5,7 +5,7 @@ use base::LittleManApp;
 
 use spin::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::{DirRead, Directory, File, FileSystemError, KaggFile, Path, FILE_SYSTEM};
+use crate::{DirRead, Directory, File, FileSystemError, KaggFile, PathString, FILE_SYSTEM};
 
 /// Definitions for the different FileHandle priviliges
 pub enum WritePriviliges {}
@@ -23,14 +23,14 @@ impl FileHandlePriviliges for ReadPriviliges {}
 pub struct LittleFileHandle<'a, T: FileHandlePriviliges> {
     _filesystem: RwLockReadGuard<'a, Option<RwLock<Directory>>>,
     locks: FileHandleLocks<'a>,
-    path: Path,
+    path: PathString,
     _phantom: PhantomData<T>,
 }
 
 /// Methods which all file handles may use
 impl<'a, T: FileHandlePriviliges> LittleFileHandle<'a, T> {
     /// The absolute path to this file
-    pub fn path(&self) -> &Path {
+    pub fn path(&self) -> &PathString {
         &self.path
     }
 
@@ -84,7 +84,7 @@ impl<'a, T: FileHandlePriviliges> LittleFileHandle<'a, T> {
 
 /// Methods which only file handles with writing privliges may want to use
 impl<'a> LittleFileHandle<'a, WritePriviliges> {
-    pub fn new(path: Path) -> Result<Self, FileSystemError> {
+    pub fn new(path: PathString) -> Result<Self, FileSystemError> {
         let path = path.clean();
         let filesystem = FILE_SYSTEM.0.read();
         let locks = if path.components().count() == 1 {
@@ -138,7 +138,7 @@ impl<'a> LittleFileHandle<'a, WritePriviliges> {
 /// Methods which file handles with read priviliges might want to use
 impl<'a> LittleFileHandle<'a, ReadPriviliges> {
     pub fn new(
-        path: Path,
+        path: PathString,
         filesystem: RwLockReadGuard<'a, Option<RwLock<Directory>>>,
     ) -> Result<Self, FileSystemError> {
         let path = path.clean();
@@ -234,7 +234,7 @@ impl<'a> FileHandleLocks<'a> {
 
     unsafe fn read(
         filesystem: *const RwLock<Directory>,
-        path: &Path,
+        path: &PathString,
     ) -> Result<Self, FileSystemError> {
         let segments = path.components();
         let root_directory = filesystem.as_ref().unwrap().read();
@@ -275,7 +275,7 @@ impl<'a> FileHandleLocks<'a> {
     }
     unsafe fn write(
         filesystem: *const RwLock<Directory>,
-        path: &Path,
+        path: &PathString,
     ) -> Result<Self, FileSystemError> {
         let segments: Vec<_> = path.components().collect();
         let root_directory = filesystem

@@ -19,7 +19,7 @@ use easter_eggs::SplashScreen;
 use forth::Stack;
 
 use base::*;
-use fs::{FileSystemError, Path};
+use fs::{FileSystemError, PathString};
 use interrupt::setup::global_os_time;
 
 use crate::interrupt::pitinit;
@@ -136,9 +136,9 @@ fn get_app(machine: &mut ForthMachine) -> Result<Box<dyn LittleManApp>, FileSyst
         .stack
         .try_pop::<String>()
         .ok_or(FileSystemError::EmptyPath)?;
-    let finalized_path = Path::from(path).add_extension("run");
+    let finalized_path = PathString::from(path).add_extension("run");
     let file = fs::get_file_relative(&finalized_path)
-        .or(fs::get_file(Path::from("bin").append(&finalized_path)))?;
+        .or(fs::get_file(PathString::from("bin").append(&finalized_path)))?;
     let app = file.launch_app()?;
     Ok(app)
 }

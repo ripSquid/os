@@ -1,14 +1,14 @@
 use alloc::{boxed::Box, format, vec::Vec};
 use base::{forth::ForthMachine, LittleManApp, OsHandle, ProgramError};
-use fs::{AppConstructor, DefaultInstall, FileMetadata, Path};
+use fs::{AppConstructor, DefaultInstall, FileMetadata, PathString};
 
 #[derive(Default)]
 pub struct Dir;
 pub struct DirApp;
 
 impl DefaultInstall for Dir {
-    fn path() -> Path {
-        Path::from("dir.run")
+    fn path() -> PathString {
+        PathString::from("dir.run")
     }
 }
 impl AppConstructor for Dir {
