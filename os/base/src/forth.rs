@@ -27,7 +27,7 @@ impl Display for StackItem {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ForthInstructions(Vec<ForthInstruction>);
 
 impl Default for ForthInstructions {
@@ -54,7 +54,7 @@ impl ForthInstructions {
                     parsed_instructions.0.push(word.into());
                     word = String::new();
                 }
-            } else if i + 1 == new_data.len() {
+            } else if i + 1 == new_data.len() && string_mode == false {
                 // Last word doesnt have space after it
                 word.push(c);
                 parsed_instructions.0.push(word.into());

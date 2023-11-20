@@ -5,7 +5,7 @@ use base::{
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
 use x86_64::structures::idt::InterruptStackFrame;
 
-static mut controller: Controller = unsafe { Controller::with_timeout(1_000_000) };
+static mut controller: Controller = unsafe { Controller::with_timeout(10_000) };
 
 #[derive(PartialEq)]
 enum State {
