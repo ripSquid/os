@@ -1,4 +1,4 @@
-use core::fmt::Display;
+use core::{fmt::Display, arch::x86_64};
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 use crate::display::{DefaultVgaWriter, UniversalVgaFormatter};
 pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine) + Sync + Send + 'static);
@@ -6,6 +6,81 @@ pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine) + Sync + Send + 'st
 fn forth_print(fm: &mut ForthMachine) {
     if let Some(x) = fm.stack.pop() {
         fm.formatter.write_str(&format!("{}", x));
+    }
+}
+
+fn forth_dup(fm: &mut ForthMachine) {
+    if let Some(x) = fm.stack.pop() {
+        fm.stack.push(x.clone());
+        fm.stack.push(x);
+    }
+}
+
+// Bottom Top
+// Top Bottom
+fn forth_swap(fm: &mut ForthMachine) {
+    if fm.stack.0.len() >= 2 {
+        let top = fm.stack.pop().unwrap();
+        let bottom = fm.stack.pop().unwrap();
+        fm.stack.push(top);
+        fm.stack.push(bottom);
+    }
+}
+
+fn forth_rot(fm: &mut ForthMachine) {
+    if fm.stack.0.len() >= 3 {
+        let top = fm.stack.pop().unwrap();
+        let middle = fm.stack.pop().unwrap();
+        let bottom = fm.stack.pop().unwrap();
+        fm.stack.push(middle);
+        fm.stack.push(top);
+        fm.stack.push(bottom);
+    }
+}
+
+fn forth_drop(fm: &mut ForthMachine) {
+    if fm.stack.0.len() > 0 {
+        let _ = fm.stack.pop().unwrap();
+    }
+}
+
+fn forth_over(fm: &mut ForthMachine) {
+    if fm.stack.0.len() >= 2 {
+        fm.stack.push(fm.stack.0[fm.stack.0.len() - 2].clone());
+    }
+}
+
+fn forth_debug(fm: &mut ForthMachine) {
+    fm.formatter.write_str(&format!("{:#?}", fm.stack.0));
+}
+
+fn forth_new_word(fm: &mut ForthMachine) {
+    let mut defined_as = ForthInstructions::default();
+    let instruction_name = if let Some(ForthInstruction::Word(s)) = fm.instructions.get(fm.instruction_counter) {s.clone()} else {return;};
+    let mut instruction_counter = fm.instruction_counter + 1;
+    let mut complete_instruction = false;
+    while let Some(instruction) = fm.instructions.get(instruction_counter)  {
+        match instruction.clone() {
+            ForthInstruction::Word(s) => {
+                if s == ":" {
+                    complete_instruction = true;
+                    break;
+                } else {
+                    defined_as.0.push(ForthInstruction::Word(s));
+                }
+            },
+            ForthInstruction::Data(x) => {
+                defined_as.0.push(ForthInstruction::Data(x));
+            }
+        }
+
+        instruction_counter += 1;
+
+    }
+
+    if complete_instruction {
+        fm.words.insert(instruction_name, defined_as);
+        fm.instruction_counter = instruction_counter + 1;
     }
 }
 
@@ -160,6 +235,13 @@ impl Default for ForthMachine {
         let default_words = {
             let mut map: BTreeMap<&'static str, ForthFunction> = BTreeMap::new();
             map.insert(",", &forth_print);
+            map.insert("dup", &forth_dup);
+            map.insert("over", &forth_over);
+            map.insert("drop", &forth_drop);
+            map.insert("rot", &forth_rot);
+            map.insert("swap", &forth_swap);
+            map.insert("debug", &forth_debug);
+            map.insert(":", &forth_new_word);
             map
         };
         Self {
