@@ -122,7 +122,7 @@ impl ForEditor {
         
 
         //if new char is escape immediately quit
-        new_char == Some('\x1B')
+        new_char.map(|v| Into::<Option<char>>::into(v)).flatten() == Some('\x1B')
     }
     fn load_file(&mut self, path: String) -> Result<(), ProgramError> {
         let file = fs::get_file(&path).map_err(|_| ProgramError::FileSystemError)?.read_file().map_err(|_| ProgramError::Custom("could not read file!"))?; 
@@ -143,7 +143,7 @@ impl LittleManApp for ForEditor {
                 break;
             }
         }
-        formatter.clear_screen(VgaColor::Black).enable_cursor().set_position((0,0));
+        formatter.clear_screen(VgaColor::Black).set_default_colors(VgaColorCombo::on_black(VgaColor::White)).enable_cursor().set_position((0,0));
 
         Ok(())
     }

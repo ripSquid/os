@@ -57,11 +57,7 @@ impl Into<char> for Key {
 impl Into<Option<char>> for Key {
     fn into(self) -> Option<char> {
         let key = unsafe {keymap[self.0]};
-        if key == '\0' {
-            None
-        } else {
-            Some(key)
-        }
+        (key != '\0').then_some(key)
     }
 }
 
@@ -94,12 +90,7 @@ impl<T> Keyboard<T> {
 
 impl<T: Into<Option<char>>> Keyboard<T> {
     pub fn try_getch_char(&mut self) -> Option<char> {
-        match self.try_getch() {
-            Some(x) => {
-                x.into()
-            }, 
-            _ => None
-        }
+        self.try_getch().map(|x| x.into()).flatten()
     }
 }
 
