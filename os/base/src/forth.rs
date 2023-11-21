@@ -254,7 +254,7 @@ impl Stack {
     }
 
     pub fn try_pop_two_ints(&mut self) -> Option<(isize, isize)> {
-        if self.0.len() >= 2 {
+        if self.0.len() < 2 {
             return None;
         }
         let x: StackItem = self.pop().unwrap();
