@@ -84,6 +84,37 @@ fn forth_new_word(fm: &mut ForthMachine) {
     }
 }
 
+fn forth_add(fm: &mut ForthMachine) {
+    if let Some((x, y)) = fm.stack.try_pop_two_ints() {
+        fm.stack.push(StackItem::Int(x+y));
+    }
+}
+
+fn forth_mul(fm: &mut ForthMachine) {
+    if let Some((x, y)) = fm.stack.try_pop_two_ints() {
+        fm.stack.push(StackItem::Int(x*y));
+    }
+}
+
+fn forth_sub(fm: &mut ForthMachine) {
+    if let Some((x, y)) = fm.stack.try_pop_two_ints() {
+        fm.stack.push(StackItem::Int(x-y));
+    }
+}
+
+fn forth_div(fm: &mut ForthMachine) {
+    if let Some((x, y)) = fm.stack.try_pop_two_ints() {
+        fm.stack.push(StackItem::Int(x/y));
+    }
+}
+
+fn forth_mod(fm: &mut ForthMachine) {
+    if let Some((x, y)) = fm.stack.try_pop_two_ints() {
+        fm.stack.push(StackItem::Int(x % y));
+    }
+}
+
+
 #[derive(PartialEq, PartialOrd, Debug, Clone)]
 pub enum StackItem {
     String(String),
@@ -221,6 +252,27 @@ impl Stack {
             }
         }
     }
+
+    pub fn try_pop_two_ints(&mut self) -> Option<(isize, isize)> {
+        if self.0.len() >= 2 {
+            return None;
+        }
+        let x: StackItem = self.pop().unwrap();
+        let y: StackItem = self.pop().unwrap();
+
+        if let StackItem::Int(x) = x {
+            if let StackItem::Int(y) = y {
+                return Some((x, y));
+            } else {
+                self.push(y);
+                self.push(StackItem::Int(x));
+            }
+        } else {
+            self.push(y);
+            self.push(x);
+        }
+        None
+    }
 }
 pub struct ForthMachine {
     pub instruction_counter: usize,
@@ -241,6 +293,11 @@ impl Default for ForthMachine {
             map.insert("rot", &forth_rot);
             map.insert("swap", &forth_swap);
             map.insert("debug", &forth_debug);
+            map.insert("+", &forth_add);
+            map.insert("-", &forth_sub);
+            map.insert("/", &forth_div);
+            map.insert("*", &forth_mul);
+            map.insert("%", &forth_mod);
             map.insert(":", &forth_new_word);
             map
         };
