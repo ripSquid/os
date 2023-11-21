@@ -6,7 +6,7 @@ use alloc::{
 use crate::{
     display::{BitmapVgaWriter, DefaultVgaWriter, UniversalVgaFormatter, VgaModeSwitch},
     forth::{ForthMachine, Stack},
-    input::{Keyboard, KEYBOARD_QUEUE},
+    input::{Keyboard, KEYBOARD_QUEUE, Key},
 };
 
 pub trait LittleManApp: Send + Sync + 'static {
@@ -33,7 +33,7 @@ pub enum SystemCall {
     ForthFunction(String),
 }
 impl OsHandle {
-    pub fn keyboard(&self) -> &Keyboard<char> {
+    pub fn keyboard(&self) -> &Keyboard<Key> {
         unsafe { &KEYBOARD_QUEUE }
     }
     pub fn execute(&mut self, forth_command: impl ToString) -> bool {
@@ -54,7 +54,7 @@ impl OsHandle {
             }
         }
     }
-    pub fn keyboard_mut(&mut self) -> &mut Keyboard<char> {
+    pub fn keyboard_mut(&mut self) -> &mut Keyboard<Key> {
         unsafe { &mut KEYBOARD_QUEUE }
     }
     pub fn running(&self) -> bool {

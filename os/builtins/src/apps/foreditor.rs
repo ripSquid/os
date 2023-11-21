@@ -77,7 +77,7 @@ impl LittleManApp for ForEditor {
         let formatter = machine.formatter.switch_to_text_mode();
         loop {
             let char = unsafe { KEYBOARD_QUEUE.getch_blocking() };
-            if self.redraw(char, formatter) {
+            if self.redraw(char.into(), formatter) {
                 break;
             }
         }

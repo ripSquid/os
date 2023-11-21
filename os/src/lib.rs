@@ -80,7 +80,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                 .write_str(fs::active_directory().as_str())
                 .write_str(" > ");
             loop {
-                let c = KEYBOARD_QUEUE.getch_blocking();
+                let c: char = KEYBOARD_QUEUE.getch_blocking().into();
                 let count = string.chars().count();
                 match c {
                     '\x08' => {
@@ -100,7 +100,10 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         forth_machine.formatter.next_line();
 
                         break;
-                    }
+                    },
+                    '\0' => {
+                        forth_machine.formatter.back_up(count);
+                    },
                     _ => {
                         forth_machine.formatter.back_up(count);
                         string.push(c);

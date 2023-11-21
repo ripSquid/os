@@ -58,9 +58,12 @@ impl LittleManApp for SplashScreen {
         let total_range = 0..duration;
         let visible_range = 1000..2000;
         while unsafe { global_os_time } < timestamp + duration {
-            if let Some('w') = unsafe { KEYBOARD_QUEUE.try_getch() } {
-                skipped = true;
-                break;
+            if let Some(k) = unsafe { KEYBOARD_QUEUE.try_getch() } {
+                if 'w' == k.into() {
+                    skipped = true;
+                    break;
+                }
+                
             }
             let time = unsafe { global_os_time / 10 } as u8;
             for line in 196..200 {

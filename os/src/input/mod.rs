@@ -1,5 +1,5 @@
 use base::{
-    input::{keymap, ALT_MODIFIER, CTRL_MODIFIER, KEYBOARD_QUEUE, SHIFT_MODIFIER},
+    input::{keymap, ALT_MODIFIER, CTRL_MODIFIER, KEYBOARD_QUEUE, SHIFT_MODIFIER, Key},
     pic::pics,
 };
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
@@ -81,12 +81,7 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
                     keyboard_state.alt_pressed = false;
                 }
                 _ => {
-                    let keymap_entry = keymap[keyboard_state.get_modifier_usize() | data as usize];
-                    if keymap_entry != '\0' {
-                        KEYBOARD_QUEUE.insert(keymap_entry);
-                    } else {
-                        //STATIC_VGA_WRITER.write_str(&format!("0x{:X}", data));
-                    }
+                    KEYBOARD_QUEUE.insert(Key::new(keyboard_state.get_modifier_usize() | data as usize))
                 }
             }
         }

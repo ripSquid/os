@@ -5,8 +5,54 @@ pub const CTRL_MODIFIER: usize = 0b1000_0000_0000;
 pub const ALT_MODIFIER: usize = 0b0010_0000_0000;
 pub const ALTGR_MODIFIER: usize = 0b0001_0000_0000;
 
-pub static mut KEYBOARD_QUEUE: Keyboard<char> = Keyboard::new();
+pub static mut KEYBOARD_QUEUE: Keyboard<Key> = Keyboard::new();
 pub static mut keymap: [char; 4096] = ['\x00'; 4096];
+
+#[derive(Copy, Clone)]
+pub struct Key(usize);
+
+
+pub struct KeyModifier(usize);
+
+impl From<Key> for KeyModifier {
+    fn from(value: Key) -> Self {
+        Self(value.0 & 0xF0000)
+    }
+}
+
+impl KeyModifier {
+    pub fn is_ctrl_pressed(&self) -> bool {
+        (self.0 & CTRL_MODIFIER) > 0
+    }
+
+    pub fn is_shift_pressed(&self) -> bool {
+        (self.0 & SHIFT_MODIFIER) > 0
+    }
+
+    pub fn is_alt_pressed(&self) -> bool {
+        (self.0 & ALT_MODIFIER) > 0
+    }
+}
+
+impl Key {
+    pub fn key_modifiers(self) -> KeyModifier {
+        self.into()
+    }
+
+    pub fn as_char(self) -> char {
+        self.into()
+    }
+
+    pub fn new(u: usize) -> Self {
+        Self(u)
+    }
+}
+
+impl Into<char> for Key {
+    fn into(self) -> char {
+        unsafe {keymap[self.0]}
+    }
+}
 
 pub struct Keyboard<T> {
     queue: Queue<T, 256>,
