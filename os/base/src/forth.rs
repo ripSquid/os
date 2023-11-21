@@ -115,7 +115,7 @@ fn forth_mod(fm: &mut ForthMachine) {
 }
 
 
-#[derive(PartialEq, PartialOrd, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum StackItem {
     String(String),
     Int(isize),
@@ -199,7 +199,7 @@ impl ForthInstructions {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ForthInstruction {
     Data(StackItem),
     Word(String),
@@ -274,6 +274,7 @@ impl Stack {
         None
     }
 }
+
 pub struct ForthMachine {
     pub instruction_counter: usize,
     pub instructions: ForthInstructions,
