@@ -17,7 +17,7 @@ pub use path::*;
 use alloc::{
     boxed::Box,
     string::{String, ToString},
-    vec::Vec,
+    vec::Vec, borrow::Cow,
 };
 
 pub mod handle;
@@ -46,11 +46,11 @@ impl RamFileSystem {
         *self.0.write() = Some(RwLock::new(Directory::default()));
     }
 
-    fn get_file<'b, P: AsRef<PathString>>(
+    fn get_file<'b, P: AsRef<Path>>(
         &'b self,
         path: P,
     ) -> Result<LittleFileHandle<'b, ReadPriviliges>, FileSystemError> {
-        LittleFileHandle::<ReadPriviliges>::new(path.as_ref().clone().clean(), FILE_SYSTEM.0.read())
+        LittleFileHandle::<ReadPriviliges>::new(path.as_ref().to_pathstring().clean(), FILE_SYSTEM.0.read())
     }
     fn get_file_write<'b, P: AsRef<PathString>>(
         &'b self,
@@ -68,7 +68,7 @@ pub fn start() {
     FILE_SYSTEM.init()
 }
 
-pub fn get_file<P: AsRef<PathString>>(
+pub fn get_file<P: AsRef<Path>>(
     path: P,
 ) -> Result<LittleFileHandle<'static, ReadPriviliges>, FileSystemError> {
     FILE_SYSTEM.get_file(path)
@@ -80,9 +80,9 @@ pub fn get_file_relative<P: AsRef<PathString>>(
 }
 pub fn create_data_file<P: AsRef<PathString>>(
     path: P,
-    data: Vec<u8>,
+    data: impl Into<Cow<'static, [u8]>>,
 ) -> Result<LittleFileHandle<'static, WritePriviliges>, FileSystemError> {
-    create_file(path, KaggFile::Data(data))
+    create_file(path, KaggFile::Data(data.into()))
 }
 pub fn create_dir<P: AsRef<PathString>>(
     path: P,
@@ -96,7 +96,7 @@ pub fn install_app<A: InstallableApp>() -> Result<(), FileSystemError> {
     Ok(())
 }
 
-pub fn read_dir<P: AsRef<PathString>>(path: P) -> Result<DirRead, FileSystemError> {
+pub fn read_dir<P: AsRef<Path>>(path: P) -> Result<DirRead, FileSystemError> {
     match get_file(path) {
         Ok(file_handle) => file_handle.read_dir(),
         Err(err) => Err(err),
@@ -116,7 +116,7 @@ pub enum FileType {
 impl File {
     pub fn empty<S: ToString>(name: S) -> Self {
         Self {
-            data: KaggFile::Data(Vec::new()),
+            data: KaggFile::Data(Vec::new().into()),
             name: name.to_string(),
         }
     }

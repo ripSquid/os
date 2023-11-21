@@ -1,17 +1,18 @@
 %define ARCHITECTURE 0
 section .multiboot_header 
 header_start:
-    ;magic (required by multiboot 2 spec)
+    ;"magic" bytes (specified by multiboot 2 spec)
+    ;The primary purpose for this is for grub to be sure this isn't here by accident.
     dd 0xE85250D6
     
-    ;architecture 
+    ;architecture bytes as defined by the multiboot 2 spec
     dd ARCHITECTURE
 
-    ;length
+    ;length of header
     dd header_end - header_start
 
-    ;checksum    
-    ;checksum + magic + arch. + len. = 0
+    ;checksum
+    ;as per the specification (checksum + magic + arch. + len. = 0)
     dd 0x100000000 - (0xe85250d6 + ARCHITECTURE + (header_end - header_start))
 
     ;tag

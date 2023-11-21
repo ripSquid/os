@@ -116,8 +116,8 @@ impl<'a> LittleFileHandle<'a, WritePriviliges> {
         self.locks
             .attempt_mut(|file| match file {
                 KaggFile::Data(data) => {
-                    *data = Vec::with_capacity(insert.len());
-                    data.extend_from_slice(insert);
+                    let vector = Vec::from(insert);
+                    *data = vector.into();
                     Ok(())
                 }
                 _ => Err(()),

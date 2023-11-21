@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec::Vec, borrow::Cow};
 use base::LittleManApp;
 
 use crate::{Directory, FileType};
@@ -8,7 +8,7 @@ pub trait AppConstructor: Send + Sync + 'static {
 }
 pub enum KaggFile {
     Directory(Directory),
-    Data(Vec<u8>),
+    Data(Cow<'static, [u8]>),
     App(Box<dyn AppConstructor>),
     Deleted,
 }

@@ -81,13 +81,14 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                 .write_str(" > ");
             loop {
                 let c = KEYBOARD_QUEUE.getch_blocking();
+                let count = string.chars().count();
                 match c {
                     '\x08' => {
                         forth_machine
                             .formatter
-                            .back_up(string.len())
-                            .write_str(&" ".repeat(string.len()))
-                            .back_up(string.len());
+                            .back_up(count)
+                            .write_str(&" ".repeat(count))
+                            .back_up(count);
                         string.pop();
                     }
                     '\n' => {
@@ -101,7 +102,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                         break;
                     }
                     _ => {
-                        forth_machine.formatter.back_up(string.len());
+                        forth_machine.formatter.back_up(count);
                         string.push(c);
                     }
                 }

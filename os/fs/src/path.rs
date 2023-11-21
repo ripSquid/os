@@ -5,7 +5,7 @@ use alloc::{
     vec::Vec,
 };
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct PathString(pub(crate) String);
 impl AsRef<PathString> for PathString {
     fn as_ref(&self) -> &PathString {
@@ -40,6 +40,14 @@ impl Path {
     }
     pub fn file_name(&self) -> Option<&Self> {
         self.components().last().map(|i| Self::new(i))
+    }
+    pub fn to_pathstring(&self) -> PathString {
+        PathString::from(self)
+    }
+}
+impl From<&Path> for PathString {
+    fn from(value: &Path) -> Self {
+        PathString(value.0.to_string())
     }
 }
 
@@ -145,5 +153,10 @@ impl From<String> for PathString {
 impl From<&str> for PathString {
     fn from(value: &str) -> Self {
         Self(value.to_string())
+    }
+}
+impl AsRef<Path> for String {
+    fn as_ref(&self) -> &Path {
+        Path::new(self)
     }
 }

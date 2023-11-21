@@ -81,35 +81,38 @@ check_multiboot:
     mov al, "0"
     jmp error
 
-
+;Sets up the first gigabyte of memory to be identity mapped
 page_table_setup:
 
-    mov eax, p3_table
-    or eax, 0b11
-    mov [p4_table], eax
+    mov eax, p3_table   ;insert address to p3_table into eax
+    or eax, 0b11        ;present + writable flags
+    mov [p4_table], eax ;assign to the 0th entry of p4_table 
     
-    mov eax, p2_table
-    or eax, 0b11
-    mov [p3_table], eax
+    mov eax, p2_table   ;insert address of p2_table to eax
+    or eax, 0b11        ;present + writable
+    mov [p3_table], eax ;assign to the 0th entry of p3_table
 
-    mov ecx, 0
+    mov ecx, 0          ;reset ecx (will use in a second)  
 
 .map_p2_table:
 
-    mov eax, 0x200000 
-    mul ecx
-    or eax, 0b10000011
-    mov [p2_table + ecx * 8], eax
-    inc ecx
-    cmp ecx, 512
-    jne .map_p2_table
+    ;construct page table entry
+    mov eax, 0x200000               ;the size of 2MiB in bytes (1024*1024*2 in hex)
+    mul ecx                         ;multiply with ecx (which is our page counter, think of it as i in a for loop)
+    or eax, 0b10000011              ;same as above + huge flag (This tells PAE that our page is 2MiB and negates the need for a p1_table)
+
+    mov [p2_table + ecx * 8], eax   ;assign the page table entry we just created to the ecx'th entry in the p2_table
+    inc ecx                         ;increase ecx in preparation for next iteration
+    cmp ecx, 512                    ;compare, are we on iteration 512? (finished)
+    jne .map_p2_table               ;if not, jump back to .map_p2_table
 
     ;map entry 511 of p4 table to itself, making a recursive page table.
-    mov eax, p4_table
-    or eax, 0b11 ; present + writable
-    mov [p4_table + (511 * 8)], eax
+    mov eax, p4_table               ;insert address to p4_table into eax
+    or eax, 0b11                    ;present + writable
+    mov [p4_table + (511 * 8)], eax ;assign to the 511th entry of p4_table
 
-    ret
+    ;return
+    ret                 
 
 enable_paging:
 
@@ -134,7 +137,7 @@ enable_paging:
 
 
 
-
+;static read only data
 section .rodata
 gdt64:
     dq 0                                        ; Empty beginner segment into the GDT
@@ -152,7 +155,7 @@ section .bss
 
 align 4096
 
-;memory paging tables
+;space for memory paging tables
 p4_table:
     resb 4096
 p3_table: 
@@ -160,8 +163,7 @@ p3_table:
 p2_table:
     resb 4096
 
-
-
+;space for CPU stack
 stack_bottom:
     resb STACKSIZE
 stack_top: 
