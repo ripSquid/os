@@ -12,7 +12,7 @@ extern crate bitflags;
 extern crate alloc;
 
 use alloc::boxed::Box;
-use base::display::{DefaultVgaWriter, UniversalVgaFormatter, VgaColorCombo, VgaPalette};
+use base::display::{DefaultVgaWriter, UniversalVgaFormatter, VgaColorCombo, VgaPalette, VgaColor};
 use base::forth::{ForthMachine, StackItem};
 use base::input::KEYBOARD_QUEUE;
 use easter_eggs::SplashScreen;
@@ -77,6 +77,8 @@ pub extern "C" fn rust_start(info: u64) -> ! {
         loop {
             forth_machine
                 .formatter
+                .set_default_colors(VgaColorCombo::on_black(VgaColor::White))
+                .enable_cursor()
                 .write_str(fs::active_directory().as_str())
                 .write_str(" > ");
             loop {

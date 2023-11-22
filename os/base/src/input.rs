@@ -9,14 +9,14 @@ pub static mut KEYBOARD_QUEUE: Keyboard<Key> = Keyboard::new();
 pub static mut keymap: [char; 4096] = ['\x00'; 4096];
 
 #[derive(Copy, Clone)]
-pub struct Key(usize);
+pub struct Key(pub usize);
 
 
 pub struct KeyModifier(usize);
 
 impl From<Key> for KeyModifier {
     fn from(value: Key) -> Self {
-        Self(value.0 & 0xF0000)
+        Self(value.0 & 0xF00)
     }
 }
 

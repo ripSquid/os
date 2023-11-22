@@ -1,0 +1,14 @@
+Välkommen till hjälpdokumentet för Operativsystemet!
+
+Här beskrivs kort hur operativsystemet fungerar och
+Vad du kan göra i det.
+
+1. Inledning - Forth
+
+Operativsystemets terminal är baserad på programmeringspråket 
+forth. Ett obskyrt men simpelt och användbart språk som är lätt att förstå, 
+Men svårare att bemästra. Låt oss ta exemplet av  [ "help" run ], det som
+sker när du trycker enter är att "help" läggs längst upp på en lista, så 
+kallad "Stack", därefter körs funktionen run, vilket hämtar värdet och letar
+efter appar vid namn "help". I detta fallet är help en förinstallerad app som
+ligger på plats "/bin/help.run" i filsystemet. 

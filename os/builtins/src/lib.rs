@@ -11,6 +11,10 @@ pub fn install_all() -> Result<(), FileSystemError> {
     result
 }
 fn try_install() -> Result<(), FileSystemError> {
+    fs::create_data_file(
+        PathString::from("/help.txt"),
+        include_str!("beginners.txt").as_bytes(),
+    )?;
     fs::create_dir(PathString::from("bin")).unwrap();
     fs::create_data_file(
         PathString::from("bin/startup.for"),

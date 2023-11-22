@@ -52,11 +52,11 @@ impl RamFileSystem {
     ) -> Result<LittleFileHandle<'b, ReadPriviliges>, FileSystemError> {
         LittleFileHandle::<ReadPriviliges>::new(path.as_ref().to_pathstring().clean(), FILE_SYSTEM.0.read())
     }
-    fn get_file_write<'b, P: AsRef<PathString>>(
+    fn get_file_write<'b, P: AsRef<Path>>(
         &'b self,
         path: P,
     ) -> Result<LittleFileHandle<'b, WritePriviliges>, FileSystemError> {
-        LittleFileHandle::<WritePriviliges>::new(path.as_ref().clone().clean())
+        LittleFileHandle::<WritePriviliges>::new(path.as_ref().to_pathstring().clean())
     }
 }
 pub struct File {
@@ -73,18 +73,23 @@ pub fn get_file<P: AsRef<Path>>(
 ) -> Result<LittleFileHandle<'static, ReadPriviliges>, FileSystemError> {
     FILE_SYSTEM.get_file(path)
 }
+pub fn get_file_write<P: AsRef<Path>>(
+    path: P,
+) -> Result<LittleFileHandle<'static, WritePriviliges>, FileSystemError> {
+    FILE_SYSTEM.get_file_write(path)
+}
 pub fn get_file_relative<P: AsRef<PathString>>(
     path: P,
 ) -> Result<LittleFileHandle<'static, ReadPriviliges>, FileSystemError> {
     FILE_SYSTEM.get_file(active_directory().append(path.as_ref()))
 }
-pub fn create_data_file<P: AsRef<PathString>>(
+pub fn create_data_file<P: AsRef<Path>>(
     path: P,
     data: impl Into<Cow<'static, [u8]>>,
 ) -> Result<LittleFileHandle<'static, WritePriviliges>, FileSystemError> {
     create_file(path, KaggFile::Data(data.into()))
 }
-pub fn create_dir<P: AsRef<PathString>>(
+pub fn create_dir<P: AsRef<Path>>(
     path: P,
 ) -> Result<LittleFileHandle<'static, WritePriviliges>, FileSystemError> {
     create_file(path, KaggFile::Directory(Directory::default()))
@@ -139,11 +144,11 @@ pub fn set_active_directory(p: PathString) {
     unsafe { ACTIVE_DIRECTORY = Some(p.clean()) };
 }
 
-pub(crate) fn create_file<P: AsRef<PathString>>(
+pub(crate) fn create_file<P: AsRef<Path>>(
     path: P,
     file: KaggFile,
 ) -> Result<LittleFileHandle<'static, WritePriviliges>, FileSystemError> {
-    let mut parent = path.as_ref().clone();
+    let mut parent = path.as_ref().to_pathstring();
     let file_name = parent.pop().unwrap();
     match FILE_SYSTEM.get_file_write(parent) {
         Ok(mut exists) => {
