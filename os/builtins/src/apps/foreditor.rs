@@ -31,20 +31,20 @@ struct ForEditor {
     cursor_position: usize,
     x_offset: usize,
     y_offset: usize,
-    path: Result<PathString, String>,
+    path: Option<PathString>,
     state: EditorState
 }
 impl Default for ForEditor {
     fn default() -> Self {
-        Self { work: Default::default(), cursor_position: Default::default(), x_offset: Default::default(), y_offset: Default::default(), path: Err(String::default()), line_cache: vec![0..0], state: EditorState::Writing }
+        Self { work: Default::default(), cursor_position: Default::default(), x_offset: Default::default(), y_offset: Default::default(), path: None, line_cache: vec![0..0], state: EditorState::Writing }
     }
 }
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum EditorState {
     Writing,
     HoveringSave,
     HoveringExit,
-    WritingSavePath,
+    WritingSavePath(String),
 }
 
 impl ForEditor {
@@ -86,6 +86,22 @@ impl ForEditor {
     fn add_char(&mut self, char: char) {
         self.work.insert(self.cursor_position, char);
         self.cursor_position += char.len_utf8();
+    } 
+    fn save_file(&mut self, message: &mut (VgaColorCombo, &str)) {
+        match &self.path {
+            Some(exists) => {
+                match fs::get_file_write(exists) {
+                    Ok(mut data_file) => {
+                        match data_file.write_file(self.work.as_bytes()) {
+                            Ok(_) => *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Green), "File Saved."),
+                            Err(_) => *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Red), "File system error."),
+                        }
+                    },
+                    Err(_) => *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Red), "File not found."),
+                }
+            },
+            None => {self.state = EditorState::WritingSavePath(String::new()); *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Black), "Oops...")},
+        }
     }
     pub fn redraw(&mut self, new_char: Option<Key>, formatter: &mut DefaultVgaWriter) -> bool {
         let mut message = (VgaColorCombo::new(VgaColor::Black, VgaColor::White), "");
@@ -94,7 +110,7 @@ impl ForEditor {
 
         if let Some(new_key) = new_char {
             
-            match self.state {
+            match &mut self.state {
                 EditorState::Writing => {
                     let first_part = new_key.0 & 0xFF;
                     match (first_part, new_key.key_modifiers().is_ctrl_pressed(),new_key.key_modifiers().is_shift_pressed()) {
@@ -120,7 +136,6 @@ impl ForEditor {
                                 let new_offset = other_range.start + offset;
                                 self.cursor_position = new_offset.min(other_range.end);
                             }
-
                         },
                         (0x20 , true, false) => {
                             self.cursor_position = self.cursor_position.saturating_add(1);
@@ -129,20 +144,7 @@ impl ForEditor {
                             }
                         },
                         (0x1F, true, true) => {
-                            match &self.path {
-                                Ok(exists) => {
-                                    match fs::get_file_write(exists) {
-                                        Ok(mut data_file) => {
-                                            match data_file.write_file(self.work.as_bytes()) {
-                                                Ok(_) => message = (VgaColorCombo::new(VgaColor::White, VgaColor::Green), "File Saved."),
-                                                Err(_) => message = (VgaColorCombo::new(VgaColor::White, VgaColor::Red), "File system error."),
-                                            }
-                                        },
-                                        Err(_) => message = (VgaColorCombo::new(VgaColor::White, VgaColor::Red), "File not found."),
-                                    }
-                                },
-                                Err(_) => message = (VgaColorCombo::new(VgaColor::White, VgaColor::Black), "Oops..."),
-                            }
+                            self.save_file(&mut message);
                         },
                         _ => {
                             let Some(new_char) = Into::<Option<char>>::into(new_key) else {return false};
@@ -164,8 +166,29 @@ impl ForEditor {
                 EditorState::HoveringExit => {
                     
                 },
-                EditorState::WritingSavePath => {
-                    
+                EditorState::WritingSavePath(string) => {
+                    match Into::<Option<char>>::into(new_key) {
+                        Some('\x08') => {
+                            string.pop();
+                        }
+                        Some('\n') => {
+                            let mut new_state = EditorState::Writing;
+                            core::mem::swap(&mut new_state, &mut self.state);
+                            let EditorState::WritingSavePath(path) = new_state else {unreachable!()};
+                            if fs::create_data_file(path.clone(), [].as_slice()).is_ok() {
+                                self.path = Some(PathString::from(path));
+                                self.save_file(&mut message);
+                            } else {
+                                message = (VgaColorCombo::new(VgaColor::White, VgaColor::Red), "Failed to create file.");
+                            }
+                           
+                        }
+                        Some(char) => {
+                            string.push(char);
+                            
+                        },
+                        None => (),
+                    }
                 },
             }
         }
@@ -194,7 +217,9 @@ impl ForEditor {
         if let Some((x, y)) = cursor_pos {
             formatter.update_cursor(x as u8, y as u8).enable_cursor();
         }
-        
+        if let EditorState::WritingSavePath(string) = &self.state {
+            formatter.set_position((0, 24)).set_default_colors(VgaColorCombo::on_black(VgaColor::Black)).enable_cursor().write_str(&string);
+        }
 
         //if new char is escape immediately quit
         new_char.map(|v| Into::<Option<char>>::into(v)).flatten() == Some('\x1B')
@@ -202,7 +227,7 @@ impl ForEditor {
     fn load_file(&mut self, path: String) -> Result<(), ProgramError> {
         let file = fs::get_file(&path).map_err(|_| ProgramError::FileSystemError)?.read_file().map_err(|_| ProgramError::Custom("could not read file!"))?; 
         self.work = String::from_utf8(file).map_err(|_| ProgramError::Custom("Invalid file contents"))?;
-        self.path = Ok(PathString::from(path));
+        self.path = Some(PathString::from(path));
         Ok(())
     }
 }
