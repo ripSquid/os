@@ -1,6 +1,6 @@
-use core::{fmt::Display, arch::x86_64};
-use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 use crate::display::{DefaultVgaWriter, UniversalVgaFormatter};
+use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
+use core::{arch::x86_64, fmt::Display};
 pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine) + Sync + Send + 'static);
 
 fn forth_print(fm: &mut ForthMachine) {
@@ -56,10 +56,15 @@ fn forth_debug(fm: &mut ForthMachine) {
 
 fn forth_new_word(fm: &mut ForthMachine) {
     let mut defined_as = ForthInstructions::default();
-    let instruction_name = if let Some(ForthInstruction::Word(s)) = fm.instructions.get(fm.instruction_counter) {s.clone()} else {return;};
+    let instruction_name =
+        if let Some(ForthInstruction::Word(s)) = fm.instructions.get(fm.instruction_counter) {
+            s.clone()
+        } else {
+            return;
+        };
     let mut instruction_counter = fm.instruction_counter + 1;
     let mut complete_instruction = false;
-    while let Some(instruction) = fm.instructions.get(instruction_counter)  {
+    while let Some(instruction) = fm.instructions.get(instruction_counter) {
         match instruction.clone() {
             ForthInstruction::Word(s) => {
                 if s == ":" {
@@ -68,14 +73,13 @@ fn forth_new_word(fm: &mut ForthMachine) {
                 } else {
                     defined_as.0.push(ForthInstruction::Word(s));
                 }
-            },
+            }
             ForthInstruction::Data(x) => {
                 defined_as.0.push(ForthInstruction::Data(x));
             }
         }
 
         instruction_counter += 1;
-
     }
 
     if complete_instruction {
@@ -86,25 +90,25 @@ fn forth_new_word(fm: &mut ForthMachine) {
 
 fn forth_add(fm: &mut ForthMachine) {
     if let Some((x, y)) = fm.stack.try_pop_two_ints() {
-        fm.stack.push(StackItem::Int(x+y));
+        fm.stack.push(StackItem::Int(x + y));
     }
 }
 
 fn forth_mul(fm: &mut ForthMachine) {
     if let Some((x, y)) = fm.stack.try_pop_two_ints() {
-        fm.stack.push(StackItem::Int(x*y));
+        fm.stack.push(StackItem::Int(x * y));
     }
 }
 
 fn forth_sub(fm: &mut ForthMachine) {
     if let Some((x, y)) = fm.stack.try_pop_two_ints() {
-        fm.stack.push(StackItem::Int(x-y));
+        fm.stack.push(StackItem::Int(x - y));
     }
 }
 
 fn forth_div(fm: &mut ForthMachine) {
     if let Some((x, y)) = fm.stack.try_pop_two_ints() {
-        fm.stack.push(StackItem::Int(x/y));
+        fm.stack.push(StackItem::Int(x / y));
     }
 }
 
@@ -114,6 +118,37 @@ fn forth_mod(fm: &mut ForthMachine) {
     }
 }
 
+fn forth_again(fm: &mut ForthMachine) {
+    // Search for the first BEGIN word
+    let mut instruction_counter = fm.instruction_counter;
+    while instruction_counter >= 1 {
+        instruction_counter -= 1;
+        if let Some(ForthInstruction::Word(x)) = fm.instructions.get(instruction_counter) {
+            if x.to_lowercase() == "begin" {
+                fm.instruction_counter = instruction_counter;
+                return;
+            }
+        }
+    }
+
+    fm.formatter
+        .write_str("\nERROR: AGAIN couldn't find any BEGIN word\n");
+}
+
+fn forth_if(fm: &mut ForthMachine) {
+    if let Some(0) = fm.stack.try_pop::<isize>() {
+        let mut instruction_counter = fm.instruction_counter;
+        while instruction_counter + 1 < fm.instructions.len() {
+            instruction_counter += 1;
+            if let Some(ForthInstruction::Word(x)) = fm.instructions.get(instruction_counter) {
+                if x.to_lowercase() == "then" {
+                    fm.instruction_counter = instruction_counter;
+                    return;
+                }
+            }
+        }
+    }
+}
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum StackItem {
@@ -300,6 +335,7 @@ impl Default for ForthMachine {
             map.insert("*", &forth_mul);
             map.insert("%", &forth_mod);
             map.insert(":", &forth_new_word);
+            map.insert("again", &forth_again);
             map
         };
         Self {
@@ -317,7 +353,8 @@ impl ForthMachine {
         self.default_words.insert(name, f);
     }
     pub fn add_instructions_to_end<S: AsRef<str>>(&mut self, data: &S) {
-        self.instructions.add_instructions_to_end(&data.as_ref().chars().collect())
+        self.instructions
+            .add_instructions_to_end(&data.as_ref().chars().collect())
     }
     pub fn run(&mut self) {
         if self.instruction_counter >= self.instructions.len() {
@@ -325,7 +362,7 @@ impl ForthMachine {
             return;
         }
         let instruction_to_run = self.instructions.get(self.instruction_counter).unwrap();
-        
+
         self.instruction_counter += 1;
 
         match instruction_to_run {
@@ -340,11 +377,8 @@ impl ForthMachine {
                 } else if let Some(instructions) = self.words.get(word.as_str()) {
                     self.run_instructions_locally(instructions.clone());
                 }
-
             }
         }
-        
-        
     }
 
     pub fn run_to_end(&mut self) {
