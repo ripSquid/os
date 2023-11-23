@@ -1,5 +1,5 @@
 use base::{
-    input::{keymap, ALT_MODIFIER, CTRL_MODIFIER, KEYBOARD_QUEUE, SHIFT_MODIFIER, Key},
+    input::{keymap, ALT_MODIFIER, CTRL_MODIFIER, KEYBOARD_QUEUE, SHIFT_MODIFIER, Key, KeyEvent},
     pic::pics,
 };
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
@@ -81,7 +81,7 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
                     keyboard_state.alt_pressed = false;
                 }
                 _ => {
-                    KEYBOARD_QUEUE.insert(Key::new(keyboard_state.get_modifier_usize() | data as usize))
+                    KEYBOARD_QUEUE.insert(KeyEvent::KeyPressed { modifiers: keyboard_state.get_modifier_usize().into(), key: Key::new(keyboard_state.get_modifier_usize() | data as usize) })
                 }
             }
         }

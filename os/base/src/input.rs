@@ -5,15 +5,33 @@ pub const CTRL_MODIFIER: usize = 0b1000_0000_0000;
 pub const ALT_MODIFIER: usize = 0b0010_0000_0000;
 pub const ALTGR_MODIFIER: usize = 0b0001_0000_0000;
 
-pub static mut KEYBOARD_QUEUE: Keyboard<Key> = Keyboard::new();
+pub static mut KEYBOARD_QUEUE: Keyboard<KeyEvent> = Keyboard::new();
 pub static mut keymap: [char; 4096] = ['\x00'; 4096];
 
 #[derive(Copy, Clone)]
 pub struct Key(pub usize);
 
 
-pub struct KeyModifier(usize);
+pub enum KeyEvent {
+    KeyPressed {
+        modifiers: KeyModifier,
+        key: Key,
+    },
+    KeyReleased {
+        key: Key,
+    },
+    ModifiersChanged {
+        modifiers: KeyModifier,
+    }
 
+}
+
+pub struct KeyModifier(usize);
+impl From<usize> for KeyModifier {
+    fn from(value: usize) -> Self {
+        Self(value)
+    }
+}
 impl From<Key> for KeyModifier {
     fn from(value: Key) -> Self {
         Self(value.0 & 0xF00)
@@ -64,33 +82,31 @@ impl Into<Option<char>> for Key {
 pub struct Keyboard<T> {
     queue: Queue<T, 256>,
 }
+impl Keyboard<KeyEvent> {
+    pub fn getch_blocking(&mut self) -> Key {
+        loop {
+            if let Some(KeyEvent::KeyPressed { key, ..}) = self.queue.dequeue() {
+                return key
+            }
+        }
+    }
+    pub fn try_getch(&mut self) -> Option<Key> {
+        self.queue.dequeue().map(|v| if let KeyEvent::KeyPressed { key, .. } = v { Some(key)} else {None}).flatten().into()
+    }
+    pub fn try_getch_char(&mut self) -> Option<char> {
+        self.try_getch().map(|x| x.into()).flatten()
+    }
+}
 impl<T> Keyboard<T> {
     pub const fn new() -> Self {
         Self {
             queue: Queue::new(),
         }
     }
-    pub fn try_getch(&mut self) -> Option<T> {
-        self.queue.dequeue().into()
-    }
-
-    pub fn getch_blocking(&mut self) -> T {
-        let mut test = None;
-        while test.is_none() {
-            test = self.queue.dequeue();
-        }
-        test.unwrap()
-    }
     pub fn insert(&mut self, data: T) {
         unsafe {
             self.queue.enqueue_unchecked(data);
         }
-    }
-}
-
-impl<T: Into<Option<char>>> Keyboard<T> {
-    pub fn try_getch_char(&mut self) -> Option<char> {
-        self.try_getch().map(|x| x.into()).flatten()
     }
 }
 
