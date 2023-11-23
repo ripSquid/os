@@ -6,7 +6,7 @@ use alloc::{
 use crate::{
     display::{BitmapVgaWriter, DefaultVgaWriter, UniversalVgaFormatter, VgaModeSwitch},
     forth::{ForthMachine, Stack},
-    input::{Keyboard, KEYBOARD_QUEUE, Key},
+    input::{Keyboard, KEYBOARD_QUEUE, ScanCode},
 };
 
 pub trait LittleManApp: Send + Sync + 'static {

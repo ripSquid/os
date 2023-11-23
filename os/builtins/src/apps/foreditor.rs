@@ -2,7 +2,7 @@ use core::ops::Range;
 use alloc::vec;
 use alloc::{string::String, boxed::Box, vec::{Vec}};
 use base::display::{VgaColorCombo, VgaColor};
-use base::input::{Key, CTRL_MODIFIER};
+use base::input::{ScanCode, CTRL_MODIFIER};
 use base::{LittleManApp, forth::ForthMachine, ProgramError, display::DefaultVgaWriter, input::KEYBOARD_QUEUE};
 use fs::{PathString, AppConstructor, DefaultInstall};
 
@@ -103,7 +103,7 @@ impl ForEditor {
             None => {self.state = EditorState::WritingSavePath(String::new()); *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Black), "Oops...")},
         }
     }
-    pub fn redraw(&mut self, new_char: Option<Key>, formatter: &mut DefaultVgaWriter) -> bool {
+    pub fn redraw(&mut self, new_char: Option<ScanCode>, formatter: &mut DefaultVgaWriter) -> bool {
         let mut message = (VgaColorCombo::new(VgaColor::Black, VgaColor::White), "");
         let mut cursor_pos = None;
         let temp_line_range = self.y_offset..self.y_offset+25;

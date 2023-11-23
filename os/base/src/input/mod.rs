@@ -1,5 +1,6 @@
 use heapless::spsc::Queue;
-
+pub mod mapping;
+pub mod k_swedish;
 pub const SHIFT_MODIFIER: usize = 0b0100_0000_0000;
 pub const CTRL_MODIFIER: usize = 0b1000_0000_0000;
 pub const ALT_MODIFIER: usize = 0b0010_0000_0000;
@@ -9,16 +10,15 @@ pub static mut KEYBOARD_QUEUE: Keyboard<KeyEvent> = Keyboard::new();
 pub static mut keymap: [char; 4096] = ['\x00'; 4096];
 
 #[derive(Copy, Clone)]
-pub struct Key(pub usize);
-
+pub struct ScanCode(pub usize);
 
 pub enum KeyEvent {
     KeyPressed {
         modifiers: KeyModifier,
-        key: Key,
+        key: ScanCode,
     },
     KeyReleased {
-        key: Key,
+        key: ScanCode,
     },
     ModifiersChanged {
         modifiers: KeyModifier,
@@ -32,8 +32,8 @@ impl From<usize> for KeyModifier {
         Self(value)
     }
 }
-impl From<Key> for KeyModifier {
-    fn from(value: Key) -> Self {
+impl From<ScanCode> for KeyModifier {
+    fn from(value: ScanCode) -> Self {
         Self(value.0 & 0xF00)
     }
 }
@@ -52,7 +52,7 @@ impl KeyModifier {
     }
 }
 
-impl Key {
+impl ScanCode {
     pub fn key_modifiers(self) -> KeyModifier {
         self.into()
     }
@@ -64,15 +64,24 @@ impl Key {
     pub fn new(u: usize) -> Self {
         Self(u)
     }
+    pub fn resolve_text_char(self, modifiers: KeyModifier) -> Option<char> {
+        let char = unsafe  {if modifiers.is_shift_pressed() {
+             keymap[SHIFT_MODIFIER | self.0]
+            
+        } else {
+            keymap[self.0]
+        }};
+        (char != '\0').then_some(char)
+    }
 }
 
-impl Into<char> for Key {
+impl Into<char> for ScanCode {
     fn into(self) -> char {
         unsafe {keymap[self.0]}
     }
 }
 
-impl Into<Option<char>> for Key {
+impl Into<Option<char>> for ScanCode {
     fn into(self) -> Option<char> {
         let key = unsafe {keymap[self.0]};
         (key != '\0').then_some(key)
@@ -83,14 +92,14 @@ pub struct Keyboard<T> {
     queue: Queue<T, 256>,
 }
 impl Keyboard<KeyEvent> {
-    pub fn getch_blocking(&mut self) -> Key {
+    pub fn getch_blocking(&mut self) -> ScanCode {
         loop {
             if let Some(KeyEvent::KeyPressed { key, ..}) = self.queue.dequeue() {
                 return key
             }
         }
     }
-    pub fn try_getch(&mut self) -> Option<Key> {
+    pub fn try_getch(&mut self) -> Option<ScanCode> {
         self.queue.dequeue().map(|v| if let KeyEvent::KeyPressed { key, .. } = v { Some(key)} else {None}).flatten().into()
     }
     pub fn try_getch_char(&mut self) -> Option<char> {
@@ -98,6 +107,16 @@ impl Keyboard<KeyEvent> {
     }
 }
 impl<T> Keyboard<T> {
+    pub fn get(&mut self) -> Option<T> {
+        self.queue.dequeue()
+    }
+    pub fn get_blocking(&mut self) -> T {
+        loop {
+            if let Some(valid) = self.queue.dequeue() {
+                return valid;
+            }
+        }
+    }
     pub const fn new() -> Self {
         Self {
             queue: Queue::new(),
