@@ -1,4 +1,5 @@
 use crate::display::{DefaultVgaWriter, UniversalVgaFormatter};
+use alloc::vec;
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 use core::{arch::x86_64, fmt::Display};
 pub type ForthFunction = &'static (dyn Fn(&mut ForthMachine) + Sync + Send + 'static);
@@ -320,31 +321,30 @@ pub struct ForthMachine {
 }
 impl Default for ForthMachine {
     fn default() -> Self {
-        let default_words = {
-            let mut map: BTreeMap<&'static str, ForthFunction> = BTreeMap::new();
-            map.insert(",", &forth_print);
-            map.insert("dup", &forth_dup);
-            map.insert("over", &forth_over);
-            map.insert("drop", &forth_drop);
-            map.insert("rot", &forth_rot);
-            map.insert("swap", &forth_swap);
-            map.insert("debug", &forth_debug);
-            map.insert("+", &forth_add);
-            map.insert("-", &forth_sub);
-            map.insert("/", &forth_div);
-            map.insert("*", &forth_mul);
-            map.insert("%", &forth_mod);
-            map.insert(":", &forth_new_word);
-            map.insert("again", &forth_again);
-            map
-        };
+        let default_words: Vec<(&str, ForthFunction)> = vec![
+            (",", &forth_print),
+            ("dup", &forth_dup),
+            ("over", &forth_over),
+            ("drop", &forth_drop),
+            ("rot", &forth_rot),
+            ("swap", &forth_swap),
+            ("debug", &forth_debug),
+            ("+", &forth_add),
+            ("-", &forth_sub),
+            ("/", &forth_div),
+            ("*", &forth_mul),
+            ("%", &forth_mod),
+            (":", &forth_new_word),
+            ("again", &forth_again),
+        ];
+
         Self {
             formatter: UniversalVgaFormatter::new_unsafe(),
             instruction_counter: 0,
             instructions: ForthInstructions::default(),
             stack: Stack::default(),
             words: BTreeMap::default(),
-            default_words,
+            default_words: BTreeMap::from_iter(default_words),
         }
     }
 }
