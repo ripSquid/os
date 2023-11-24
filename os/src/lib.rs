@@ -82,7 +82,7 @@ pub extern "C" fn rust_start(info: u64) -> ! {
                 .write_str(fs::active_directory().as_str())
                 .write_str(" > ");
             loop {
-                let c: char = KEYBOARD_QUEUE.getch_blocking().into();
+                let c: char = KEYBOARD_QUEUE.getch_blocking();
                 let count = string.chars().count();
                 match c {
                     '\x08' => {

@@ -1,6 +1,6 @@
 use base::{
     input::{keymap, ALT_MODIFIER, CTRL_MODIFIER, KEYBOARD_QUEUE, SHIFT_MODIFIER, ScanCode, KeyEvent},
-    pic::pics,
+    pic::pics, debug,
 };
 use ps2::{error::ControllerError, flags::ControllerConfigFlags, Controller};
 use x86_64::structures::idt::InterruptStackFrame;
@@ -41,6 +41,59 @@ static mut keyboard_state: KeyboardState = KeyboardState {
     altgr_pressed: false,
 };
 
+#[inline]
+unsafe fn process_data(data: u8) {
+    match data {
+        0x2A => {
+            // Shift Pressed
+            keyboard_state.shift_pressed = true;
+        }
+        0xAA => {
+            // Shift released
+            keyboard_state.shift_pressed = false;
+        }
+        0x1D => {
+            // CTRL pressed
+            keyboard_state.ctrl_pressed = true;
+        }
+        0x9D => {
+            // CTRL released
+            keyboard_state.ctrl_pressed = false;
+        }
+        0x38 => {
+            // Alt pressed
+            keyboard_state.alt_pressed = true;
+        }
+        0xB8 => {
+            // Alt released
+            keyboard_state.alt_pressed = false;
+        }
+        0xE0 => {
+            keyboard_state.command = State::WaitingWithByte(0xE0);
+            return;
+        }
+        _ => {
+            let pressed = data & 0x80 == 0;
+            let key = {
+                let addon = match keyboard_state.command {
+                    State::Waiting => 0,
+                    State::WaitingWithByte(byte) => (byte as usize) << 8,
+                };
+                keyboard_state.command = State::Waiting;
+                (data as usize & 0b_0111_1111) | addon
+            };
+            
+            match pressed {
+                true => KEYBOARD_QUEUE.insert(KeyEvent::KeyPressed { modifiers: keyboard_state.get_modifier_usize().into(), key: ScanCode::new(key as usize) }),
+                false => KEYBOARD_QUEUE.insert(KeyEvent::KeyReleased { key: ScanCode::new(key as usize) }),
+            }
+            return;
+        }
+        
+    }
+    KEYBOARD_QUEUE.insert(KeyEvent::ModifiersChanged { modifiers: keyboard_state.get_modifier_usize().into() })
+}
+
 pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame) {
     // Implement keyboard 2
 
@@ -50,56 +103,9 @@ pub extern "x86-interrupt" fn keyboard_handler(_stack_frame: InterruptStackFrame
     // 0x2A 0xAA SHIFT
     // 0x1D 0x9D CTRL
     // 0x38 0xB8 ALT
-
     unsafe {
         if let Ok(data) = controller.read_data() {
-            match data {
-                0x2A => {
-                    // Shift Pressed
-                    keyboard_state.shift_pressed = true;
-                }
-                0xAA => {
-                    // Shift released
-                    keyboard_state.shift_pressed = false;
-                }
-                0x1D => {
-                    // CTRL pressed
-                    keyboard_state.ctrl_pressed = true;
-                }
-                0x9D => {
-                    // CTRL released
-                    keyboard_state.ctrl_pressed = false;
-                }
-                0x38 => {
-                    // Alt pressed
-                    keyboard_state.alt_pressed = true;
-                }
-                0xB8 => {
-                    // Alt released
-                    keyboard_state.alt_pressed = false;
-                }
-                0xE0 => {
-                    keyboard_state.command = State::WaitingWithByte(0xE0);
-                    return;
-                }
-                _ => {
-                    let pressed = data & 0x80 == 0;
-                    let key = {
-                        let addon = match keyboard_state.command {
-                            State::Waiting => 0,
-                            State::WaitingWithByte(byte) => (byte as usize) << 8,
-                        };
-                        (data as usize & 0b_0111_1111) | addon
-                    };
-                    match pressed {
-                        true => KEYBOARD_QUEUE.insert(KeyEvent::KeyPressed { modifiers: keyboard_state.get_modifier_usize().into(), key: ScanCode::new(key as usize) }),
-                        false => KEYBOARD_QUEUE.insert(KeyEvent::KeyReleased { key: ScanCode::new(key as usize) }),
-                    }
-                    return;
-                }
-                
-            }
-            KEYBOARD_QUEUE.insert(KeyEvent::ModifiersChanged { modifiers: keyboard_state.get_modifier_usize().into() })
+            process_data(data)
         }
     }
     //debug!("keyboard handler!");

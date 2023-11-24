@@ -1,3 +1,5 @@
+use core::ops::{BitOrAssign, BitOr};
+
 use heapless::spsc::Queue;
 pub mod mapping;
 pub mod k_swedish;
@@ -9,9 +11,10 @@ pub const ALTGR_MODIFIER: usize = 0b0001_0000_0000;
 pub static mut KEYBOARD_QUEUE: Keyboard<KeyEvent> = Keyboard::new();
 pub static mut keymap: [char; 4096] = ['\x00'; 4096];
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct ScanCode(pub usize);
 
+#[derive(Clone, PartialEq)]
 pub enum KeyEvent {
     KeyPressed {
         modifiers: KeyModifier,
@@ -26,6 +29,7 @@ pub enum KeyEvent {
 
 }
 
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
 pub struct KeyModifier(usize);
 impl From<usize> for KeyModifier {
     fn from(value: usize) -> Self {
@@ -38,9 +42,23 @@ impl From<ScanCode> for KeyModifier {
     }
 }
 
+impl BitOr for KeyModifier {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
 impl KeyModifier {
+    pub const CTRL: Self = Self(CTRL_MODIFIER);
+    pub const SHIFT: Self = Self(SHIFT_MODIFIER);
+
     pub fn is_ctrl_pressed(&self) -> bool {
         (self.0 & CTRL_MODIFIER) > 0
+    }
+    pub fn new(u: usize) -> Self {
+        Self(u)
     }
 
     pub fn is_shift_pressed(&self) -> bool {
@@ -66,12 +84,11 @@ impl ScanCode {
     }
     pub fn resolve_text_char(self, modifiers: KeyModifier) -> Option<char> {
         let char = unsafe  {if modifiers.is_shift_pressed() {
-             keymap[SHIFT_MODIFIER | self.0]
-            
+            keymap.get(SHIFT_MODIFIER | self.0).cloned()
         } else {
-            keymap[self.0]
+            keymap.get(self.0).cloned()
         }};
-        (char != '\0').then_some(char)
+        char.map(|char| (char !='\0').then_some(char)).flatten()
     }
 }
 
@@ -80,30 +97,29 @@ impl Into<char> for ScanCode {
         unsafe {keymap[self.0]}
     }
 }
-
+/* 
 impl Into<Option<char>> for ScanCode {
     fn into(self) -> Option<char> {
         let key = unsafe {keymap[self.0]};
         (key != '\0').then_some(key)
     }
 }
-
+*/
 pub struct Keyboard<T> {
     queue: Queue<T, 256>,
 }
 impl Keyboard<KeyEvent> {
-    pub fn getch_blocking(&mut self) -> ScanCode {
+    pub fn getch_blocking(&mut self) -> char {
         loop {
-            if let Some(KeyEvent::KeyPressed { key, ..}) = self.queue.dequeue() {
-                return key
-            }
+            let Some(KeyEvent::KeyPressed { key, modifiers}) = self.queue.dequeue() else {continue};
+            return key.resolve_text_char(modifiers).unwrap_or('\0');
         }
     }
-    pub fn try_getch(&mut self) -> Option<ScanCode> {
-        self.queue.dequeue().map(|v| if let KeyEvent::KeyPressed { key, .. } = v { Some(key)} else {None}).flatten().into()
+    pub fn try_getch(&mut self) -> Option<(ScanCode, KeyModifier)> {
+        self.queue.dequeue().map(|v| if let KeyEvent::KeyPressed { key, modifiers } = v { Some((key, modifiers))} else {None}).flatten()
     }
     pub fn try_getch_char(&mut self) -> Option<char> {
-        self.try_getch().map(|x| x.into()).flatten()
+        self.try_getch().map(|(x, y)| x.resolve_text_char(y)).flatten()
     }
 }
 impl<T> Keyboard<T> {
@@ -243,6 +259,7 @@ pub unsafe fn setup_keymap() {
 
     // Space
     keymap[0x39] = ' ';
+    keymap[SHIFT_MODIFIER | 0x39] = ' ';
     // Enter
     keymap[0x1C] = '\x0A';
     // Backspace
