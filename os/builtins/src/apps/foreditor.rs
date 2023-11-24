@@ -1,5 +1,5 @@
 use core::ops::Range;
-use alloc::vec;
+use alloc::{vec, format};
 use alloc::{string::String, boxed::Box, vec::{Vec}};
 use base::display::{VgaColorCombo, VgaColor};
 use base::input::{ScanCode, CTRL_MODIFIER, KeyEvent, KeyModifier};
@@ -113,6 +113,7 @@ impl ForEditor {
             match &mut self.state {
                 EditorState::Writing => {
                     let first_part = new_key.0;
+                    const CTRLNALT: KeyModifier = KeyModifier::CTRL.combine(KeyModifier::ALT);
                     match (first_part, modifiers) {
                         (0xE048, _mods) => {
                             let Some((index, range)) = self.line_cache.iter().enumerate().min_by_key(|(_, e)| (e.start < self.cursor_position)) else {return false};
@@ -143,7 +144,7 @@ impl ForEditor {
                                 self.cursor_position = self.cursor_position.saturating_add(1);
                             }
                         },
-                        (0x1F, (KeyModifier::CTRL | KeyModifier::SHIFT)) => {
+                        (0x1F, KeyModifier::CTRL) => {
                             self.save_file(&mut message);
                         },
                         _ => {
@@ -218,7 +219,14 @@ impl ForEditor {
             formatter.update_cursor(x as u8, y as u8).enable_cursor();
         }
         if let EditorState::WritingSavePath(string) = &self.state {
-            formatter.set_position((0, 24)).set_default_colors(VgaColorCombo::on_black(VgaColor::White)).enable_cursor().write_str(&string);
+            let width = 40;
+            let start = (80-width)/2;
+            formatter.set_position((start, 10)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(&format!("{:=^40}", "Enter path to save file at:"));
+            for i in 11..14 {
+                formatter.set_position((start, i)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(&" ".repeat(width));
+            }
+            formatter.set_position((start, 14)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(&format!("{:=^40}", ""));
+            formatter.set_position((start+2, 12)).set_default_colors(VgaColorCombo::on_black(VgaColor::White)).enable_cursor().write_str(&string);
         }
 
         //if new char is escape immediately quit

@@ -321,7 +321,7 @@ pub struct ForthMachine {
 }
 impl Default for ForthMachine {
     fn default() -> Self {
-        let default_words: Vec<(&str, ForthFunction)> = vec![
+        let default_words: &[(&str, ForthFunction)] = &[
             (",", &forth_print),
             ("dup", &forth_dup),
             ("over", &forth_over),
@@ -344,7 +344,7 @@ impl Default for ForthMachine {
             instructions: ForthInstructions::default(),
             stack: Stack::default(),
             words: BTreeMap::default(),
-            default_words: BTreeMap::from_iter(default_words),
+            default_words: BTreeMap::from_iter(default_words.into_iter().cloned()),
         }
     }
 }

@@ -53,7 +53,11 @@ impl BitOr for KeyModifier {
 impl KeyModifier {
     pub const CTRL: Self = Self(CTRL_MODIFIER);
     pub const SHIFT: Self = Self(SHIFT_MODIFIER);
+    pub const ALT: Self = Self(ALT_MODIFIER);
 
+    pub const fn combine(self, other: Self) -> Self {
+        Self(self.0 | other.0)
+    }
     pub fn is_ctrl_pressed(&self) -> bool {
         (self.0 & CTRL_MODIFIER) > 0
     }
