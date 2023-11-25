@@ -69,6 +69,7 @@ impl<'a, T> KernelDebug<'a> for GateDescriptor<T> {
 }
 
 #[repr(u8)]
+#[allow(dead_code)]
 pub enum CPUPrivilege {
     KERNEL = 0x0,
     DRIVER1 = 0x1,
@@ -77,6 +78,7 @@ pub enum CPUPrivilege {
 }
 
 #[repr(u8)]
+#[allow(dead_code)]
 pub enum InterruptType {
     Interrupt = 0xE,
     Trap = 0xF,

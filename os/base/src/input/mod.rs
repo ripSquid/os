@@ -1,5 +1,4 @@
-use core::ops::{BitOrAssign, BitOr};
-
+use core::ops::BitOr;
 use heapless::spsc::Queue;
 pub mod mapping;
 pub mod k_swedish;
@@ -9,7 +8,7 @@ pub const ALT_MODIFIER: usize = 0b0010_0000_0000;
 pub const ALTGR_MODIFIER: usize = 0b0001_0000_0000;
 
 pub static mut KEYBOARD_QUEUE: Keyboard<KeyEvent> = Keyboard::new();
-pub static mut keymap: [char; 4096] = ['\x00'; 4096];
+pub static mut KEYMAP: [char; 4096] = ['\x00'; 4096];
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct ScanCode(pub usize);
@@ -17,32 +16,32 @@ pub struct ScanCode(pub usize);
 #[derive(Clone, PartialEq)]
 pub enum KeyEvent {
     KeyPressed {
-        modifiers: KeyModifier,
+        modifiers: Modifiers,
         key: ScanCode,
     },
     KeyReleased {
         key: ScanCode,
     },
     ModifiersChanged {
-        modifiers: KeyModifier,
+        modifiers: Modifiers,
     }
 
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
-pub struct KeyModifier(usize);
-impl From<usize> for KeyModifier {
+pub struct Modifiers(usize);
+impl From<usize> for Modifiers {
     fn from(value: usize) -> Self {
         Self(value)
     }
 }
-impl From<ScanCode> for KeyModifier {
+impl From<ScanCode> for Modifiers {
     fn from(value: ScanCode) -> Self {
         Self(value.0 & 0xF00)
     }
 }
 
-impl BitOr for KeyModifier {
+impl BitOr for Modifiers {
     type Output = Self;
 
     fn bitor(self, rhs: Self) -> Self::Output {
@@ -50,7 +49,7 @@ impl BitOr for KeyModifier {
     }
 }
 
-impl KeyModifier {
+impl Modifiers {
     pub const CTRL: Self = Self(CTRL_MODIFIER);
     pub const SHIFT: Self = Self(SHIFT_MODIFIER);
     pub const ALT: Self = Self(ALT_MODIFIER);
@@ -75,7 +74,7 @@ impl KeyModifier {
 }
 
 impl ScanCode {
-    pub fn key_modifiers(self) -> KeyModifier {
+    pub fn key_modifiers(self) -> Modifiers {
         self.into()
     }
 
@@ -86,11 +85,11 @@ impl ScanCode {
     pub fn new(u: usize) -> Self {
         Self(u)
     }
-    pub fn resolve_text_char(self, modifiers: KeyModifier) -> Option<char> {
+    pub fn resolve_text_char(self, modifiers: Modifiers) -> Option<char> {
         let char = unsafe  {if modifiers.is_shift_pressed() {
-            keymap.get(SHIFT_MODIFIER | self.0).cloned()
+            KEYMAP.get(SHIFT_MODIFIER | self.0).cloned()
         } else {
-            keymap.get(self.0).cloned()
+            KEYMAP.get(self.0).cloned()
         }};
         char.map(|char| (char !='\0').then_some(char)).flatten()
     }
@@ -98,7 +97,7 @@ impl ScanCode {
 
 impl Into<char> for ScanCode {
     fn into(self) -> char {
-        unsafe {keymap[self.0]}
+        unsafe {KEYMAP[self.0]}
     }
 }
 /* 
@@ -119,7 +118,7 @@ impl Keyboard<KeyEvent> {
             return key.resolve_text_char(modifiers).unwrap_or('\0');
         }
     }
-    pub fn try_getch(&mut self) -> Option<(ScanCode, KeyModifier)> {
+    pub fn try_getch(&mut self) -> Option<(ScanCode, Modifiers)> {
         self.queue.dequeue().map(|v| if let KeyEvent::KeyPressed { key, modifiers } = v { Some((key, modifiers))} else {None}).flatten()
     }
     pub fn try_getch_char(&mut self) -> Option<char> {
@@ -154,122 +153,122 @@ pub unsafe fn setup_keymap() {
     // Highest 4 bits are for CTRL, SHIFT, ALT, ALTGR
     // Lowest 8 bits are for the character/keycode from keyboard
 
-    keymap[0x1E] = 'a';
-    keymap[0x30] = 'b';
-    keymap[0x2E] = 'c';
-    keymap[0x20] = 'd';
-    keymap[0x12] = 'e';
-    keymap[0x21] = 'f';
-    keymap[0x22] = 'g';
-    keymap[0x23] = 'h';
-    keymap[0x17] = 'i';
-    keymap[0x24] = 'j';
-    keymap[0x25] = 'k';
-    keymap[0x26] = 'l';
-    keymap[0x32] = 'm';
-    keymap[0x31] = 'n';
-    keymap[0x18] = 'o';
-    keymap[0x19] = 'p';
-    keymap[0x10] = 'q';
-    keymap[0x13] = 'r';
-    keymap[0x1F] = 's';
-    keymap[0x14] = 't';
-    keymap[0x16] = 'u';
-    keymap[0x2F] = 'v';
-    keymap[0x11] = 'w';
-    keymap[0x2D] = 'x';
-    keymap[0x15] = 'y';
-    keymap[0x2C] = 'z';
+    KEYMAP[0x1E] = 'a';
+    KEYMAP[0x30] = 'b';
+    KEYMAP[0x2E] = 'c';
+    KEYMAP[0x20] = 'd';
+    KEYMAP[0x12] = 'e';
+    KEYMAP[0x21] = 'f';
+    KEYMAP[0x22] = 'g';
+    KEYMAP[0x23] = 'h';
+    KEYMAP[0x17] = 'i';
+    KEYMAP[0x24] = 'j';
+    KEYMAP[0x25] = 'k';
+    KEYMAP[0x26] = 'l';
+    KEYMAP[0x32] = 'm';
+    KEYMAP[0x31] = 'n';
+    KEYMAP[0x18] = 'o';
+    KEYMAP[0x19] = 'p';
+    KEYMAP[0x10] = 'q';
+    KEYMAP[0x13] = 'r';
+    KEYMAP[0x1F] = 's';
+    KEYMAP[0x14] = 't';
+    KEYMAP[0x16] = 'u';
+    KEYMAP[0x2F] = 'v';
+    KEYMAP[0x11] = 'w';
+    KEYMAP[0x2D] = 'x';
+    KEYMAP[0x15] = 'y';
+    KEYMAP[0x2C] = 'z';
 
-    keymap[0x1A] = 'å';
-    keymap[0x27] = 'ö';
-    keymap[0x28] = 'ä';
+    KEYMAP[0x1A] = 'å';
+    KEYMAP[0x27] = 'ö';
+    KEYMAP[0x28] = 'ä';
 
-    keymap[SHIFT_MODIFIER | 0x1A] = 'Å';
-    keymap[SHIFT_MODIFIER | 0x27] = 'Ö';
-    keymap[SHIFT_MODIFIER | 0x28] = 'Ä';
+    KEYMAP[SHIFT_MODIFIER | 0x1A] = 'Å';
+    KEYMAP[SHIFT_MODIFIER | 0x27] = 'Ö';
+    KEYMAP[SHIFT_MODIFIER | 0x28] = 'Ä';
 
-    keymap[SHIFT_MODIFIER | 0x1E] = 'A';
-    keymap[SHIFT_MODIFIER | 0x30] = 'B';
-    keymap[SHIFT_MODIFIER | 0x2E] = 'C';
-    keymap[SHIFT_MODIFIER | 0x20] = 'D';
-    keymap[SHIFT_MODIFIER | 0x12] = 'E';
-    keymap[SHIFT_MODIFIER | 0x21] = 'F';
-    keymap[SHIFT_MODIFIER | 0x22] = 'G';
-    keymap[SHIFT_MODIFIER | 0x23] = 'H';
-    keymap[SHIFT_MODIFIER | 0x17] = 'I';
-    keymap[SHIFT_MODIFIER | 0x24] = 'J';
-    keymap[SHIFT_MODIFIER | 0x25] = 'K';
-    keymap[SHIFT_MODIFIER | 0x26] = 'L';
-    keymap[SHIFT_MODIFIER | 0x32] = 'M';
-    keymap[SHIFT_MODIFIER | 0x31] = 'N';
-    keymap[SHIFT_MODIFIER | 0x18] = 'O';
-    keymap[SHIFT_MODIFIER | 0x19] = 'P';
-    keymap[SHIFT_MODIFIER | 0x10] = 'Q';
-    keymap[SHIFT_MODIFIER | 0x13] = 'R';
-    keymap[SHIFT_MODIFIER | 0x1F] = 'S';
-    keymap[SHIFT_MODIFIER | 0x14] = 'T';
-    keymap[SHIFT_MODIFIER | 0x16] = 'U';
-    keymap[SHIFT_MODIFIER | 0x2F] = 'V';
-    keymap[SHIFT_MODIFIER | 0x11] = 'W';
-    keymap[SHIFT_MODIFIER | 0x2D] = 'X';
-    keymap[SHIFT_MODIFIER | 0x15] = 'Y';
-    keymap[SHIFT_MODIFIER | 0x2C] = 'Z';
+    KEYMAP[SHIFT_MODIFIER | 0x1E] = 'A';
+    KEYMAP[SHIFT_MODIFIER | 0x30] = 'B';
+    KEYMAP[SHIFT_MODIFIER | 0x2E] = 'C';
+    KEYMAP[SHIFT_MODIFIER | 0x20] = 'D';
+    KEYMAP[SHIFT_MODIFIER | 0x12] = 'E';
+    KEYMAP[SHIFT_MODIFIER | 0x21] = 'F';
+    KEYMAP[SHIFT_MODIFIER | 0x22] = 'G';
+    KEYMAP[SHIFT_MODIFIER | 0x23] = 'H';
+    KEYMAP[SHIFT_MODIFIER | 0x17] = 'I';
+    KEYMAP[SHIFT_MODIFIER | 0x24] = 'J';
+    KEYMAP[SHIFT_MODIFIER | 0x25] = 'K';
+    KEYMAP[SHIFT_MODIFIER | 0x26] = 'L';
+    KEYMAP[SHIFT_MODIFIER | 0x32] = 'M';
+    KEYMAP[SHIFT_MODIFIER | 0x31] = 'N';
+    KEYMAP[SHIFT_MODIFIER | 0x18] = 'O';
+    KEYMAP[SHIFT_MODIFIER | 0x19] = 'P';
+    KEYMAP[SHIFT_MODIFIER | 0x10] = 'Q';
+    KEYMAP[SHIFT_MODIFIER | 0x13] = 'R';
+    KEYMAP[SHIFT_MODIFIER | 0x1F] = 'S';
+    KEYMAP[SHIFT_MODIFIER | 0x14] = 'T';
+    KEYMAP[SHIFT_MODIFIER | 0x16] = 'U';
+    KEYMAP[SHIFT_MODIFIER | 0x2F] = 'V';
+    KEYMAP[SHIFT_MODIFIER | 0x11] = 'W';
+    KEYMAP[SHIFT_MODIFIER | 0x2D] = 'X';
+    KEYMAP[SHIFT_MODIFIER | 0x15] = 'Y';
+    KEYMAP[SHIFT_MODIFIER | 0x2C] = 'Z';
 
-    keymap[0xB] = '0';
-    keymap[0x2] = '1';
-    keymap[0x3] = '2';
-    keymap[0x4] = '3';
-    keymap[0x5] = '4';
-    keymap[0x6] = '5';
-    keymap[0x7] = '6';
-    keymap[0x8] = '7';
-    keymap[0x9] = '8';
-    keymap[0xA] = '9';
+    KEYMAP[0xB] = '0';
+    KEYMAP[0x2] = '1';
+    KEYMAP[0x3] = '2';
+    KEYMAP[0x4] = '3';
+    KEYMAP[0x5] = '4';
+    KEYMAP[0x6] = '5';
+    KEYMAP[0x7] = '6';
+    KEYMAP[0x8] = '7';
+    KEYMAP[0x9] = '8';
+    KEYMAP[0xA] = '9';
 
-    keymap[SHIFT_MODIFIER | 0xB] = '=';
-    keymap[SHIFT_MODIFIER | 0x2] = '!';
-    keymap[SHIFT_MODIFIER | 0x3] = '"';
-    keymap[SHIFT_MODIFIER | 0x4] = '#';
-    keymap[SHIFT_MODIFIER | 0x5] = '3';
-    keymap[SHIFT_MODIFIER | 0x6] = '%';
-    keymap[SHIFT_MODIFIER | 0x7] = '&';
-    keymap[SHIFT_MODIFIER | 0x8] = '/';
-    keymap[SHIFT_MODIFIER | 0x9] = '(';
-    keymap[SHIFT_MODIFIER | 0xA] = ')';
+    KEYMAP[SHIFT_MODIFIER | 0xB] = '=';
+    KEYMAP[SHIFT_MODIFIER | 0x2] = '!';
+    KEYMAP[SHIFT_MODIFIER | 0x3] = '"';
+    KEYMAP[SHIFT_MODIFIER | 0x4] = '#';
+    KEYMAP[SHIFT_MODIFIER | 0x5] = '3';
+    KEYMAP[SHIFT_MODIFIER | 0x6] = '%';
+    KEYMAP[SHIFT_MODIFIER | 0x7] = '&';
+    KEYMAP[SHIFT_MODIFIER | 0x8] = '/';
+    KEYMAP[SHIFT_MODIFIER | 0x9] = '(';
+    KEYMAP[SHIFT_MODIFIER | 0xA] = ')';
 
-    keymap[ALT_MODIFIER | 0x3] = '@';
-    keymap[ALT_MODIFIER | 0x5] = '$';
+    KEYMAP[ALT_MODIFIER | 0x3] = '@';
+    KEYMAP[ALT_MODIFIER | 0x5] = '$';
 
-    keymap[0x0C] = '+';
-    keymap[SHIFT_MODIFIER | 0x0C] = '?';
-    keymap[ALT_MODIFIER | 0x0C] = '\\';
+    KEYMAP[0x0C] = '+';
+    KEYMAP[SHIFT_MODIFIER | 0x0C] = '?';
+    KEYMAP[ALT_MODIFIER | 0x0C] = '\\';
 
-    keymap[0x33] = ',';
-    keymap[0x34] = '.';
-    keymap[0x35] = '-';
+    KEYMAP[0x33] = ',';
+    KEYMAP[0x34] = '.';
+    KEYMAP[0x35] = '-';
 
-    keymap[SHIFT_MODIFIER | 0x33] = ';';
-    keymap[SHIFT_MODIFIER | 0x34] = ':';
-    keymap[SHIFT_MODIFIER | 0x35] = '_';
+    KEYMAP[SHIFT_MODIFIER | 0x33] = ';';
+    KEYMAP[SHIFT_MODIFIER | 0x34] = ':';
+    KEYMAP[SHIFT_MODIFIER | 0x35] = '_';
 
-    keymap[0x2B] = '\'';
-    keymap[SHIFT_MODIFIER | 0x2B] = '*';
-    keymap[SHIFT_MODIFIER | 0x1B] = '^';
+    KEYMAP[0x2B] = '\'';
+    KEYMAP[SHIFT_MODIFIER | 0x2B] = '*';
+    KEYMAP[SHIFT_MODIFIER | 0x1B] = '^';
 
-    keymap[0x56] = '<';
-    keymap[SHIFT_MODIFIER | 0x56] = '>';
-    keymap[ALT_MODIFIER | 0x56] = '|';
+    KEYMAP[0x56] = '<';
+    KEYMAP[SHIFT_MODIFIER | 0x56] = '>';
+    KEYMAP[ALT_MODIFIER | 0x56] = '|';
 
     // Space
-    keymap[0x39] = ' ';
-    keymap[SHIFT_MODIFIER | 0x39] = ' ';
+    KEYMAP[0x39] = ' ';
+    KEYMAP[SHIFT_MODIFIER | 0x39] = ' ';
     // Enter
-    keymap[0x1C] = '\x0A';
+    KEYMAP[0x1C] = '\x0A';
     // Backspace
-    keymap[0x0E] = '\x08';
+    KEYMAP[0x0E] = '\x08';
     // Escape
-    keymap[0x01] = '\x1B';
+    KEYMAP[0x01] = '\x1B';
 
     // 0x39 SPACE
     // 0x1C ENTER

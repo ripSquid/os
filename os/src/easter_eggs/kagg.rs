@@ -12,7 +12,7 @@ use crate::{
         restore_text_mode_font,  VgaPalette,
         VgaPaletteColor, 
     },
-    interrupt::setup::global_os_time,
+    interrupt::setup::GLOBAL_OS_TIME,
 };
 
 #[derive(Default)]
@@ -32,7 +32,7 @@ impl DefaultInstall for SplashScreen {
 impl LittleManApp for SplashScreen {
     fn run(&mut self, args: &mut base::forth::ForthMachine) -> Result<(), base::ProgramError> {
         let mut skipped = false;
-        let mut timestamp = unsafe { global_os_time };
+        let mut timestamp = unsafe { GLOBAL_OS_TIME };
         let g_formatter = args.formatter.switch_to_graphics_mode();
         let mut fade = 0u8;
         let lars = include_bytes!("LarsKagg2.bmp");
@@ -57,12 +57,12 @@ impl LittleManApp for SplashScreen {
         let duration = 3000;
         let total_range = 0..duration;
         let visible_range = 1000..2000;
-        while unsafe { global_os_time } < timestamp + duration {
+        while unsafe { GLOBAL_OS_TIME } < timestamp + duration {
             if let Some('w') = unsafe { (KEYBOARD_QUEUE.try_getch_char()) } {
                 skipped = true;
                 break;
             }
-            let time = unsafe { global_os_time / 10 } as u8;
+            let time = unsafe { GLOBAL_OS_TIME / 10 } as u8;
             for line in 196..200 {
                 g_formatter.set_position((0, line));
                 for i in 0..160u16 {
@@ -72,7 +72,7 @@ impl LittleManApp for SplashScreen {
             }
 
             let old_fade = fade;
-            let time = unsafe { global_os_time } - timestamp;
+            let time = unsafe { GLOBAL_OS_TIME } - timestamp;
             if !visible_range.contains(&time) {
                 if time < visible_range.start {
                     fade = ((time - total_range.start) * u8::MAX as u64

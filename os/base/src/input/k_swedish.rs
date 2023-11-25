@@ -1,4 +1,4 @@
-use super::{mapping::{KeyMapEntry, KeyMapper}, ScanCode, KeyModifier};
+use super::{mapping::{KeyMapEntry, KeyMapper}, ScanCode, Modifiers};
 
 
 
@@ -12,7 +12,7 @@ impl KeyMapper for SwedishLayoutKeyboardMapper {
 
     type CompleteMapTarget = KeyMapEntry;
 
-    fn map_combined(scan_code: ScanCode, modifers: KeyModifier, any: Self::AdditionalParams) -> Self::CompleteMapTarget {
+    fn map_combined(scan_code: ScanCode, modifers: Modifiers, any: Self::AdditionalParams) -> Self::CompleteMapTarget {
         todo!()
     }
 }

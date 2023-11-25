@@ -1,13 +1,14 @@
+use core::fmt::Display;
 use core::ops::Range;
 use alloc::{vec, format};
 use alloc::{string::String, boxed::Box, vec::{Vec}};
 use base::display::{VgaColorCombo, VgaColor};
-use base::input::{ScanCode, CTRL_MODIFIER, KeyEvent, KeyModifier};
+use base::input::{ScanCode, CTRL_MODIFIER, KeyEvent, Modifiers};
 use base::{LittleManApp, forth::ForthMachine, ProgramError, display::DefaultVgaWriter, input::KEYBOARD_QUEUE};
 use fs::{PathString, AppConstructor, DefaultInstall};
 
 
-
+type EditorMessage = Option<(VgaColorCombo, &'static str)>;
 
 impl DefaultInstall for ForEditorFile {
     fn path() -> PathString {
@@ -32,19 +33,36 @@ struct ForEditor {
     x_offset: usize,
     y_offset: usize,
     path: Option<PathString>,
-    state: EditorState
+    state: EditorState,
+    message: Option<(VgaColorCombo, &'static str, usize)>
 }
 impl Default for ForEditor {
     fn default() -> Self {
-        Self { work: Default::default(), cursor_position: Default::default(), x_offset: Default::default(), y_offset: Default::default(), path: None, line_cache: vec![0..0], state: EditorState::Writing }
+        Self {message: None, work: Default::default(), cursor_position: Default::default(), x_offset: Default::default(), y_offset: Default::default(), path: None, line_cache: vec![0..0], state: EditorState::Writing }
     }
 }
 #[derive(Clone)]
 enum EditorState {
     Writing,
-    HoveringSave,
-    HoveringExit,
+    InMenu(MenuOptions),
     WritingSavePath(String),
+}
+#[derive(Clone, PartialEq)]
+enum MenuOptions {
+    Save,
+    SaveAs,
+    Open,
+    Quit,
+}
+impl Display for MenuOptions {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            MenuOptions::Save => "Save".fmt(f),
+            MenuOptions::SaveAs => "Save As".fmt(f),
+            MenuOptions::Open => "Open".fmt(f),
+            MenuOptions::Quit => "Quit".fmt(f),
+        }
+    }
 }
 
 impl ForEditor {
@@ -87,88 +105,152 @@ impl ForEditor {
         self.work.insert(self.cursor_position, char);
         self.cursor_position += char.len_utf8();
     } 
-    fn save_file(&mut self, message: &mut (VgaColorCombo, &str)) {
+    fn save_file(&mut self, message: &mut Option<(VgaColorCombo, &str)>) {
         match &self.path {
             Some(exists) => {
                 match fs::get_file_write(exists) {
                     Ok(mut data_file) => {
                         match data_file.write_file(self.work.as_bytes()) {
-                            Ok(_) => *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Green), "File Saved."),
-                            Err(_) => *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Red), "File system error."),
+                            Ok(_) => *message = Some((VgaColorCombo::new(VgaColor::Black, VgaColor::Green), "File Saved.")),
+                            Err(_) => *message = Some((VgaColorCombo::new(VgaColor::White, VgaColor::Red), "File system error.")),
                         }
                     },
-                    Err(_) => *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Red), "File not found."),
+                    Err(_) => *message = Some((VgaColorCombo::new(VgaColor::White, VgaColor::Red), "File not found.")),
                 }
             },
-            None => {self.state = EditorState::WritingSavePath(String::new()); *message = (VgaColorCombo::new(VgaColor::White, VgaColor::Black), "Oops...")},
+            None => {self.state = EditorState::WritingSavePath(String::new());},
         }
     }
-    pub fn redraw(&mut self, new_event: Option<KeyEvent>, formatter: &mut DefaultVgaWriter) -> bool {
-        let mut message = (VgaColorCombo::new(VgaColor::Black, VgaColor::White), "");
+    fn draw_work(&mut self, formatter: &mut DefaultVgaWriter) {
         let mut cursor_pos = None;
-        let temp_line_range = self.y_offset..self.y_offset+25;
+        formatter.set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Blue)).disable_cursor();
+        let line_range = self.y_offset..self.y_offset+24;
+        for (i, index) in line_range.into_iter().enumerate() {
+            let substr = if let Some(line) = self.line_cache.get(index) {
+                if line.contains(&self.cursor_position) {
+                    cursor_pos = Some((self.cursor_position-line.start, i));
+                } else if self.cursor_position == line.end {
+                    cursor_pos = Some((line.end-line.start, i));
+                }
+                let str = &self.work[line.clone()];
+                let len = str.len();
+                //unless len is bigger than the x_offset we're not drawing anything anyway
+                &str[self.x_offset..len.min(self.x_offset+80)]
+            } else {
+                ""
+            };
+            formatter.set_position((0,i)).write_str(&format!("{substr:<80}"));  
+        }
+        if let Some((x, y)) = cursor_pos {
+            formatter.update_cursor(x as u8, y as u8).enable_cursor();
+        }
+    } 
+    fn draw_dialog(formatter: &mut DefaultVgaWriter, title: &str, text: &str) {
+        let width = 40;
+        let start = (80-width)/2;
+        formatter.set_position((start, 10)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(format!("O{:=^1$}O", title, width-2));
+        for i in 11..14 {
+            formatter.set_position((start, i)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(format!("|{:1$}|", "",width-2));
+        }
+        formatter.set_position((start, 14)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(format!("O{:=^1$}O", "", width-2));
+        formatter.set_position((start+2, 12)).set_default_colors(VgaColorCombo::on_black(VgaColor::White)).enable_cursor().write_str(text);
+    }
+    fn handle_writing_key(&mut self, modifiers: Modifiers, key: ScanCode, message: &mut EditorMessage) {
+        let first_part = key.0;
+        match (first_part, modifiers) {
+            (0xE048, _mods) => {
+                let Some((index, range)) = self.line_cache.iter().enumerate().find(|(_, r)| r.contains(&self.cursor_position) || self.cursor_position == r.end) else {return};
+                if index > 0 {
+                    let offset = self.cursor_position - range.start;
+                    let other_range =  &self.line_cache[index-1];
+                    let new_offset = other_range.start + offset;
+                    self.cursor_position = new_offset.min(other_range.end);
+                }
+            }
+            (0xE04B, _mods) => {
+                self.cursor_position = self.cursor_position.saturating_sub(1);
 
-        if let Some(KeyEvent::KeyPressed { modifiers, key: new_key }) = new_event {
-            
-            match &mut self.state {
+            }
+            (0xE050, _mods) => {
+                let Some((index, range)) = self.line_cache.iter().enumerate().find(|(_, r)| r.contains(&self.cursor_position) || self.cursor_position == r.end) else {return};
+                if index < self.line_cache.len()-1 {
+                    let offset = self.cursor_position - range.start;
+                    let other_range =  &self.line_cache[index+1];
+                    let new_offset = other_range.start + offset;
+                    self.cursor_position = new_offset.min(other_range.end);
+                }
+            },
+            (0xE04D, _mods) => {
+                self.cursor_position = self.cursor_position.saturating_add(1);
+                while self.cursor_position < self.work.len() && !self.work.is_char_boundary(self.cursor_position) {
+                    self.cursor_position = self.cursor_position.saturating_add(1);
+                }
+            },
+            (0x1F, Modifiers::CTRL) => {
+                self.save_file(message);
+            },
+            _ => {
+                let Some(new_char) = key.resolve_text_char(modifiers) else {return};
+                if new_char != '\x08' {
+                    self.add_char(new_char);
+                } else {
+                    self.remove_char();
+                }
+                self.refresh_line_cache();
+            }
+        }
+        while self.cursor_position > 0 && !self.work.is_char_boundary(self.cursor_position) {
+            self.cursor_position = self.cursor_position.saturating_sub(1);
+        }
+    }
+    fn redraw(&mut self, new_event: Option<KeyEvent>, formatter: &mut DefaultVgaWriter) -> bool {
+        let mut message = None;
+        let mut shutdown = false;
+        const CTRLNALT: Modifiers = Modifiers::CTRL.combine(Modifiers::ALT);
+
+        match new_event {
+            Some(KeyEvent::ModifiersChanged { modifiers: CTRLNALT }) => {
+                self.state = EditorState::InMenu(MenuOptions::Save);
+            }
+            Some(KeyEvent::KeyPressed { modifiers, key }) => match &mut self.state {
                 EditorState::Writing => {
-                    let first_part = new_key.0;
-                    const CTRLNALT: KeyModifier = KeyModifier::CTRL.combine(KeyModifier::ALT);
-                    match (first_part, modifiers) {
-                        (0xE048, _mods) => {
-                            let Some((index, range)) = self.line_cache.iter().enumerate().min_by_key(|(_, e)| (e.start < self.cursor_position)) else {return false};
-                            if index > 0 {
-                                let offset = self.cursor_position - range.start;
-                                let other_range =  &self.line_cache[index-1];
-                                let new_offset = other_range.start + offset;
-                                self.cursor_position = new_offset.min(other_range.end);
-                            }
-                            
-                        }
-                        (0xE04B, _mods) => {
-                            self.cursor_position = self.cursor_position.saturating_sub(1);
-
-                        }
-                        (0xE050, _mods) => {
-                            let Some((index, range)) = self.line_cache.iter().enumerate().min_by_key(|(_, e)| (e.start < self.cursor_position)) else {return false};
-                            if index < self.line_cache.len()-1 {
-                                let offset = self.cursor_position - range.start;
-                                let other_range =  &self.line_cache[index+1];
-                                let new_offset = other_range.start + offset;
-                                self.cursor_position = new_offset.min(other_range.end);
-                            }
-                        },
-                        (0xE04D, _mods) => {
-                            self.cursor_position = self.cursor_position.saturating_add(1);
-                            while self.cursor_position < self.work.len() && !self.work.is_char_boundary(self.cursor_position) {
-                                self.cursor_position = self.cursor_position.saturating_add(1);
-                            }
-                        },
-                        (0x1F, KeyModifier::CTRL) => {
-                            self.save_file(&mut message);
-                        },
-                        _ => {
-                            let Some(new_char) = new_key.resolve_text_char(modifiers) else {return false};
-                            if new_char != '\x08' {
-                                self.add_char(new_char);
-                            } else {
-                                self.remove_char();
-                            }
-                            self.refresh_line_cache();
-                        }
-                    }
-                    while self.cursor_position > 0 && !self.work.is_char_boundary(self.cursor_position) {
-                        self.cursor_position = self.cursor_position.saturating_sub(1);
-                    }
+                    self.handle_writing_key(modifiers, key, &mut message);
                 },
-                EditorState::HoveringSave => {
-                    
-                },
-                EditorState::HoveringExit => {
-                    
+                EditorState::InMenu(option) => {
+                    let first_part = key.0;
+                    match first_part {
+                        0x01 => {
+                            self.state = EditorState::Writing;
+                        },
+                        0x1C => {
+                            match option {
+                                MenuOptions::Save => {self.save_file(&mut message);},
+                                MenuOptions::SaveAs => (),
+                                MenuOptions::Open => (),
+                                MenuOptions::Quit => shutdown = true,
+                            }
+                        }
+                        0xE048 => {
+                            *option = match option {
+                                MenuOptions::Save => MenuOptions::SaveAs,
+                                MenuOptions::SaveAs => MenuOptions::Open,
+                                MenuOptions::Open => MenuOptions::Quit,
+                                MenuOptions::Quit => MenuOptions::Save,
+                            }
+                        }
+                        0xE050 => {
+                            *option = match option {
+                                MenuOptions::Save => MenuOptions::Quit,
+                                MenuOptions::SaveAs => MenuOptions::Save,
+                                MenuOptions::Open => MenuOptions::SaveAs,
+                                MenuOptions::Quit => MenuOptions::Open,
+                            }
+                        }
+                        _ => {}
+                    }
                 },
                 EditorState::WritingSavePath(string) => {
-                    match new_key.resolve_text_char(modifiers) {
+                    match key.resolve_text_char(modifiers) {
                         Some('\x08') => {
                             string.pop();
                         }
@@ -180,7 +262,7 @@ impl ForEditor {
                                 self.path = Some(PathString::from(path));
                                 self.save_file(&mut message);
                             } else {
-                                message = (VgaColorCombo::new(VgaColor::White, VgaColor::Red), "Failed to create file.");
+                                message = Some((VgaColorCombo::new(VgaColor::White, VgaColor::Red), "Failed to create file."));
                             }
                            
                         }
@@ -191,46 +273,58 @@ impl ForEditor {
                         None => (),
                     }
                 },
-            }
+            },
+            _ => (),
         }
        
-        let line_range = self.y_offset..self.y_offset+25;
-        
-        formatter.clear_screen(VgaColor::Blue).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Blue)).set_position((0,0)).disable_cursor();
-        for (i, index) in line_range.into_iter().enumerate() {
-            if let Some(line) = self.line_cache.get(index) {
-                if line.contains(&self.cursor_position) {
-                    cursor_pos = Some((self.cursor_position-line.start, i));
-                } else if self.cursor_position == line.end {
-                    cursor_pos = Some((line.end-line.start, i));
-                }
-                let str = &self.work[line.clone()];
-                let len = str.len();
-                //unless len is bigger than the x_offset we're not drawing anything anyway
-                if !(len > self.x_offset) {
-                    continue;
-                }
-                let substr = &str[self.x_offset..len.min(self.x_offset+80)];
-                formatter.set_position((0,i)).write_str(substr);  
-            }
+        if let Some((c, t)) = message {
+            self.message = Some((c, t, 10))
         }
-        formatter.set_position((0,24)).set_default_colors(message.0).write_str(message.1);
-        if let Some((x, y)) = cursor_pos {
-            formatter.update_cursor(x as u8, y as u8).enable_cursor();
-        }
-        if let EditorState::WritingSavePath(string) = &self.state {
-            let width = 40;
-            let start = (80-width)/2;
-            formatter.set_position((start, 10)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(&format!("{:=^40}", "Enter path to save file at:"));
-            for i in 11..14 {
-                formatter.set_position((start, i)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(&" ".repeat(width));
-            }
-            formatter.set_position((start, 14)).set_default_colors(VgaColorCombo::new(VgaColor::White, VgaColor::Red)).write_str(&format!("{:=^40}", ""));
-            formatter.set_position((start+2, 12)).set_default_colors(VgaColorCombo::on_black(VgaColor::White)).enable_cursor().write_str(&string);
+        self.draw_bottom(formatter);
+
+        match &self.state {
+            EditorState::Writing => {
+                self.draw_work(formatter);
+            },
+            EditorState::InMenu(option) => {
+                Self::draw_menu(formatter, option);
+            },
+            EditorState::WritingSavePath(string) => {
+                Self::draw_dialog(formatter, "| Enter Save Path: |", &string)
+            },
         }
 
-        //if new char is escape immediately quit
-        new_event.map(|v| v == KeyEvent::KeyPressed { modifiers: KeyModifier::default(), key: ScanCode::new(1) }) == Some(true)
+        shutdown
+    }
+    fn draw_menu(formatter: &mut DefaultVgaWriter, option: &MenuOptions) {
+        formatter.disable_cursor();
+        for (i, kind) in [MenuOptions::Open, MenuOptions::Quit, MenuOptions::Save, MenuOptions::SaveAs].iter().enumerate() {
+            formatter.set_position((2, 23-i));
+            let (combo, format) = match kind == option {
+                true => (VgaColorCombo::new(VgaColor::Black, VgaColor::Yellow), format!("[{kind:<14}]")),
+                false => (VgaColorCombo::new(VgaColor::Black, VgaColor::White), format!(" {kind:<14} ")),
+            };
+            formatter.set_default_colors(combo).write_str(format);
+        }
+    }
+    fn draw_start_frame(&mut self, formatter: &mut DefaultVgaWriter) {
+        self.draw_work(formatter);
+        self.draw_bottom(formatter);
+    }
+    fn draw_bottom(&mut self, formatter: &mut DefaultVgaWriter) {
+        let (combo, text) = match &mut self.message {
+            Some((_,_,0)) => {
+                self.message = None;
+                None
+            }
+            Some((c,t,n)) => {
+                *n = n.saturating_sub(1);
+                Some((*c,*t))
+            },
+            None => None,
+        }.unwrap_or((VgaColorCombo::new(VgaColor::Black, VgaColor::White), "Press Ctrl+Alt to bring up menu"));
+        formatter.set_position((0,24)).set_default_colors(combo).write_str(format!("{text:<80}"));
+        
     }
     fn load_file(&mut self, path: String) -> Result<(), ProgramError> {
         let file = fs::get_file(&path).map_err(|_| ProgramError::FileSystemError)?.read_file().map_err(|_| ProgramError::Custom("could not read file!"))?; 
@@ -246,7 +340,7 @@ impl LittleManApp for ForEditor {
         }
         let formatter = machine.formatter.switch_to_text_mode();
         self.refresh_line_cache();
-        self.redraw(None, formatter);
+        self.draw_start_frame(formatter);
         loop {
             let key = unsafe { KEYBOARD_QUEUE.get_blocking() };
             if self.redraw(Some(key), formatter) {

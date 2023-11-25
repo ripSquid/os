@@ -20,7 +20,7 @@ use forth::Stack;
 
 use base::*;
 use fs::{FileSystemError, PathString};
-use interrupt::setup::global_os_time;
+use interrupt::setup::GLOBAL_OS_TIME;
 
 use crate::interrupt::pitinit;
 

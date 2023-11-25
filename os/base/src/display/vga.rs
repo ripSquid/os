@@ -131,11 +131,11 @@ impl DefaultVgaWriter {
         self.position = (0, 0);
         self
     }
-    pub fn write_str(&mut self, chars: &str) -> &mut Self {
+    pub fn write_str<T: AsRef<str>>(&mut self, chars: T) -> &mut Self {
         if self.cursor {
             self.update_cursor(self.position.0 as u8, self.position.1 as u8);
         }
-        for byte in chars.chars() {
+        for byte in chars.as_ref().chars() {
             self.write_unicode_char(byte);
         }
         self

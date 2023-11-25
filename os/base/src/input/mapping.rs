@@ -1,9 +1,9 @@
-use super::{ScanCode, KeyModifier};
+use super::{ScanCode, Modifiers};
 
 pub trait KeyMapper {
     type AdditionalParams;
     type CompleteMapTarget;
-    fn map_combined(scan_code: ScanCode, modifers: KeyModifier, any: Self::AdditionalParams) -> Self::CompleteMapTarget;
+    fn map_combined(scan_code: ScanCode, modifers: Modifiers, any: Self::AdditionalParams) -> Self::CompleteMapTarget;
 }
 
 pub enum KeyMapEntry {

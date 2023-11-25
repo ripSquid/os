@@ -21,7 +21,7 @@ pub struct IDTDescriptor {
     pub size: u16,
     pub offset: u64,
 }
-pub static mut global_os_time: u64 = 0;
+pub static mut GLOBAL_OS_TIME: u64 = 0;
 static mut idt: IDTable = IDTable::new();
 
 static mut idtdescriptor: DescriptorTablePointer = DescriptorTablePointer {
@@ -77,7 +77,7 @@ pub extern "x86-interrupt" fn breakpoint(_stack_frame: InterruptStackFrame) {
 
 pub extern "x86-interrupt" fn timer(_stack_frame: InterruptStackFrame) {
     unsafe {
-        global_os_time += 1;
+        GLOBAL_OS_TIME += 1;
         pics.notify_end_of_interrupt(32);
     }
 }
