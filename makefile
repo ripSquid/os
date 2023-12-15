@@ -14,12 +14,13 @@ run-qemu:
 
 
 
-arch ?= gymnasie
-kernel := build/kernel-$(arch).bin
-iso := build/os-$(arch).iso
+name ?= gymnasie
+kernel_binary := build/kernel-$(name).bin
+iso := build/os-$(name).iso
 
-target ?= x86_64-os
-rust_os := target/$(target)/release/libos.a
+rust_target ?= x86_64-os
+rust_optimisation ?= release
+rust_bin := target/$(rust_target)/$(rust_optimisation)/libos.a
 
 
 linker_script := asm-src/linker.ld
@@ -30,7 +31,7 @@ assembly_object_files := $(patsubst asm-src/%.asm, \
 
 
 
-all: $(kernel)
+all: $(kernel_binary)
 
 clean:
 	@-rm -r build
@@ -40,16 +41,16 @@ run: $(iso)
 
 iso: $(iso)
 
-$(iso): $(kernel) $(grub_cfg)
+$(iso): $(kernel_binary) $(grub_cfg)
 	@mkdir -p build/isofiles/boot/grub
-	@cp $(kernel) build/isofiles/boot/kernel.bin
+	@cp $(kernel_binary) build/isofiles/boot/kernel.bin
 	@cp $(grub_cfg) build/isofiles/boot/grub
 	@grub-mkrescue -o $(iso) build/isofiles 
 	
 
-$(kernel): $(assembly_object_files) $(linker_script)
-	@cargo build --target $(target).json --release
-	@ld -n -T $(linker_script) -o $(kernel) $(assembly_object_files) $(rust_os)
+$(kernel_binary): $(assembly_object_files) $(linker_script)
+	@cargo build --target $(rust_target).json --$(rust_optimisation)
+	@ld -n -T $(linker_script) -o $(kernel_binary) $(assembly_object_files) $(rust_bin)
 
 # compile assembly files
 build/asm/%.o: asm-src/%.asm
