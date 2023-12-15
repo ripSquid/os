@@ -1,22 +1,25 @@
 %define ARCHITECTURE 0
+%define MAGIC 0xE85250D6
+%define HEADER_LENGTH (header_end - header_start)
+
 section .multiboot_header 
 header_start:
-    ;"magic" bytes (specified by multiboot 2 spec)
-    ;The primary purpose for this is for grub to be sure this isn't here by accident.
-    dd 0xE85250D6
+    ;"magic" bytes (specificerat av multiboot 2 spec.)
+    dd MAGIC
     
-    ;architecture bytes as defined by the multiboot 2 spec
+    ;architecture bytes som definerat av multiboot 2 spec.
     dd ARCHITECTURE
 
-    ;length of header
+    ;längden av våran header i bytes
     dd header_end - header_start
 
     ;checksum
-    ;as per the specification (checksum + magic + arch. + len. = 0)
-    dd 0x100000000 - (0xe85250d6 + ARCHITECTURE + (header_end - header_start))
+    ;för att vara giltig ska (checksum + magic + arch. + header len. = 0)
+    ;vi använder inbyggda assemblersymboler för att uppnå detta.
+    dd 0x100000000 - (MAGIC + ARCHITECTURE + HEADER_LENGTH)
 
-    ;tag
+    ;taggar (i detta fallet bara en slut-tag)
     dw 0
-    dw 0
-    dd 8 ;size of tag including ourselves
+    dw 0 
+    dd 8 ;storlek av taggarna i bytes
 header_end:

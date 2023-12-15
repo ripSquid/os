@@ -25,32 +25,34 @@ error:
     mov byte  [0xb800a], al
     hlt
 
+
+;ett märke som används för att kalla på funktionen.
 check_cpuid:
 
-    ;put flags into eax
-    pushfd              
-    pop eax         
+    ;kopiera flaggregistret till processorns EAX register.
+    pushfd  ;lägger flaggregistret på stacken
+    pop eax ;lägger av från stacken till EAX
 
-    ;make a copy to restore later
-    mov ecx, eax        ;copy into ecx
-    xor eax, 1 << 21    ;flip bit 21 (ID)
+    ;gör en kopia av EAX i ECX registret.
+    mov ecx, eax   
 
-    ;put eax into flags
-    push eax            
-    popfd               
+    ;byt på bit 21 i EAX versionen.   
+    xor eax, 1 << 21   
 
-    ;put flags into eax
-    pushfd              
-    pop eax
+    ;lägg EAX versionen i flaggregistret och återför tillbaka
+    push eax ;lägger EAX på stacken
+    popfd    ;tar värdet från stacken till flaggregistret
+    pushfd   ;lägger flaggregistret tillbaka på stacken
+    pop eax  ;tar värdet från stacken till EAX igen
 
-    ;return flags to original state
-    push ecx
-    popfd
+    ;återställ det orginella värdet
+    push ecx ;lägg den oförändrade ECX versionen på stacken
+    popfd    ;tar värdet från stacken till flaggregistret
 
-    ;compare new to old
-    cmp eax, ecx
-    je .cpuid_fail
-    ret
+    ;jämför den oförändrade ECX versionen med vårt försök i EAX
+    cmp eax, ecx    ;gör jämnförelsen (eax - ecx)
+    je .cpuid_fail  ;om resultatet blev 0, hoppa till "cpuid_fail" funktionen. 
+    ret             ;returnera från funktionen, vilket endast nås i andra fall.
 
 .cpuid_fail:
     mov al, "1"
