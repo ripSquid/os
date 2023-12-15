@@ -11,12 +11,12 @@ use crate::{
 };
 
 #[derive(Clone, Copy)]
-pub struct MultibootInfoUnparsed {
+pub struct MultibootInfo {
     pub header: MultibootInfoHeader,
     pub tags: MultiBootTags,
     pointer: u64,
 }
-impl<'a> KernelDebug<'a> for MultibootInfoUnparsed {
+impl<'a> KernelDebug<'a> for MultibootInfo {
     fn debug(
         &self,
         formatter: crate::display::KernelFormatter<'a>,
@@ -30,7 +30,7 @@ pub struct MultibootInfoHeader {
     total_size: u32,
     _reserved: u32,
 }
-impl MultibootInfoUnparsed {
+impl MultibootInfo {
     pub fn find_tag(&self, tag_type: TagType) -> Option<MultiBootTag> {
         self.tag_iter().find(|tag| tag.tag_type() == tag_type)
     }
@@ -43,7 +43,7 @@ impl MultibootInfoUnparsed {
         let tags =
             core::slice::from_raw_parts((raw + 24) as *const u8, (header.total_size - 24) as usize);
         let tags = MultiBootTags::from_slice(tags)?;
-        Some(MultibootInfoUnparsed {
+        Some(MultibootInfo {
             header,
             tags,
             pointer: pointer as u64,
@@ -79,10 +79,10 @@ impl<'a> KernelDebug<'a> for MultiBootTag {
 }
 pub struct MultiBootTagIter {
     byte_index: usize,
-    tags: MultibootInfoUnparsed,
+    tags: MultibootInfo,
 }
 impl MultiBootTagIter {
-    pub fn new(info: MultibootInfoUnparsed) -> Self {
+    pub fn new(info: MultibootInfo) -> Self {
         Self {
             byte_index: 0,
             tags: info,

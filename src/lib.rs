@@ -44,33 +44,53 @@ mod interrupt;
 mod memory;
 mod multiboot_info;
 
-//no mangle tells the compiler to keep the name of this symbol
-//this is later used in long_mode.asm, at which point the cpu is prepared to run rust code
+// ``no_mangle`` säger till kompilatorn att bevara funktionens namn efter kompilering.
+// detta tillåter long_mode.asm att tillkalla ``rust_start`` i slutet av dess kod vilket linkern känner igen.
 #[no_mangle]
 pub extern "C" fn rust_start(info: u64) -> ! {
+    
+    //lös ut pekaren till multiboot2 informationsstrukturen och översätt till en abstraherad form.
     let multiboot_info = unsafe {
-        multiboot_info::MultibootInfoUnparsed::from_pointer(info as *const MultibootInfoHeader)
+        multiboot_info::MultibootInfo::from_pointer(info as *const MultibootInfoHeader)
     }
     .unwrap();
+    
+    //hämta ut en abstraktion av den aktiva minneskartläggsningstabell p4.
     let mut active_table = unsafe { PageTableMaster::new() };
+
+    //skapa ny minneskarta, hämta ut ELF-allokerare.
     let mut allocator = memory::remap_everything(multiboot_info, &mut active_table);
+    
+
     unsafe {
+        //skapa global minnesallokerare
         populate_global_allocator(&mut active_table, &mut allocator);
+        
+        //skapa IDT och initiera interrupts.
         interrupt::setup::setup_interrupts();
+
+        //Initiera datorns timer att ticka 
         pitinit(2400);
     }
 
-    fs::start();
-    builtins::install_all().unwrap();
-    fs::install_app::<SplashScreen>().unwrap();
+    // Starta filsystemet och installera alla inbyggda appar
+    {
+        fs::start();
+        builtins::install_all().unwrap();
+        fs::install_app::<SplashScreen>().unwrap();
+    }
 
+    // Skapa Forths runtime
     let mut forth_machine = ForthMachine::default();
 
+    // definera ordet run
     forth_machine.insert_default_word("run", &run);
     
+    // starta bin/startup.for
     forth_machine.add_instructions_to_end(&"\"bin/startup.for\" \"forrunner\" run");
     forth_machine.run_to_end();
-    
+
+    // kör terminalen (operativsystemet är helt startat)
     unsafe {
         let mut string = String::new();
         forth_machine.formatter.enable_cursor().set_position((0, 7));

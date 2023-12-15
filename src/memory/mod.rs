@@ -15,7 +15,7 @@ use crate::{
     multiboot_info::{
         elf::ElfSectionFlags,
         memory_map::{MemoryMapEntry, MemoryType},
-        MultiBootTag, MultibootInfoUnparsed, TagType,
+        MultiBootTag, MultibootInfo, TagType,
     },
 };
 use alloc::{boxed::Box, format, string::String, vec::Vec};
@@ -154,7 +154,7 @@ impl Iterator for MemoryAreaIter {
 }
 
 pub(crate) fn remap_everything(
-    info: MultibootInfoUnparsed,
+    info: MultibootInfo,
     active_table: &mut PageTableMaster,
 ) -> ElfTrustAllocator {
     let MultiBootTag::MemoryMap(memory_tag) = info.find_tag(TagType::MemoryMap).unwrap() else {
